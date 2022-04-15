@@ -8,30 +8,52 @@ For the tutorial of distributed training, please see [here](../2_user_guide/Dist
 
 ## Overview
 
-Distributed RAF mainly adopts the Single Program Multiple Data (SPMD) programming model driven by MPI-like libraries such as NVIDIA Collective Communications Library (NCCL), which provides a set of collective communication operators and bridges multiple discrete GPUs on numerous servers connected via conventional Ethernet or high-performance Infiniband. Specifically, RAF utilizes both MPI and NCCL in a mixed way, where MPI is used to launch the distributed RAF (create many MPI processes) on user-specified nodes and exchange data for initializing NCCL, while NCCL is responsible for transferring and computing tensors among multiple GPUs efficiently.
-
 ```
           RAF IR
              │
              │ Executed by
              ▼
-    RAF VM / Interpreter
-             │
-             │ Dispatch to
-             ▼
-┌───RAF Op Implementation
-│     (in NCCL dialect)
-│            │
-│            │ Request
-│            ▼             Init
-│    RAF NCCLCommunicator◄──────RAF MPICommunicator
-│            │                            │
-│ Call       │ Provide Handle             │ Call
-│            ▼                            ▼
-└────►NCCL Collective Op          MPI Library APIs
+    RAF VM / Interpreter            Client Script
+             │                            │
+             │ Dispatch to                │ Set
+             ▼                            ▼
+┌───RAF Op Implementation       RAF VoidCommunicator
+│     (in NCCL dialect)                   │
+│            │                            │ Be
+│            │ Request                    │
+│            ▼             Init           ▼               Be
+│    RAF NCCLCommunicator◄──────RAF Global Communicator◄──────RAF MPICommunicator (default)
+│            │                                                       │
+│ Call       │ Provide Handle                                        │ Call
+│            ▼                                                       ▼
+└────►NCCL Collective Op                                      MPI Library APIs
 
 
                  Architecture Diagram
+```
+
+Distributed RAF mainly adopts the Single Program Multiple Data (SPMD) programming model driven by MPI-like libraries such as NVIDIA Collective Communications Library (NCCL), which provides a set of collective communication operators and bridges multiple discrete GPUs on numerous servers connected via conventional Ethernet or high-performance Infiniband. By default, RAF uses MPI to launch the Python script. In such a situation, RAF utilizes both MPI and NCCL in a mixed way, where MPI is used to launch the distributed RAF (create many MPI processes) on user-specified nodes and exchange data for initializing NCCL, while NCCL is responsible for transferring and computing tensors among multiple GPUs efficiently.
+
+RAF also offers the ability of using other launchers instead of MPI. RAF provides a set of API to set/get the global communicator. By default, it will be a `MPICommunicator`. Users can switch to use `VoidCommunicator`, so that users can change those distributed infomation freely and use other launchers (e.g. DeepSpeed, torchrun, user-owned multi-process launcher, etc.). When using `VoidCommunicator`, the data exchange for initializing NCCL will be done by using shared file(s), so environment variable `RAF_FILE_STORE_PATH` should be set to a directory.
+
+*P.S.: `VoidCommunicator` now supports single machine only.*
+
+For example, users can run RAF scripts with `RAF_FILE_STORE_PATH=$(pwd) torchrun --standalone --nnodes=1 --nproc_per_node=4 client_script.py`.
+
+```python
+# client_script.py
+from raf import distributed as dist
+
+dist.set_default_communicator("void")
+comm = dist.get_communicator()
+comm.size = 4  # num of GPUs
+comm.rank = os.environ.get("RANK")
+comm.local_rank = 4  # num of GPUs
+comm.local_size = os.environ.get("RANK")
+
+# user-owned logic
+...
+...
 ```
 
 ## Collective Communication Operators
@@ -55,22 +77,19 @@ MPI rank 3: cuda(1) @ node 1
 
 Like many other multi-GPU MPI applications, a number of RAF processes will spawn, and each process will be assigned with an index `rank` and a GPU in order.
 
-To figure out which GPU this process binds to, we could obtain this information at `DistConfig`.
-
-**Deprecation Notice.** Some attributes in `DistConfig`, including `rank` and `size`, will be deprecated soon, and user should get these from `Communicator` in the future instead.
-
+To figure out which GPU this process binds to, we could obtain this information at `Communicator`.
 
 ``` python
 import numpy as np
 import raf
 from raf import distributed as dist
 
-dcfg = dist.get_config()
-root_rank = dcfg.root_rank     # The root rank.
-size = dcfg.size               # The number of total MPI processes.
-rank = dcfg.rank               # The rank of this process, ranging from 0 to (size - 1).
-local_rank = dcfg.local_rank   # The local rank of this process on this machine.
-local_size = dcfg.local_size   # The number of local MPI processes onthis machine.
+comm = dist.get_communicator()  # With MPI enabled, it's a `MPICommunicator`
+root_rank = comm.root_rank      # The root rank.
+size = comm.size                # The number of total MPI processes.
+rank = comm.rank                # The rank of this process, ranging from 0 to (size - 1).
+local_rank = comm.local_rank    # The local rank of this process on this machine.
+local_size = comm.local_size    # The number of local MPI processes onthis machine.
 
 device = f'cuda({local_rank})' # the rank-th GPU on this machine that this process binds to.
 ```
