@@ -138,9 +138,9 @@ Communicator GetGlobalCommunicator() {
   return entry->comm;
 }
 
-void UseVoidCommunicator() {
+void SetDefaultCommunicator(std::string name) {
   auto entry = GlobalCommunicatorEntry::ThreadLocal();
-  entry->comm = Communicator::Get("void");
+  entry->comm = Communicator::Get(name);
 }
 
 RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.void")
@@ -151,7 +151,7 @@ RAF_REGISTER_GLOBAL("raf.distributed.RemoveCommunicator").set_body_typed([]() {
 });
 
 RAF_REGISTER_GLOBAL("raf.distributed.GetGlobalCommunicator").set_body_typed(GetGlobalCommunicator);
-RAF_REGISTER_GLOBAL("raf.distributed.UseVoidCommunicator").set_body_typed(UseVoidCommunicator);
+RAF_REGISTER_GLOBAL("raf.distributed.SetDefaultCommunicator").set_body_typed(SetDefaultCommunicator);
 
 #define SetGlobalCommunicator(Attr, attr)                                           \
   void SetGlobal##Attr(int attr) {                                                  \

@@ -96,5 +96,6 @@ def get_communicator():
     return ffi.GetGlobalCommunicator()
 
 
-def use_void_communicator():
-    ffi.UseVoidCommunicator()
+def set_default_communicator(name):
+    assert name in ["mpi", "void"], "Invalid name to set global communicator!"
+    ffi.SetDefaultCommunicator(name)
