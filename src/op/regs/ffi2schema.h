@@ -232,32 +232,6 @@ inline ir::Optional<ir::Array<value::IntValue>> IntArray(const registry::TVMArgV
   throw;
 }
 
-inline std::vector<value::BaseTensorValue> TupleTensor(const registry::TVMArgValue& a) {
-  RAF_PRELUDE();
-  const Object* _ptr = a.ptr<Object>();
-  if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
-    const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
-    std::vector<BaseTensorValue> ret;
-    ret.reserve(n->size());
-    for (const ObjectRef& i : *n) {
-      if (const auto* e = i.as<VarNode>()) {
-        using binding::NDArrayBindingObj;
-        auto* bound = binding::LookupBinding(e).as<NDArrayBindingObj>();
-        ret.push_back(Downcast<TensorValue>(bound->value));
-        continue;
-      }
-      LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" is not tuple of tensors, "
-                 << "because the " << ToOrdinal(ret.size()) << " member is of type \""
-                 << i->GetTypeKey() << '"';
-      throw;
-    }
-    return ret;
-  }
-  LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
-             << "\" is not tuple of tensors";
-  throw;
-}
-
 inline std::vector<value::BaseTensorValue> TensorOrTupleTensor(const registry::TVMArgValue& a) {
   RAF_PRELUDE();
   if (type_code == kTVMObjectHandle && a.IsObjectRef<Var>()) {
