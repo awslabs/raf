@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=attribute-defined-outside-init,protected-access,too-many-locals
-# pylint: disable=too-many-statements,invalid-name
+# pylint: disable=too-many-statements,invalid-name, redefined-outer-name
 import os
 import sys
 import pytest

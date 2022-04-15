@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=no-self-use,invalid-name, protected-access, too-many-locals, too-many-branches
+# pylint: disable=no-self-use,invalid-name, protected-access, too-many-locals, too-many-branches, redefined-outer-name
 """Test collective communication operators in a cluster with 2 GPUs.
 As pytest do not support mpirun, thus we skip this test in pytest progress.
 To test collective_communication, you should run:
