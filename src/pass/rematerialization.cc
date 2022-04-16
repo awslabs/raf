@@ -896,7 +896,6 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
 
   /*! \brief Visit each let statement and return the analyzed information of each tensor. */
   TensorInfos Run() {
-    LOG(INFO) << "Function: " << ir::AsText(func_);
     // Analyze parameters.
     for (const auto& var : func_->params) {
       auto liveness_vars = analyzer_->GetTensorVars(var);
