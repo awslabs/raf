@@ -187,8 +187,11 @@ inline ir::Optional<Array<value::IntValue>> IntArray(const value::Value& a) {
   throw;
 }
 
-inline std::vector<value::BaseTensorValue> TupleTensor(const value::Value& a) {
-  RAF_PRELUDE_DISALLOW_NULL("tuple of tensors");
+inline std::vector<value::BaseTensorValue> TensorOrTupleTensor(const value::Value& a) {
+  RAF_PRELUDE_DISALLOW_NULL("a tensor or tuple of tensors");
+  if (const auto* v = a.as<BaseTensorValueObj>()) {
+    return {GetRef<BaseTensorValue>(v)};
+  }
   if (const auto* v = a.as<TupleValueObj>()) {
     std::vector<BaseTensorValue> ret;
     ret.reserve(v->fields.size());
@@ -205,7 +208,7 @@ inline std::vector<value::BaseTensorValue> TupleTensor(const value::Value& a) {
     return ret;
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()
-             << "\" is not tuple of tensors";
+             << "\" is not an integer or tuple of integers";
   throw;
 }
 

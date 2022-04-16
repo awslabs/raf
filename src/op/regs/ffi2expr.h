@@ -218,8 +218,11 @@ inline ir::Expr IntArray(const registry::TVMArgValue& a) {
   throw;
 }
 
-inline ir::Expr TupleTensor(const registry::TVMArgValue& a) {
+inline ir::Expr TensorOrTupleTensor(const registry::TVMArgValue& a) {
   RAF_PRELUDE();
+  if (type_code == kTVMNDArrayHandle) {
+    return RAF_CONST(TensorValue, a.operator tvm::runtime::NDArray());
+  }
   const Object* _ptr = a.ptr<Object>();
   if (type_code == kTVMObjectHandle && _ptr->IsInstance<ArrayNode>()) {
     const ArrayNode* n = static_cast<const ArrayNode*>(_ptr);
@@ -237,7 +240,7 @@ inline ir::Expr TupleTensor(const registry::TVMArgValue& a) {
     return binding::BindSymbol(tvm::relay::Tuple(ret));
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << GetTypeStr(a)
-             << "\" is not tuple of tensors";
+             << "\" is not a tensor or tuple of tensors";
   throw;
 }
 
