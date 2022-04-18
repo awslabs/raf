@@ -492,6 +492,20 @@ SCHEMAS = {
         Arg(name="src", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="value::Value"),
     ],
+    "transform.h::scatter_strided_slice": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="src", cxx_type="value::BaseTensorValue"),
+        Arg(name="begin", cxx_type="std::vector<int64_t>", cxx_normalizer="IntTuple"),
+        Arg(name="end", cxx_type="std::vector<int64_t>", cxx_normalizer="IntTuple"),
+        Arg(
+            name="strides",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple",
+            cxx_default="{}",
+            py_default="None",
+        ),
+        Arg(name="slice_mode", cxx_type="std::string", cxx_default='"end"', py_default='"end"'),
+    ],
     "transform.h::transpose": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(
@@ -853,6 +867,7 @@ SCHEMAS = {
         Arg(name="device_type", cxx_type="int"),
         Arg(name="device_id", cxx_type="int"),
         Arg(name="dtype", cxx_type="std::string", cxx_default='"float32"', py_default='"float32"'),
+        Arg(name="alloc_async", cxx_type="bool", cxx_default=True),
     ],
     "vm.h::alloc_tensor": [
         Arg(name="storage", cxx_type="value::BaseTensorValue"),

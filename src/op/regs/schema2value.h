@@ -97,6 +97,10 @@ inline value::Value TupleTensor(const std::vector<value::BaseTensorValue>& a) {
   return TupleValue::make(std::move(ret));
 }
 
+inline value::Value TensorOrTupleTensor(const std::vector<value::BaseTensorValue>& a) {
+  return TupleTensor(a);
+}
+
 #undef RAF_PRELUDE
 
 }  // namespace schema2value

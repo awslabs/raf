@@ -825,6 +825,24 @@ RAF_OP_DECLARE("raf.op.scatter_dx", [](const CallValues& call) {
   call->device = x->device;
 });
 
+RAF_OP_DECLARE("raf.op.scatter_strided_slice", [](const CallValues& call) {
+  const auto* args = call->args.as<ScatterStridedSliceArgs>();
+  CHECK(args != nullptr);
+  DLTensor* x = args->x;
+  DLTensor* src_tensor = args->src;
+
+  CHECK(!args->begin.empty()) << "scatter_strided_slice received invalid begin";
+  CHECK(!args->end.empty()) << "scatter_strided_slice received invalid end";
+  CHECK_EQ(args->begin.size(), args->end.size()) << "begin.size() != end.size()";
+  CHECK_EQ(x->ndim, src_tensor->ndim);
+
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->device = x->device;
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+});
+
 RAF_OP_DECLARE("raf.op.clip", [](const CallValues& call) {
   const auto* args = call->args.as<ClipArgs>();
   CHECK(args != nullptr);
@@ -875,8 +893,6 @@ RAF_OP_DECLARE("raf.op.group_cast", [](const CallValues& call) {
   const auto* args = call->args.as<GroupCastArgs>();
   CHECK(args != nullptr);
 
-  const DLTensor* first_tensor = args->tensor_list[0];
-
   std::vector<TensorValue> ret;
   std::string dtype = args->dtype;
   for (int i = 0; i < args->tensor_list.size(); ++i) {
@@ -885,9 +901,15 @@ RAF_OP_DECLARE("raf.op.group_cast", [](const CallValues& call) {
     ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
                                         /*dtype=*/String2DLDataType(dtype),
                                         /*shape=*/oshape));
+    if (i == 0) {
+      call->device = x->device;
+    } else {
+      raf::Device device = x->device;
+      CHECK_EQ(call->device.device_type(), device.device_type()) << "Device type mismatch";
+      CHECK_EQ(call->device.device_id(), device.device_id()) << "Device id mismatch";
+    }
   }
   call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
-  call->device = first_tensor->device;
 });
 
 RAF_OP_DECLARE("raf.op.gather", [](const CallValues& call) {

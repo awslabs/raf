@@ -109,7 +109,7 @@ class CommunicatorPool {
   }
 
   static CommunicatorPool* Get() {
-    static CommunicatorPool* instance = new CommunicatorPool();
+    static CommunicatorPool* instance = dmlc::ThreadLocalStore<CommunicatorPool>::Get();
     return instance;
   }
 

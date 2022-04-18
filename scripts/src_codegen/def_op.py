@@ -148,6 +148,7 @@ OPS = [
     Op(name="layer_norm_train", schema_name="layer_norm"),
     Op(name="scatter", schema_name="scatter"),
     Op(name="scatter_dx", schema_name="scatter_dx"),
+    Op(name="scatter_strided_slice", schema_name="scatter_strided_slice"),
     Op(name="layer_norm_dx", schema_name="layer_norm_dx"),
     Op(name="layer_norm_train_dx", schema_name="layer_norm_train_dx"),
     Op(name="concatenate_dx", schema_name="concatenate"),
