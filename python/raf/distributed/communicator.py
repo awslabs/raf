@@ -59,24 +59,6 @@ class VoidCommunicator(Communicator):
         self.local_rank_ = value
         ffi.SetGlobalLocalRank(value)
 
-    @property
-    def world_size(self):
-        return self.world_size_
-
-    @world_size.setter
-    def world_size(self, value):
-        self.world_size_ = value
-        ffi.SetGlobalWorldSize(value)
-
-    @property
-    def world_rank(self):
-        return self.world_rank_
-
-    @world_rank.setter
-    def world_rank(self, value):
-        self.world_rank_ = value
-        ffi.SetGlobalWorldRank(value)
-
     def dumps(self):
         attr_keys = [
             "size",

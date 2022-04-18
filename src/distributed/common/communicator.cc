@@ -143,6 +143,36 @@ void SetDefaultCommunicator(std::string name) {
   entry->comm = Communicator::Get(name);
 }
 
+void SetGlobalRank(int rank) {
+  CHECK(GetGlobalCommunicator()->IsInstance<communicator::VoidCommunicatorObj>())
+      << "Only VoidCommunicator is mutable";
+  auto comm = GetGlobalCommunicator();
+  comm->rank = rank;
+  comm->world_rank = rank;
+}
+
+void SetGlobalSize(int size) {
+  CHECK(GetGlobalCommunicator()->IsInstance<communicator::VoidCommunicatorObj>())
+      << "Only VoidCommunicator is mutable";
+  auto comm = GetGlobalCommunicator();
+  comm->size = size;
+  comm->world_size = size;
+  // TODO: make `host_ids` configurable.
+  comm->host_ids = std::vector<uint64_t>(size, comm->host_ids[0]);
+}
+
+void SetGlobalLocalRank(int local_rank) {
+  CHECK(GetGlobalCommunicator()->IsInstance<communicator::VoidCommunicatorObj>())
+      << "Only VoidCommunicator is mutable";
+  GetGlobalCommunicator()->local_rank = local_rank;
+}
+
+void SetGlobalLocalSize(int local_size) {
+  CHECK(GetGlobalCommunicator()->IsInstance<communicator::VoidCommunicatorObj>())
+      << "Only VoidCommunicator is mutable";
+  GetGlobalCommunicator()->local_size = local_size;
+}
+
 RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.void")
     .set_body_typed(VoidCommunicator::make);
 
@@ -153,34 +183,10 @@ RAF_REGISTER_GLOBAL("raf.distributed.RemoveCommunicator").set_body_typed([]() {
 RAF_REGISTER_GLOBAL("raf.distributed.GetGlobalCommunicator").set_body_typed(GetGlobalCommunicator);
 RAF_REGISTER_GLOBAL("raf.distributed.SetDefaultCommunicator")
     .set_body_typed(SetDefaultCommunicator);
-
-#define SetGlobalCommunicator(Attr, attr)                                           \
-  void SetGlobal##Attr(int attr) {                                                  \
-    CHECK(GetGlobalCommunicator()->IsInstance<communicator::VoidCommunicatorObj>()) \
-        << "Only VoidCommunicator is mutable";                                      \
-    GetGlobalCommunicator()->attr = attr;                                           \
-  }
-
-SetGlobalCommunicator(Rank, rank);
-void SetGlobalSize(int size) {
-  CHECK(GetGlobalCommunicator()->IsInstance<communicator::VoidCommunicatorObj>())
-      << "Only VoidCommunicator is mutable";
-  auto comm = GetGlobalCommunicator();
-  comm->size = size;
-  // TODO: make `host_ids` configurable.
-  comm->host_ids = std::vector<uint64_t>(size, comm->host_ids[0]);
-}
-SetGlobalCommunicator(LocalRank, local_rank);
-SetGlobalCommunicator(LocalSize, local_size);
-SetGlobalCommunicator(WorldRank, world_rank);
-SetGlobalCommunicator(WorldSize, world_size);
-
 RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalRank").set_body_typed(SetGlobalRank);
 RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalSize").set_body_typed(SetGlobalSize);
 RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalLocalRank").set_body_typed(SetGlobalLocalRank);
 RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalLocalSize").set_body_typed(SetGlobalLocalSize);
-RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalWorldRank").set_body_typed(SetGlobalWorldRank);
-RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalWorldSize").set_body_typed(SetGlobalWorldSize);
 
 RAF_REGISTER_OBJECT_REFLECT(VoidCommunicatorObj);
 
