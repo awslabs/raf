@@ -39,8 +39,8 @@ class LansImpl : public raf::op::OpEnv {
     auto datatype = t0->dtype;
     CHECK(datatype.code == kDLFloat);
     CHECK((datatype.bits == 32) || (datatype.bits == 16));
- 
-	beta1_ = args->beta1;
+
+    beta1_ = args->beta1;
     beta2_ = args->beta2;
     eps_ = args->eps;
     bias_correction_ = args->bias_correction;

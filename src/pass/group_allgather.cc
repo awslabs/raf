@@ -79,60 +79,60 @@ class CommGrouper : public ExprMutator {
           cast_allgather_ = true;
           cast_call = Downcast<Call>(cast_node->value);
           allgather_input = cast_call->args[0];
+        } else {
+          allgather_input = gather_call->args[0];
+        }
+
+        if (slice_node) {
+          slice_call = Downcast<Call>(slice_node->value);
+          slice_dic_[allgather_inputs_.size()] = slice_call->args[2];
+          zero_input = scope->Push(
+              Call(zeros_op,
+                   {MakeConstant(ArrayToIntTuple(var_type->shape)),
+                    MakeConstant(StringValue::make(DLDataType2String(var_type->dtype))),
+                    MakeConstant(StringValue::make("cuda(" + std::to_string(local_rank_) + ")"))}));
+          allgather_output = zero_input;
+        } else {
+          allgather_output = add_call->args[2];
+        }
+
+        if (curr_size_ + size < bucket_size_) {
+          curr_size_ += size;
+          allgather_inputs_.push_back(allgather_input);
+          allgather_outputs_.push_back(allgather_output);
+          update_params_.push_back(update_var);
+        } else {
+          curr_size_ = size;
+          Var gather_input;
+          if (cast_node) {
+            auto cast_input = scope->Push(Tuple(allgather_inputs_));
+            gather_input = scope->Push(Call(group_cast, {cast_input, cast_call->args[1]}));
           } else {
-            allgather_input = gather_call->args[0];
+            gather_input = scope->Push(Tuple(allgather_inputs_));
+          }
+          auto gather_output = scope->Push(Tuple(allgather_outputs_));
+          auto output = scope->Push(
+              Call(group_allgather, {gather_input, gather_call->args[1], gather_output}));
+          for (int i = 0; i < allgather_inputs_.size(); ++i) {
+            auto out_tensor = scope->Push(TupleGetItem(output, i));
+            if (slice_dic_.count(i)) {
+              out_tensor = scope->Push(
+                  Call(slice_op_,
+                       {out_tensor, MakeConstant(TupleValue::make({ScalarValue::make(0)})),
+                        slice_dic_[i], MakeConstant(TupleValue::make({ScalarValue::make(1)}))}));
+            }
+            params_.Set(update_params_[i], out_tensor);
           }
 
+          allgather_inputs_ = {allgather_input};
+          allgather_outputs_ = {allgather_output};
           if (slice_node) {
-            slice_call = Downcast<Call>(slice_node->value);
-            slice_dic_[allgather_inputs_.size()] = slice_call->args[2];
-            zero_input = scope->Push(Call(
-                zeros_op,
-                {MakeConstant(ArrayToIntTuple(var_type->shape)),
-                 MakeConstant(StringValue::make(DLDataType2String(var_type->dtype))),
-                 MakeConstant(StringValue::make("cuda(" + std::to_string(local_rank_) + ")"))}));
-            allgather_output = zero_input;
-          } else {
-            allgather_output = add_call->args[2];
+            slice_dic_.clear();
+            slice_dic_[allgather_inputs_.size() - 1] = slice_call->args[2];
           }
-
-          if (curr_size_ + size < bucket_size_) {
-            curr_size_ += size;
-            allgather_inputs_.push_back(allgather_input);
-            allgather_outputs_.push_back(allgather_output);
-            update_params_.push_back(update_var);
-          } else {
-            curr_size_ = size;
-            Var gather_input;
-            if (cast_node) {
-              auto cast_input = scope->Push(Tuple(allgather_inputs_));
-              gather_input = scope->Push(Call(group_cast, {cast_input, cast_call->args[1]}));
-            } else {
-              gather_input = scope->Push(Tuple(allgather_inputs_));
-            }
-            auto gather_output = scope->Push(Tuple(allgather_outputs_));
-            auto output = scope->Push(
-                Call(group_allgather, {gather_input, gather_call->args[1], gather_output}));
-            for (int i = 0; i < allgather_inputs_.size(); ++i) {
-              auto out_tensor = scope->Push(TupleGetItem(output, i));
-              if (slice_dic_.count(i)) {
-                out_tensor = scope->Push(
-                    Call(slice_op_,
-                         {out_tensor, MakeConstant(TupleValue::make({ScalarValue::make(0)})),
-                          slice_dic_[i], MakeConstant(TupleValue::make({ScalarValue::make(1)}))}));
-              }
-              params_.Set(update_params_[i], out_tensor);
-            }
-
-            allgather_inputs_ = {allgather_input};
-            allgather_outputs_ = {allgather_output};
-            if (slice_node) {
-              slice_dic_.clear();
-              slice_dic_[allgather_inputs_.size() - 1] = slice_call->args[2];
-            }
-            update_params_ = {update_var};
-          }
-          node = add_node;
+          update_params_ = {update_var};
+        }
+        node = add_node;
       } else if (curr_var == ret_var_) {
         comm_node = true;
         if (allgather_inputs_.size() > 1) {
@@ -168,7 +168,6 @@ class CommGrouper : public ExprMutator {
           }
         }
         scope->Push(curr_var, Tuple(tuple));
-
       }
       if (comm_node == false) {
         scope->Push(curr_var, value);
@@ -176,10 +175,10 @@ class CommGrouper : public ExprMutator {
       body = node->body;
       node = body.as<LetNode>();
 
-  } while (node);
-  auto ret = scopes_.back()->Get(this->Mutate(body));
-  scopes_.pop_back();
-  return ret;
+    } while (node);
+    auto ret = scopes_.back()->Get(this->Mutate(body));
+    scopes_.pop_back();
+    return ret;
   }
 
  private:
@@ -242,47 +241,45 @@ class CommGrouper : public ExprMutator {
       if (opn == op) {
         return true;
       }
-   }
-   return false;
- }
+    }
+    return false;
+  }
 
- /*! \brief The target function. */
- Function func_;
- /*! \brief The scope stack of the let list. */
- std::vector<std::unique_ptr<LetList>> scopes_;
- /*! \brief The parameters of the target function. */
- Map<Var, Expr> params_;
- /*! \brief The inputs of allgather. */
- std::vector<Expr> allgather_inputs_;
- /*! \brief The outputs of allgather. */
- std::vector<Expr> allgather_outputs_;
- /*! \brief The parameters need to be updated. */
- std::vector<Var> update_params_;
- /*! \brief Track the tensors that need to be sliced. */
- std::unordered_map<size_t, Expr> slice_dic_;
- /*! \brief Group bucket size. */
- size_t bucket_size_;
- /*! \brief The current bucket size for the group. */
- size_t curr_size_ = 0;
- /*! \brief whether has cast op before allgather. */
- bool cast_allgather_ = false;
- /*! \brief The return var. */
- Var ret_var_;
- /*! \brief Local rank. */
- int local_rank_;
- // ops using in this pass
- Op add_op_ = Op::Get("raf.op.add");
- Op allgather_op_ = Op::Get("raf.op._allgather");
- Op slice_op_ = Op::Get("raf.op.strided_slice");
- Op cast_op_ = Op::Get("raf.op.cast");
+  /*! \brief The target function. */
+  Function func_;
+  /*! \brief The scope stack of the let list. */
+  std::vector<std::unique_ptr<LetList>> scopes_;
+  /*! \brief The parameters of the target function. */
+  Map<Var, Expr> params_;
+  /*! \brief The inputs of allgather. */
+  std::vector<Expr> allgather_inputs_;
+  /*! \brief The outputs of allgather. */
+  std::vector<Expr> allgather_outputs_;
+  /*! \brief The parameters need to be updated. */
+  std::vector<Var> update_params_;
+  /*! \brief Track the tensors that need to be sliced. */
+  std::unordered_map<size_t, Expr> slice_dic_;
+  /*! \brief Group bucket size. */
+  size_t bucket_size_;
+  /*! \brief The current bucket size for the group. */
+  size_t curr_size_ = 0;
+  /*! \brief whether has cast op before allgather. */
+  bool cast_allgather_ = false;
+  /*! \brief The return var. */
+  Var ret_var_;
+  /*! \brief Local rank. */
+  int local_rank_;
+  // ops using in this pass
+  Op add_op_ = Op::Get("raf.op.add");
+  Op allgather_op_ = Op::Get("raf.op._allgather");
+  Op slice_op_ = Op::Get("raf.op.strided_slice");
+  Op cast_op_ = Op::Get("raf.op.cast");
 };
 }  // namespace group_comm
 
 Pass GroupAllgather() {
-  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
-                                                                             PassContext pc) {
-    return group_comm::CommGrouper(f).Group();
-  };
+  TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func =
+      [=](Function f, IRModule m, PassContext pc) { return group_comm::CommGrouper(f).Group(); };
   auto group_allgather_pass = CreateRAFFunctionPass(pass_func, 0, "GroupAllgather", {});
 
   return RAFSequential({InferType(), group_allgather_pass, InferType()}, "GroupAllgather");

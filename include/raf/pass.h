@@ -400,7 +400,7 @@ Pass Deduplicate(int forward_steps, bool consider_type, bool must_dominate,
                  ir::Optional<ir::String> salt);
 
 /*!
- * \brief This pass works in ANF and group allgather operators for ZeRO. 
+ * \brief This pass works in ANF and group allgather operators for ZeRO.
  * \return The created pass.
  */
 Pass GroupAllgather();
