@@ -1,3 +1,12 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*!
+ * \file group_allgather.cc
+ * \brief ZeRO optimzed graph, this pass group the cast, if there is, and allgather ops.
+ */
 #include "raf/pass.h"
 #include "./common.h"
 #include "./let_list.h"
