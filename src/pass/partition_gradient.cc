@@ -312,17 +312,6 @@ class GradientPartitioner : public ExprMutator {
       auto replace_var = scope->Push(TupleGetItem(grad_var, rank_));
       grads_.Set(var, replace_var);
     }
-
-    // if (opt_level > 1) {
-    //   auto compute = Downcast<Constant>(GetNArg(allreduce_expr, 1));
-    //   auto reduce_scatter_var = scope->Push(Call(reduce_scatter_op, {grad_var, compute}));
-    //   if (divide_expr.defined()) {
-    //     // update the divide op args
-    //     auto divide_call = divide_expr.as<CallNode>();
-    //     return scope->Push(Call(divide_call->op, {reduce_scatter_var, divide_call->args[1]}));
-    //   }
-    //   return reduce_scatter_var;
-    // }
   }
 
   void IssueGroupScatter(LetList* scope, Constant compute) {
