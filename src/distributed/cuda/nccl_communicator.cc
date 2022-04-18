@@ -26,7 +26,7 @@ class NCCLIdSyncHelper {
     if (temp == nullptr) {
       LOG(FATAL) << "RAF_FILE_STORE_PATH is no set.";
     } else {
-      base_path = std::string(temp);
+      base_path_ = std::string(temp);
     }
     this->Append();
   }
@@ -40,23 +40,23 @@ class NCCLIdSyncHelper {
     if (rank == rank_vec[0]) {
       auto vec = std::vector<uint8_t>(reinterpret_cast<uint8_t*>(nccl_id),
                                       reinterpret_cast<uint8_t*>(nccl_id) + NCCL_UNIQUE_ID_BYTES);
-      fs_vec.back()->Set(vec);
+      fs_vec_.back()->Set(vec);
     } else {
-      auto vec = fs_vec.back()->Get();
+      auto vec = fs_vec_.back()->Get();
       CHECK(vec.size() == NCCL_UNIQUE_ID_BYTES);
       std::memcpy(nccl_id, vec.data(), vec.size());
     }
   }
 
   void Append() {
-    count += 1;
-    fs_vec.push_back(std::make_unique<SimpleFileStore>(base_path + "/" + std::to_string(count)));
+    count_ += 1;
+    fs_vec_.push_back(std::make_unique<SimpleFileStore>(base_path_ + "/" + std::to_string(count_)));
   }
 
  private:
-  std::list<std::unique_ptr<SimpleFileStore>> fs_vec;
-  std::string base_path;
-  int count{0};
+  std::list<std::unique_ptr<SimpleFileStore>> fs_vec_;
+  std::string base_path_;
+  int count_{0};
 };
 
 NCCLCommunicatorObj::~NCCLCommunicatorObj() {

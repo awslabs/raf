@@ -271,7 +271,7 @@ def with_dialect(dialect):
     return decorator
 
 
-def get_dist_info(verbose=False):
+def get_dist_comm_info(verbose=False):
     """Helper function to get the distributed communicator info.
 
     Parameters
@@ -317,7 +317,7 @@ def skip_dist_test(min_rank_num=1, require_exact_rank=False):
     if not raf.build.with_distributed():
         return True
 
-    size, _, _ = get_dist_info()
+    size, _, _ = get_dist_comm_info()
     if require_exact_rank:
         return size != min_rank_num
     return size < min_rank_num

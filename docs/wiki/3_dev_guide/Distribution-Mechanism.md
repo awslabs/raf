@@ -34,7 +34,7 @@ For the tutorial of distributed training, please see [here](../2_user_guide/Dist
 
 Distributed RAF mainly adopts the Single Program Multiple Data (SPMD) programming model driven by MPI-like libraries such as NVIDIA Collective Communications Library (NCCL), which provides a set of collective communication operators and bridges multiple discrete GPUs on numerous servers connected via conventional Ethernet or high-performance Infiniband. By default, RAF uses MPI to launch the Python script. In such a situation, RAF utilizes both MPI and NCCL in a mixed way, where MPI is used to launch the distributed RAF (create many MPI processes) on user-specified nodes and exchange data for initializing NCCL, while NCCL is responsible for transferring and computing tensors among multiple GPUs efficiently.
 
-RAF also offers the ability of using other launchers instead of MPI. RAF provides a set of API to set/get the global communicator. By default, it will be a `MPICommunicator`. Users can switch to use `VoidCommunicator`, so that users can change those distributed infomation freely and use other launchers (e.g. DeepSpeed, torchrun, user-owned multi-process launcher, etc.). When using `VoidCommunicator`, the data exchange for initializing NCCL will be done by using shared file(s), so environment variable `RAF_FILE_STORE_PATH` should be set to a directory.
+RAF also offers the ability of using other launchers instead of MPI. RAF provides a set of API to set/get the global communicator. By default, it will be a `MPICommunicator`. Users can switch to use `VoidCommunicator`, so that users can change those distributed infomation freely and use other launchers (e.g. DeepSpeed, torchrun, user-owned multi-process launcher, etc.). When using `VoidCommunicator`, the data exchange for initializing NCCL will be done by using inter-process shared file(s). To enable this feature, users need to set the environment variable `RAF_FILE_STORE_PATH` to a directory.
 
 *P.S.: `VoidCommunicator` now supports single machine only.*
 
@@ -46,10 +46,11 @@ from raf import distributed as dist
 
 dist.set_default_communicator("void")
 comm = dist.get_communicator()
+rank = os.environ.get("RANK")  # torchrun provides rank information
 comm.size = 4  # num of GPUs
-comm.rank = os.environ.get("RANK")
+comm.rank = rank
 comm.local_rank = 4  # num of GPUs
-comm.local_size = os.environ.get("RANK")
+comm.local_size = rank
 
 # user-owned logic
 ...
@@ -165,8 +166,8 @@ NCCL / MPI Communicator establishes connections between workers, provides each m
 - `local_size`: The amount of processes on the same physical machine, from this communicator's perspective.
 - `rank`: rank ID of this process from this communicator's perspective.
 - `size`: The amount of processes from this communicator's perspective.
-- `global_rank`: rank ID of this process from the global communicator's perspective.
-- `global_size`: The amount of processes from the global communicator's perspective.
+- `world_rank`: rank ID of this process from the global communicator's perspective.
+- `world_size`: The amount of processes from the global communicator's perspective.
 - `group_id`: The ID of group where this process locates. Used by grouping and sub-communicator.
 - `group_size`: The number of groups. Used by grouping and sub-communicator.
 - Handler. The handler of corresponding MPI / NCCL Communicator.

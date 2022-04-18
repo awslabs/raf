@@ -74,7 +74,7 @@ def gen_data(shape, device):
     return m_x
 
 
-def run(train_config, meta_dist_config):
+def run(train_config, raf_dist_config):
     """Train the model.
 
     Parameters
@@ -82,7 +82,7 @@ def run(train_config, meta_dist_config):
     train_config: Dict[str, int]
         The training configurations.
 
-    meta_dist_config: Dict[str, Union[bool, int]]
+    raf_dist_config: Dict[str, Union[bool, int]]
         The RAF distribution configurations.
     """
     # Process training configs.
@@ -97,8 +97,8 @@ def run(train_config, meta_dist_config):
     # Process distribution configs. Note that data parallel is always on.
     dcfg = dist.get_config()
     comm = dist.get_communicator()
-    dcfg.enable_data_parallel = meta_dist_config.get("enable_data_parallel", False)
-    dcfg.zero_opt_level = meta_dist_config.get("zero_opt_level", 0)
+    dcfg.enable_data_parallel = raf_dist_config.get("enable_data_parallel", False)
+    dcfg.zero_opt_level = raf_dist_config.get("zero_opt_level", 0)
     device = f"cuda({comm.local_rank})"
 
     total_data_size = (np.prod(shape) + (batch_size * num_classes)) * n_mini_batch
@@ -167,8 +167,8 @@ if __name__ == "__main__":
         "input_shape": 28,
         "num_classes": 10,
     }
-    meta_dist_config = {
+    raf_dist_config = {
         "enable_data_parallel": True,
         "zero_opt_level": 1,
     }
-    run(train_config, meta_dist_config)
+    run(train_config, raf_dist_config)

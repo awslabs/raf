@@ -19,7 +19,7 @@ dcfg = dist.get_config()
 dcfg.enable_data_parallel = True
 ```
 
-Note that if you are using the provided script (i.e., `dist_example.py`), you can simply change the values in `meta_dist_config`. We will introduce each configure in the following subsections along with the distribution methodologies.
+Note that if you are using the provided script (i.e., `dist_example.py`), you can simply change the values in `raf_dist_config`. We will introduce each configure in the following subsections along with the distribution methodologies.
 
 MPI is recommended to manage multi-processing, so we need to launch the script with `mpirun`:
 
@@ -58,7 +58,7 @@ Data parallelism distributes the input training data to each device, and perform
 To enable data parallelism, set the corresponding configure to be `True` in the script:
 
 ```python
-meta_dist_config = {
+raf_dist_config = {
     "enable_data_parallel": True
 }
 ```
@@ -73,7 +73,7 @@ ZeRO optimizations are introduced in this paper https://arxiv.org/abs/1910.02054
 To enable ZeRO, again we just need to set the corresponding configure in the script:
 
 ```python
-meta_dist_config = {
+raf_dist_config = {
     "zero_opt_level": 1, # Use ZeRO-1
     ...
 }

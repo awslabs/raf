@@ -12,7 +12,7 @@ import pytest
 import numpy as np
 import raf
 from raf import distributed as dist
-from raf.testing import check_type, run_infer_type, skip_dist_test, get_dist_info
+from raf.testing import check_type, run_infer_type, skip_dist_test, get_dist_comm_info
 from tvm.relay import TensorType, FuncType, TupleType
 
 SKIP_REASON = "Distribution is not enabled or #rank is not expected"
@@ -35,7 +35,7 @@ def test_allreduce_with_tensor(computation):
     shape = (4, 4)
     dtype = "float32"
     model = TestModel()
-    _, rank, local_rank = get_dist_info()
+    _, rank, local_rank = get_dist_comm_info()
     device = f"cuda({local_rank})"
     x = np.ones(shape=shape, dtype=dtype) * (rank + 1)
     x = raf.array(x, device=device)
@@ -65,7 +65,7 @@ def test_allreduce_with_tensor_list(computation):
     shape2 = (3, 4, 5)
     dtype = "float32"
     model = TestModel()
-    _, rank, local_rank = get_dist_info()
+    _, rank, local_rank = get_dist_comm_info()
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=shape1, dtype=dtype) * (rank + 1)
     x2 = np.ones(shape=shape2, dtype=dtype) * (-rank - 1)
