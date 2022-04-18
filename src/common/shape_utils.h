@@ -214,6 +214,17 @@ inline int64_t BytesCompactType(const Type& type) {
   throw;
 }
 
+inline int64_t NElement(const Var& var) {
+  int64_t n = 1;
+  TensorType var_type = Downcast<TensorType>(var->checked_type());
+  for (int i = 0; i < var_type->shape.size(); ++i) {
+    PrimExpr k = var_type->shape[i];
+    int64_t k_v = k.as<IntImmNode>()->value;
+    n *= k_v;
+  }
+  return n;
+}
+
 }  // namespace shape_utils
 }  // namespace common
 }  // namespace raf

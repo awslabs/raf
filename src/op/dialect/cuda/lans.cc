@@ -39,8 +39,8 @@ class LansImpl : public raf::op::OpEnv {
     auto datatype = t0->dtype;
     CHECK(datatype.code == kDLFloat);
     CHECK((datatype.bits == 32) || (datatype.bits == 16));
-
-    beta1_ = args->beta1;
+ 
+	beta1_ = args->beta1;
     beta2_ = args->beta2;
     eps_ = args->eps;
     bias_correction_ = args->bias_correction;
@@ -80,6 +80,11 @@ class LansImpl : public raf::op::OpEnv {
     RequestWorkspace(&param_norm_tensor_, cv->device, 4 * param_group_n_);
     RequestWorkspace(&update_m_norm_, cv->device, 4 * param_group_n_);
     RequestWorkspace(&q_norm_tensor_, cv->device, 4 * param_group_n_);
+
+    static auto cuda_device_api = DeviceAPI::Get(DevType::kCUDA());
+    compute_stream_ = cuda_device_api->GetStream();
+    cpu_ctx_.device_type = kDLCPU;
+    cpu_ctx_.device_id = 0;
   }
 
   void Execute(const CallValues& cv) override {
@@ -90,19 +95,14 @@ class LansImpl : public raf::op::OpEnv {
   }
 
   void Execute(const std::vector<Value>& inputs, Value output) override {
-    static auto cuda_device_api = DeviceAPI::Get(DevType::kCUDA());
-    void* compute_stream = cuda_device_api->GetStream();
     TupleValue tuple = ir::Downcast<TupleValue>(inputs[0]);
     DLTensor* t0 = ir::Downcast<TensorValue>(tuple->fields[0]);
     CHECK(t0->dtype.code == kDLFloat);
     CHECK((t0->dtype.bits == 32) || (t0->dtype.bits == 16));
-    DLDevice cpu_ctx;
-    cpu_ctx.device_type = kDLCPU;
-    cpu_ctx.device_id = 0;
     auto* tstep = inputs[1].as<value::TensorValueObj>();
     tensor::Tensor step_tensor = tstep->tensor;
     CHECK(step_tensor->ndim == 0);
-    tvm::runtime::NDArray step_array = step_tensor.CopyTo(cpu_ctx);
+    tvm::runtime::NDArray step_array = step_tensor.CopyTo(cpu_ctx_);
     float fstep = reinterpret_cast<float*>(step_array->data)[0];
     int step = (int)fstep;
     float bias_correction1 = 1.0f;
@@ -116,35 +116,26 @@ class LansImpl : public raf::op::OpEnv {
       beta3 = 1 - beta1_;
     }
 
-    switch (t0->dtype.bits) {
-      case 32: {
-        std::vector<float*> tlist;
-        for (int i = 0; i < param_group_n_; ++i) {
-          DLTensor* tensor = ir::Downcast<TensorValue>(tuple->fields[i]);
-          tlist.push_back(static_cast<float*>(tensor->data));
-        }
-        tlist.push_back(static_cast<float*>(q_tensor_buf_));
-        for (int i = 1; i < numels_.size(); ++i) {
-          tlist.push_back(static_cast<float*>(q_tensor_buf_) + numels_[i - 1]);
-        }
-        for (int i = param_group_n_; i < tuple->fields.size(); ++i) {
-          DLTensor* tensor = ir::Downcast<TensorValue>(tuple->fields[i]);
-          tlist.push_back(static_cast<float*>(tensor->data));
-        }
-        multi_tensor_lans_cuda<float>(
-            CHUNK_SIZE, tlist, learning_rate_, beta1_, beta2_, eps_, bias_correction_,
-            bias_correction1, bias_correction2, beta3, weight_decay_, grad_averaging_, mode_,
-            normalize_grad_, numels_, compute_stream, static_cast<float*>(output_per_tensor_),
-            static_cast<float*>(grad_norm_tensor_), static_cast<float*>(param_norm_tensor_),
-            static_cast<float*>(update_m_norm_), static_cast<float*>(q_norm_tensor_),
-            max_chunks_per_tensor_);
-        break;
-      }
-      default: {
-        LOG(FATAL) << "Unsupported dtype: " << DType(t0->dtype).c_str();
-        throw;
-      }
+    std::vector<float*> tlist;
+    for (int i = 0; i < param_group_n_; ++i) {
+      DLTensor* tensor = ir::Downcast<TensorValue>(tuple->fields[i]);
+      tlist.push_back(static_cast<float*>(tensor->data));
     }
+    tlist.push_back(static_cast<float*>(q_tensor_buf_));
+    for (int i = 1; i < numels_.size(); ++i) {
+      tlist.push_back(static_cast<float*>(q_tensor_buf_) + numels_[i - 1]);
+    }
+    for (int i = param_group_n_; i < tuple->fields.size(); ++i) {
+      DLTensor* tensor = ir::Downcast<TensorValue>(tuple->fields[i]);
+      tlist.push_back(static_cast<float*>(tensor->data));
+    }
+    multi_tensor_lans_cuda<float>(
+        CHUNK_SIZE, tlist, learning_rate_, beta1_, beta2_, eps_, bias_correction_, bias_correction1,
+        bias_correction2, beta3, weight_decay_, grad_averaging_, mode_, normalize_grad_, numels_,
+        compute_stream_, static_cast<float*>(output_per_tensor_),
+        static_cast<float*>(grad_norm_tensor_), static_cast<float*>(param_norm_tensor_),
+        static_cast<float*>(update_m_norm_), static_cast<float*>(q_norm_tensor_),
+        max_chunks_per_tensor_);
   }
 
   std::string name() const override {
@@ -174,6 +165,8 @@ class LansImpl : public raf::op::OpEnv {
   void* q_norm_tensor_;
   int max_chunks_per_tensor_;
   void* q_tensor_buf_;
+  void* compute_stream_;
+  DLDevice cpu_ctx_;
 };
 
 RAF_REGISTER_DIALECT_OP(cuda, lans, 20);

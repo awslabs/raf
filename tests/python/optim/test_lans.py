@@ -219,6 +219,7 @@ def test_state_partition(mock_get_context):
             self.zero_opt_level = 2
             self.size = 4
             self.rank = 3
+            self.group_bucket_size = 50000000
 
     mock_get_context.return_value = MockContext()
 
@@ -253,7 +254,8 @@ def test_state_partition(mock_get_context):
 
     # Verify IR. This model has 7 parameters and 9 gradients
     # (gradients for input data and ytrure are useless).
-    assert text.count("raf.op._reduce_scatter") == 9, text
+    # The 9 _reduce_scatters are grouped. So only 1 _group_reduce_scatter.
+    assert text.count("raf.op._group_reduce_scatter") == 1, text
     assert text.count("raf.op._allgather") == 7, text
     assert text.count("raf.op.strided_slice") == 7, text
 

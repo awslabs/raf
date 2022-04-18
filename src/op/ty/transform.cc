@@ -703,7 +703,6 @@ Type StridedSliceInfer(const CallValues& value) {
 
   auto dshape = data->shape;
   int64_t num_axis = dshape.size();
-
   Array<PrimExpr> begin = GetShapeExprFromValue(args->begin);
   Array<PrimExpr> end = GetShapeExprFromValue(args->end);
   auto is_any = [](PrimExpr expr) { return expr->IsInstance<tvm::tir::AnyNode>(); };
@@ -803,6 +802,7 @@ Type StridedSliceInfer(const CallValues& value) {
       slice_range = end_v - begin_v;
       step = stride_v;
     }
+    CHECK_NE(step, 0) << "step can not be zero ";
     oshape[i] = Integer((slice_range + step - 1) / step);
   }
 

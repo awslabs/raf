@@ -833,6 +833,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   tvm::With<Device> dctx((*it).second);
   pass::PassContext pass_ctx = pass::PassContext::Current();
   tvm::With<pass::PassContext> ctx(pass_ctx);
+  auto dist_ctx = DistContext::Global();
 
   Array<pass::Pass> pass_seqs;
 
@@ -840,6 +841,10 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::GradInputSelect());
   pass_seqs.push_back(pass::InlineLet());
   pass_seqs.push_back(pass::DeadCodeElimination());
+  // enable group all gather for ZeRO.
+  if (dist_ctx->zero_opt_level > 1 && dist_ctx->group_bucket_size > 1) {
+    pass_seqs.push_back(pass::GroupAllgather());
+  }
 
   bool enable_stream_schedule = true;
   if (!pass_ctx->GetConfig("raf.vm.optimize.anf_only", Bool(false)).value()) {

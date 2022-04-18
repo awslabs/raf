@@ -17,14 +17,17 @@ from raf.testing import compile_vm_model, randn, one_hot_torch
 
 
 def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
+    bucket_size = 5000000000
     record = ad_model._internal(*args)
     mod = record.mod
     mod = InferType()(mod)
-    mod = PartitionGradient(opt_level, rank_size, rank)(mod)
+    mod = PartitionGradient(opt_level, rank_size, rank, bucket_size)(mod)
     mod = InferType()(mod)
     text = raf.ir.AsText(mod)
     assert text.count("raf.op.pad") == n_pad
-    assert text.count("raf.op.split") == n_grad
+    if opt_level == 1:
+        assert text.count("raf.op.split") == n_grad
+
     nccl_version = raf.build.with_nccl()
 
     if opt_level == 1:
@@ -33,44 +36,60 @@ def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
         # let %x_2 = %x_1.3;
         # ...
         # let %a10 = (..., %x_2, ...);
-        slice_grad_regex = fr"let %x_(\d+) = %x_\d+\.{rank};"
+        grad_regex = fr"let %x_(\d+) = %x_\d+\.{rank};"
     elif opt_level == 2:
-        # ZeRO-2 uses reduce_scatter to slice gradients.
-        assert text.count("raf.op._reduce_scatter") == n_grad, text
+        # ZeRO-2 uses group_reduce_scatter to slice gradients.
+        assert text.count("raf.op._group_reduce_scatter") == 1, text
 
         # Gradients will be sliced as follows in ZeRO-2:
         # # if NCCL version is >= 2.10
-        # let %x_1 = raf.op.split(%a0, 4);
-        # let %x_2 = raf.op._recuce_scatter(%x_1, avg);
+        # let %x = (%x_0, %x1, ...);
+        # let %y = raf.op._group_recuce_scatter(%x, avg);
+        # let %y_0 = %y.0
+        # let %y_1 = %y.1
         # ...
-        # let %a10 = (..., %x_2, ...);
+        # let %a10 = (..., %y_0, %y_1, ...);
         # # else NCCL version is < 2.10
-        # let %x_1 = raf.op.split(%a0, 4);
-        # let %x_2 = raf.op._recuce_scatter(%x_1, sum);
-        # let %x_3 = raf.op.divide(%x_2, ...)
+        # let %x = (%x_0, %x1, ...);
+        # let %y = raf.op._group_recuce_scatter(%x, avg);
+        # let %y_0 = %y.0
+        # let %y_3 = raf.op.divide(%y_0, ...)
         # ...
-        # let %a10 = (..., %x_3, ...);
+        # let %a10 = (..., %y_3, ...);
         if nccl_version >= 21000:
-            slice_grad_regex = fr"let %x_(\d+) = raf.op._reduce_scatter.+"
+            grad_regex = fr"let %x_(\d+) = raf.op._group_reduce_scatter.+"
         else:
-            slice_grad_regex = fr"let %x_(\d+) = raf.op.divide.+"
+            grad_regex = fr"let %x_(\d+) = raf.op.divide.+"
     else:
         assert False, "Unsupported opt_level %d" % opt_level
 
     # Verify that the output gradient tuple contains all sliced gradients.
     verify_grad_tuple = False
     split_grads = set()
+    find_grad = False
+    print("text ", text)
     for line in text.split("\n"):
-        tokens = re.search(slice_grad_regex, line)
+        tokens = re.search(grad_regex, line)
         if tokens:
-            split_grads.add(f"%x_{tokens.group(1)}")
+            grad_var = f"%x_{tokens.group(1)}"
+            split_grads.add(grad_var)
+            find_grad = True
             continue
+        if find_grad:
+            if opt_level == 2 and nccl_version >=2100:
+                pattern = fr"let %x_(\d+) = {grad_var}.+;"
+                tokens = re.search(pattern, line)
+                if tokens:
+                    if grad_var in split_grads:
+                        split_grads = set() 
+                    split_grads.add(f"%x_{tokens.group(1)}")
+                    continue
 
-        tokens = re.search(r"let .+ = \((.+)\);", line)
-        if tokens:
-            if all([g in split_grads for g in tokens.group(1).replace(" ", "").split(",")]):
-                verify_grad_tuple = True
-                break
+            tokens = re.search(r"let .+ = \((.+)\);", line)
+            if tokens:
+                if all([g in split_grads for g in tokens.group(1).replace(" ", "").split(",")]):
+                    verify_grad_tuple = True
+                    break
     assert verify_grad_tuple
 
     if raf.build.with_cuda():
@@ -108,7 +127,7 @@ def test_basic(mock_get_context, opt_level, batch):
     class MockContext:
         def __init__(self):
             self.enable_data_parallel = True
-            self.zero_opt_level = 1
+            self.zero_opt_level = opt_level
             self.size = 4
             self.rank = 3
 
@@ -128,7 +147,6 @@ def test_basic(mock_get_context, opt_level, batch):
     elif batch == 7:
         # The first axis of all gradients are non-dividable.
         verify_ir(opt_level, ad_model, [m_dy, m_x, m_ytrue], 4, 1, 9, 9)
-
 
 if __name__ == "__main__":
     pytest.main([__file__])

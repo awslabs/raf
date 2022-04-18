@@ -89,7 +89,6 @@ class TypeInferencer : public ExprMutator {
   Expr VisitExpr_(const CallNode* call) override {
     static const Op& invoke_op = Op::Get("raf.op.vm.invoke_op");
     const OpNode* opn = call->op.as<OpNode>();
-    std::cout << " infer type op is " << opn->name << "\n" << std::flush;
     if (opn && GetRef<Op>(opn) == invoke_op) {
       // Since invoke_op use the second argument (input tuple) to invoke
       // the first argument (op or closure), we need to update the var map

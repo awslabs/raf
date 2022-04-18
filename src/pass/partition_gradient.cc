@@ -24,13 +24,16 @@ namespace partition_gradient {
 
 class GradientPartitioner : public ExprMutator {
  public:
-  GradientPartitioner(int opt_level, int n_part, const Function& func)
-      : opt_level_(opt_level), n_part_(n_part), func_(func) {
+  GradientPartitioner(int opt_level, int n_part, int64_t bucket_size, const Function& func)
+      : opt_level_(opt_level), n_part_(n_part), bucket_size_(bucket_size), func_(func) {
     // Build the var to expr map for the ANF.
     Map<Var, Expr> var_to_expr;
     auto ell = ExplicitLetList::make(func->body);
     for (size_t i = 0; i < ell->vars.size(); ++i) {
       var_to_expr.Set(ell->vars[i], ell->exprs[i]);
+      if (IsAllReduceCall(ell->exprs[i])) {
+        last_all_reduce_ = ell->vars[i];
+      }
     }
 
     // Assume output is a tuple of (forward out, (grads, ...))
@@ -84,8 +87,7 @@ class GradientPartitioner : public ExprMutator {
       if (grads_.count(curr_var) > 0) {
         // The curr_var is a complete gradient.
         CHECK(!grads_[curr_var].defined());
-        auto grad_var = SliceGrad(scope, curr_var, value, opt_level_);
-        grads_.Set(curr_var, grad_var);
+        SliceGrad(scope, curr_var, value, opt_level_);
       } else if (curr_var == grad_tuple_var_) {
         // Replace gradients with sliced ones.
         Array<Expr> fields;
@@ -212,20 +214,34 @@ class GradientPartitioner : public ExprMutator {
    * let %4 = TupleGetItem(%3, rank);
    * TODO(comaniac): Add %rank to the function argument if rank_ is unknown.
    *
-   * The desired IR for ZeRO-2 is:
+   * The desired IR for ZeRO-2 is if bucket_size_ < 2:
    * // if NCCL version is >= 2.10
    * let %1 = op(%0);       // A backward op to generate gradient
    * let %2 = pad(%1, ...); // %1 is the complete local gradient
-   * let %3 = split(%2, ...);
+   * let %3 = Tuple(%2);
    * let %4 = reduce_scatter(%3, avg);
    * // else NCCL version is < 2.10
    * let %1 = op(%0);       // A backward op to generate gradient
    * let %2 = pad(%1, ...); // %1 is the complete local gradient
-   * let %3 = split(%2, ...);
+   * let %3 = Tuple(%2);
    * let %4 = reduce_scatter(%3, sum);
    * let %5 = divide(%4, ...)
-   */
-  Var SliceGrad(LetList* scope, const Var& var, const Expr& value, int opt_level) {
+   * The desired IR for ZeRO-2 is if bucket_size_ > 2, which means group reduce_scatter:
+   * // if NCCL version is >= 2.10
+   * let %1 = op(%0);       // A backward op to generate gradient
+   * let %2 = pad(%1, ...); // %1 is the complete local gradient
+   * let %3 = Tuple(%2);
+   * let %4 = group_reduce_scatter(%3, avg);
+   * // else NCCL version is < 2.10
+   * let %1 = op(%0);       // A backward op to generate gradient
+   * let %2 = pad(%1, ...); // %1 is the complete local gradient
+   * let %3 = Tuple(%2);
+   * let %4 = group_reduce_scatter(%3, sum);
+   * let %5 = %4.0
+   * let %6 = divide(%5, ...)
+
+*/
+  void SliceGrad(LetList* scope, const Var& var, const Expr& value, int opt_level) {
     static const Op& split_op = Op::Get("raf.op.split");
     static const Op& reduce_scatter_op = Op::Get("raf.op._reduce_scatter");
     Expr allreduce_expr, divide_expr;
@@ -235,11 +251,12 @@ class GradientPartitioner : public ExprMutator {
       // no need to apply ZeRO-2.
       opt_level = 1;
     }
-    auto grad_var = var;
+    Var grad_var;
     if (opt_level > 1) {
       // ZeRO-2: Replace the AllReduce with ReduceScatter.
       auto first_arg = Downcast<Var>(GetNArg(allreduce_expr, 0));
       // The 1st arg of allreduce is a tuple of tensors.
+      Constant compute = Downcast<Constant>(GetNArg(allreduce_expr, 1));
       auto arg_tuple = Downcast<Tuple>(var_to_expr_[first_arg]);
       CHECK_EQ(arg_tuple->fields.size(), 1U) << "Not supported yet";
 
@@ -251,28 +268,81 @@ class GradientPartitioner : public ExprMutator {
       } else {
         grad_var = Downcast<Var>(arg_tuple->fields[0]);
       }
+
+      int64_t size = common::shape_utils::NElement(grad_var);
+      grad_var = GenPadCall(scope, grad_var);
+      if (bucket_size_ < 2) {
+        // Do not group redcue_scatter
+        grad_var = scope->Push(Tuple({grad_var}));
+        auto reduce_scatter_var = scope->Push(Call(reduce_scatter_op, {grad_var, compute}));
+        if (divide_expr.defined()) {
+          // update the divide op args
+          auto divide_call = divide_expr.as<CallNode>();
+          reduce_scatter_var =
+              scope->Push(Call(divide_call->op, {reduce_scatter_var, divide_call->args[1]}));
+        }
+        grads_.Set(var, reduce_scatter_var);
+      } else {
+        if (var == last_all_reduce_) {
+          scatter_input_.push_back(grad_var);
+          scatter_var_.push_back(var);
+          divide_expr_.push_back(divide_expr);
+          IssueGroupScatter(scope, compute);
+          return;
+        }
+        if (curr_size_ + size < bucket_size_) {
+          scatter_input_.push_back(grad_var);
+          scatter_var_.push_back(var);
+          divide_expr_.push_back(divide_expr);
+          curr_size_ += size;
+        } else {
+          IssueGroupScatter(scope, compute);
+          scatter_input_.push_back(grad_var);
+          scatter_var_.push_back(var);
+          divide_expr_.push_back(divide_expr);
+          curr_size_ = size;
+        }
+      }
     } else {
       // ZeRO-1: Keep AllReduce (or the backward op if data parallel is disabled).
       scope->Push(var, value);
+      grad_var = GenPadCall(scope, var);
+      grad_var = scope->Push(Call(split_op, {grad_var, MakeConstant(ScalarValue::make(n_part_)),
+                                             MakeConstant(ScalarValue::make(0))}));
+      auto replace_var = scope->Push(TupleGetItem(grad_var, rank_));
+      grads_.Set(var, replace_var);
     }
 
-    grad_var = GenPadCall(scope, grad_var);
-    grad_var = scope->Push(Call(split_op, {grad_var, MakeConstant(ScalarValue::make(n_part_)),
-                                           MakeConstant(ScalarValue::make(0))}));
+    // if (opt_level > 1) {
+    //   auto compute = Downcast<Constant>(GetNArg(allreduce_expr, 1));
+    //   auto reduce_scatter_var = scope->Push(Call(reduce_scatter_op, {grad_var, compute}));
+    //   if (divide_expr.defined()) {
+    //     // update the divide op args
+    //     auto divide_call = divide_expr.as<CallNode>();
+    //     return scope->Push(Call(divide_call->op, {reduce_scatter_var, divide_call->args[1]}));
+    //   }
+    //   return reduce_scatter_var;
+    // }
+  }
 
-    if (opt_level > 1) {
-      auto compute = Downcast<Constant>(GetNArg(allreduce_expr, 1));
-      auto reduce_scatter_var = scope->Push(Call(reduce_scatter_op, {grad_var, compute}));
+  void IssueGroupScatter(LetList* scope, Constant compute) {
+    static const Op& group_reduce_scatter = Op::Get("raf.op._group_reduce_scatter");
+    auto inputs = scope->Push(Tuple(scatter_input_));
+
+    auto scatter_out = scope->Push(Call(group_reduce_scatter, {inputs, compute}));
+    for (int i = 0; i < scatter_var_.size(); ++i) {
+      auto update_var = scope->Push(TupleGetItem(scatter_out, i));
+      auto divide_expr = divide_expr_[i];
       if (divide_expr.defined()) {
         // update the divide op args
         auto divide_call = divide_expr.as<CallNode>();
-        return scope->Push(Call(divide_call->op, {reduce_scatter_var, divide_call->args[1]}));
+        update_var = scope->Push(Call(divide_call->op, {update_var, divide_call->args[1]}));
       }
-      return reduce_scatter_var;
+      grads_.Set(scatter_var_[i], update_var);
     }
-    return scope->Push(TupleGetItem(grad_var, rank_));
+    scatter_input_ = {};
+    scatter_var_ = {};
   }
-
   /*! \brief The scope stack of the let list. */
   std::vector<std::unique_ptr<LetList>> scopes_;
   /*! \brief The optimization level (ZeRO-n). */
@@ -289,14 +359,27 @@ class GradientPartitioner : public ExprMutator {
   Var grad_tuple_var_;
   /*! \brief Mapping from let-binding var to the expression. */
   Map<Var, Expr> var_to_expr_;
+  /*! \brief The bucket size for group scatter. */
+  int64_t bucket_size_;
+  /*! \brief The current bucket size for group scatter. */
+  int64_t curr_size_ = 0;
+  /*! \brief The last all reduce in graph. */
+  Var last_all_reduce_;
+  /*! \brief The inputs for group scatter. */
+  std::vector<Expr> scatter_input_;
+  /*! \brief The group scatter var. */
+  std::vector<Var> scatter_var_;
+  /*! \brief Divide expr after allreduce for NCCL version < 2.10. */
+  std::vector<Expr> divide_expr_;
 };
 
 }  // namespace partition_gradient
 
-Pass PartitionGradient(int opt_level, int n_part, int rank) {
+Pass PartitionGradient(int opt_level, int n_part, int rank, int64_t bucket_size) {
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,
                                                                              PassContext pc) {
-    return partition_gradient::GradientPartitioner(opt_level, n_part, f).Partition(rank);
+    return partition_gradient::GradientPartitioner(opt_level, n_part, bucket_size, f)
+        .Partition(rank);
   };
   auto partition_gradient = CreateRAFFunctionPass(pass_func, 0, "PartitionGradientFunc", {});
   return RAFSequential({partition_gradient, EraseType(), DeadCodeElimination()},
