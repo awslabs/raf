@@ -31,9 +31,6 @@ class GradientPartitioner : public ExprMutator {
     auto ell = ExplicitLetList::make(func->body);
     for (size_t i = 0; i < ell->vars.size(); ++i) {
       var_to_expr.Set(ell->vars[i], ell->exprs[i]);
-      if (IsAllReduceCall(ell->exprs[i])) {
-        last_all_reduce_ = ell->vars[i];
-      }
     }
 
     // Assume output is a tuple of (forward out, (grads, ...))
@@ -53,12 +50,13 @@ class GradientPartitioner : public ExprMutator {
       grad_tuple_var_ = Downcast<Var>(tuple->fields[tgi->index]);
       grads = var_to_expr[grad_tuple_var_];
     }
-
-    for (auto field : Downcast<Tuple>(grads)->fields) {
+    auto grad_fields = Downcast<Tuple>(grads)->fields;
+    for (auto field : grad_fields) {
       CHECK(field->IsInstance<VarNode>())
           << "Expected a var in the gradient tuple, but got " << field->GetTypeKey();
       grads_.Set(Downcast<Var>(field), Expr());
     }
+    last_all_reduce_ = Downcast<Var>(grad_fields[grad_fields.size() - 1]);
 
     scopes_.emplace_back(new LetList);
   }
