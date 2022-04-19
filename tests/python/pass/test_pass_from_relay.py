@@ -1089,7 +1089,7 @@ def test_gelu_pattern(shape, dtype):
     bias = _relay.var("bias", shape=shape, dtype=dtype)
 
     a0 = _relay.add(r_x, bias)
-    a1 = _relay.multiply(a0, _relay.const(1 / 2 ** 0.5, dtype))
+    a1 = _relay.multiply(a0, _relay.const(1 / 2**0.5, dtype))
     a2 = _relay.erf(a1)
     a3 = _relay.multiply(a2, _relay.const(0.5, dtype))
     a4 = _relay.add(_relay.const(0.5, dtype), a3)

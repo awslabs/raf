@@ -36,7 +36,7 @@ def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
         # let %x_2 = %x_1.3;
         # ...
         # let %a10 = (..., %x_2, ...);
-        grad_regex = fr"let %x_(\d+) = %x_\d+\.{rank};"
+        grad_regex = rf"let %x_(\d+) = %x_\d+\.{rank};"
     elif opt_level == 2:
         # ZeRO-2 uses group_reduce_scatter to slice gradients.
         assert text.count("raf.op._group_reduce_scatter") == 1, text
@@ -57,9 +57,9 @@ def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
         # ...
         # let %a10 = (..., %y_3, ...);
         if nccl_version >= 21000:
-            grad_regex = fr"let %x_(\d+) = raf.op._group_reduce_scatter.+"
+            grad_regex = rf"let %x_(\d+) = raf.op._group_reduce_scatter.+"
         else:
-            grad_regex = fr"let %x_(\d+) = raf.op.divide.+"
+            grad_regex = rf"let %x_(\d+) = raf.op.divide.+"
     else:
         assert False, "Unsupported opt_level %d" % opt_level
 
@@ -76,12 +76,12 @@ def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
             find_grad = True
             continue
         if find_grad:
-            if opt_level == 2 and nccl_version >=2100:
-                pattern = fr"let %x_(\d+) = {grad_var}.+;"
+            if opt_level == 2 and nccl_version >= 2100:
+                pattern = rf"let %x_(\d+) = {grad_var}.+;"
                 tokens = re.search(pattern, line)
                 if tokens:
                     if grad_var in split_grads:
-                        split_grads = set() 
+                        split_grads = set()
                     split_grads.add(f"%x_{tokens.group(1)}")
                     continue
 
@@ -147,6 +147,7 @@ def test_basic(mock_get_context, opt_level, batch):
     elif batch == 7:
         # The first axis of all gradients are non-dividable.
         verify_ir(opt_level, ad_model, [m_dy, m_x, m_ytrue], 4, 1, 9, 9)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

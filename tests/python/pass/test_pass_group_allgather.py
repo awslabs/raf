@@ -16,6 +16,7 @@ from raf.model import Conv2d, Linear, BatchNorm
 from raf.testing import one_hot_torch, randn
 from raf._ffi import pass_
 
+
 class MNMTest(raf.Model):
     # pylint: disable=attribute-defined-outside-init
     def build(self, input_shape=28, num_classes=10):
@@ -55,6 +56,7 @@ def lower(model, args):
     mod = model._internal(*args).mod
     return optimize(mod)
 
+
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @patch("raf.distributed.get_context")
 def test_group(mock_get_context):
@@ -85,7 +87,7 @@ def test_group(mock_get_context):
 
     record = m_optimizer._internal(*args)
     mod = record.mod
- 
+
     func = lower(m_optimizer, [*args])["main"]
     text = raf.ir.AsText(func)
     ## Verify IR. This model has 7 parameters and 9 gradients
@@ -95,6 +97,7 @@ def test_group(mock_get_context):
     assert text.count("raf.op.strided_slice") == 7, text
     ## Using "zeros(" to exclude "zeros_like" op.
     assert text.count("raf.op.zeros(") == 7, text
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -34,7 +34,7 @@ def with_data_parallel(model):
         """
 
         def build(self, model):
-# pylint: disable=attribute-defined-outside-init, missing-function-docstring
+            # pylint: disable=attribute-defined-outside-init, missing-function-docstring
             self.model = model
 
         @trace
@@ -48,7 +48,11 @@ def with_data_parallel(model):
             #     passes.append(AutoDataParallel())
             if dctx.zero_opt_level > 0:
                 passes.append(InferType())
-                passes.append(PartitionGradient(dctx.zero_opt_level, dctx.size, dctx.rank, dctx.group_bucket_size))
+                passes.append(
+                    PartitionGradient(
+                        dctx.zero_opt_level, dctx.size, dctx.rank, dctx.group_bucket_size
+                    )
+                )
 
             record = self.model._internal(*args, **kwargs)
             mod = record.mod
