@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=too-many-arguments, protected-access, attribute-defined-outside-init
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals, too-many-branches 
 import re
 
 from unittest.mock import patch

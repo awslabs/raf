@@ -1,15 +1,9 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=unused-variable
+# pylint: disable=unused-variable,protected-access
 from unittest.mock import patch
-import re
-import math
 import pytest
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 
 import raf
 from raf.model import Conv2d, Linear, BatchNorm
