@@ -27,7 +27,7 @@ def verify_memory(mod, device, expected_trace, disable_fusion=True, include_para
     for (name, mem), expected in zip(trace, expected_trace):
         assert name != "unknown"
         if isinstance(expected, tuple):  # The expected memory could be a range.
-            assert expected[0] < mem < expected[1]
+            assert expected[0] <= mem < expected[1]
         else:
             check(mem, expected)
 
