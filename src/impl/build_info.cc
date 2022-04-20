@@ -31,8 +31,12 @@ std::string UseCuBLAS() {
   return RAF_USE_CUBLAS;
 }
 
-std::string UseCuDNN() {
-  return RAF_USE_CUDNN;
+bool UseCuDNN() {
+#ifdef RAF_USE_CUDNN
+  return true;
+#else
+  return false;
+#endif
 }
 
 std::string UseLLVM() {

@@ -257,7 +257,7 @@ class TorchMatmulDropout(nn.Module):
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape_dict", [{"input0": ((128, 20), "float32")}])
 @pytest.mark.parametrize("p", [0.6, 0.0])
-@pytest.mark.parametrize("device", ["cpu", "cuda"])
+@pytest.mark.parametrize("device", ["cuda"])
 @pytest.mark.parametrize("mode", ["forward", "backward", "sgd"])
 @with_seed(0)
 def test_mm_dropout(shape_dict, p, device, mode):
