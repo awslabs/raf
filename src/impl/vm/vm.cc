@@ -1076,9 +1076,7 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     // prepare distributed requests
     for (size_t i = 0; i < requests->distributed.size(); i++) {
       Requests::DistributedRequest& entry = requests->distributed[i];
-      *entry.dest = (void*)(Communicator::Get().as<CommunicatorObj>());
-      // TODO(@Tonny-Gu): force removing const attribute here is dirty. Can we return a ObjectRef or
-      // ncclComm_t handler instead?
+      *entry.dest = (void*)(Communicator::Get(entry.name, entry.rank_list).as<CommunicatorObj>());
     }
 #ifdef RAF_USE_CUDA
     // prepare cuda stream requests

@@ -31,7 +31,7 @@ def with_cudnn():
 
 def with_mpi():
     """Whether MPI build is turned on."""
-    return build_info.use_mpi() != "OFF"
+    return build_info.use_mpi()
 
 
 def with_nccl():

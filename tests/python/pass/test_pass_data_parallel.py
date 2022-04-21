@@ -32,9 +32,10 @@ def one_hot(batch_size, num_classes, device="cuda"):
     ],
 )
 def test_dp(config):
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
-    device = f"cuda({dctx.local_rank})"
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
+    comm = dist.get_communicator()
+    device = f"cuda({comm.local_rank})"
     const, _ = randn([config[0], config[1]], device=device)
     nccl_version = raf.build.with_nccl()
 
@@ -122,8 +123,8 @@ def test_dp(config):
             expr_g2 = raf.ir.op._allreduce(allreduce_in2, "avg")
             var_g2 = relay.var("g2")
         else:
-            fdeno = raf.ir.const(float(dctx.size), dtype="float32")
-            ideno = raf.ir.const(dctx.size, dtype="int64")
+            fdeno = raf.ir.const(float(comm.size), dtype="float32")
+            ideno = raf.ir.const(comm.size, dtype="int64")
 
             expr_g = raf.ir.op._allreduce(allreduce_in)
             var_g_sum = relay.var("g_sum")
@@ -213,7 +214,7 @@ def test_dp(config):
     text = func_after.astext()
     assert "raf.op._allreduce" in text
     assert tvm.ir.structural_equal(func_after, func_expected)
-    dctx.enable_data_parallel = False
+    dcfg.enable_data_parallel = False
 
 
 if __name__ == "__main__":

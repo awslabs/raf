@@ -8,30 +8,53 @@ For the tutorial of distributed training, please see [here](../2_user_guide/Dist
 
 ## Overview
 
-Distributed RAF mainly adopts the Single Program Multiple Data (SPMD) programming model driven by MPI-like libraries such as NVIDIA Collective Communications Library (NCCL), which provides a set of collective communication operators and bridges multiple discrete GPUs on numerous servers connected via conventional Ethernet or high-performance Infiniband. Specifically, RAF utilizes both MPI and NCCL in a mixed way, where MPI is used to launch the distributed RAF (create many MPI processes) on user-specified nodes and exchange data for initializing NCCL, while NCCL is responsible for transferring and computing tensors among multiple GPUs efficiently.
-
 ```
           RAF IR
              │
              │ Executed by
              ▼
-    RAF VM / Interpreter
-             │
-             │ Dispatch to
-             ▼
-┌───RAF Op Implementation
-│     (in NCCL dialect)
-│            │
-│            │ Request
-│            ▼             Init
-│    RAF NCCLCommunicator◄──────RAF MPICommunicator
-│            │                            │
-│ Call       │ Provide Handle             │ Call
-│            ▼                            ▼
-└────►NCCL Collective Op          MPI Library APIs
+    RAF VM / Interpreter            Client Script
+             │                            │
+             │ Dispatch to                │ Set
+             ▼                            ▼
+┌───RAF Op Implementation       RAF VoidCommunicator
+│     (in NCCL dialect)                   │
+│            │                            │ Be
+│            │ Request                    │
+│            ▼             Init           ▼               Be
+│    RAF NCCLCommunicator◄──────RAF Global Communicator◄──────RAF MPICommunicator (default)
+│            │                                                       │
+│ Call       │ Provide Handle                                        │ Call
+│            ▼                                                       ▼
+└────►NCCL Collective Op                                      MPI Library APIs
 
 
                  Architecture Diagram
+```
+
+Distributed RAF mainly adopts the Single Program Multiple Data (SPMD) programming model driven by MPI-like libraries such as NVIDIA Collective Communications Library (NCCL), which provides a set of collective communication operators and bridges multiple discrete GPUs on numerous servers connected via conventional Ethernet or high-performance Infiniband. By default, RAF uses MPI to launch the Python script. In such a situation, RAF utilizes both MPI and NCCL in a mixed way, where MPI is used to launch the distributed RAF (create many MPI processes) on user-specified nodes and exchange data for initializing NCCL, while NCCL is responsible for transferring and computing tensors among multiple GPUs efficiently.
+
+RAF also offers the ability of using other launchers instead of MPI. RAF provides a set of API to set/get the global communicator. By default, it will be a `MPICommunicator`. Users can switch to use `VoidCommunicator`, so that users can change those distributed infomation freely and use other launchers (e.g. DeepSpeed, torchrun, user-owned multi-process launcher, etc.). When using `VoidCommunicator`, the data exchange for initializing NCCL will be done by using inter-process shared file(s). To enable this feature, users need to set the environment variable `RAF_FILE_STORE_PATH` to a directory.
+
+*P.S.: `VoidCommunicator` now supports single machine only.*
+
+For example, users can run RAF scripts with `RAF_FILE_STORE_PATH=$(pwd) torchrun --standalone --nnodes=1 --nproc_per_node=4 client_script.py`.
+
+```python
+# client_script.py
+from raf import distributed as dist
+
+dist.set_default_communicator("void")
+comm = dist.get_communicator()
+rank = os.environ.get("RANK")  # torchrun provides rank information
+comm.size = 4  # num of GPUs
+comm.rank = rank
+comm.local_rank = 4  # num of GPUs
+comm.local_size = rank
+
+# user-owned logic
+...
+...
 ```
 
 ## Collective Communication Operators
@@ -55,22 +78,19 @@ MPI rank 3: cuda(1) @ node 1
 
 Like many other multi-GPU MPI applications, a number of RAF processes will spawn, and each process will be assigned with an index `rank` and a GPU in order.
 
-To figure out which GPU this process binds to, we could obtain this information at `DistContext`. 
-
-**Deprecation Notice.** Some attributes in `DistContext`, including `rank` and `size`, will be deprecated soon, and user should get these from `Communicator` in the future instead. 
-
+To figure out which GPU this process binds to, we could obtain this information at `Communicator`.
 
 ``` python
 import numpy as np
 import raf
 from raf import distributed as dist
 
-dctx = dist.get_context()
-root_rank = dctx.root_rank     # The root rank.
-size = dctx.size               # The number of total MPI processes.
-rank = dctx.rank               # The rank of this process, ranging from 0 to (size - 1).
-local_rank = dctx.local_rank   # The local rank of this process on this machine.
-local_size = dctx.local_size   # The number of local MPI processes onthis machine.
+comm = dist.get_communicator()  # With MPI enabled, it's a `MPICommunicator`
+root_rank = comm.root_rank      # The root rank.
+size = comm.size                # The number of total MPI processes.
+rank = comm.rank                # The rank of this process, ranging from 0 to (size - 1).
+local_rank = comm.local_rank    # The local rank of this process on this machine.
+local_size = comm.local_size    # The number of local MPI processes onthis machine.
 
 device = f'cuda({local_rank})' # the rank-th GPU on this machine that this process binds to.
 ```
@@ -101,12 +121,12 @@ A portion of RAF collective operators allow users to partition compute resources
 - `raf.allreduce`
 - `raf.allgather`
 
-These operators accept an additional parameter `rank_list`, which is a list of rank subsets, and the process will only talk to ranks in the same subset, and its syntax is straightforward. 
+These operators accept an additional parameter `rank_list`, which is a list of rank subsets, and the process will only talk to ranks in the same subset, and its syntax is straightforward.
 
 Continue with the example above. If we want to let rank 0 talk to rank 1 only, and let rank 2 talk to rank 3, we could simply set the `rank_list` to,
 
 ```python
-x = raf.allreduce([x], "sum", rank_list=[[0, 1], [2, 3]]) 
+x = raf.allreduce([x], "sum", rank_list=[[0, 1], [2, 3]])
 ```
 
 To help you better understand this syntax, we provide more examples in the following table for comparison. Note that AR is short for AllReduce.
@@ -134,7 +154,7 @@ There are several RAF passes that help user convert IR for single machine into d
 Of course, a correct handwritten distributed IR that manually manipulates data shards is also valid.
 ### Communicator
 
-The term *Communicator* may refer to various things in different contexts. To disambiguate, we will use the following phrases to make a distinction. 
+The term *Communicator* may refer to various things in different contexts. To disambiguate, we will use the following phrases to make a distinction.
 
 - Communicator / Sub-Communicator / Global Communicator: Refers to RAF Communicator, a TVM object / class that stores some runtime data of the distributed context.
 - NCCLCommunicator / MPICommunicator: Refers to a derived class from Communicator.
@@ -142,12 +162,12 @@ The term *Communicator* may refer to various things in different contexts. To di
 
 NCCL / MPI Communicator establishes connections between workers, provides each machine an identity and important information (e.g., machine's rank, world size, the handler of NCCL / MPI Communicator, etc.), and exchange data among workers. Thus, we consider each NCCL / MPI Communicator defines a distributed context. To support numerous collective communication libraries and manage multiple communicators, we propose a unified data structure *Communicator* to assist them and record the key information including,
 
-- `local_rank`: local rank ID related to physical hardware location, from this communicator's perspective. 
+- `local_rank`: local rank ID related to physical hardware location, from this communicator's perspective.
 - `local_size`: The amount of processes on the same physical machine, from this communicator's perspective.
 - `rank`: rank ID of this process from this communicator's perspective.
 - `size`: The amount of processes from this communicator's perspective.
-- `global_rank`: rank ID of this process from the global communicator's perspective.
-- `global_size`: The amount of processes from the global communicator's perspective.
+- `world_rank`: rank ID of this process from the global communicator's perspective.
+- `world_size`: The amount of processes from the global communicator's perspective.
 - `group_id`: The ID of group where this process locates. Used by grouping and sub-communicator.
 - `group_size`: The number of groups. Used by grouping and sub-communicator.
 - Handler. The handler of corresponding MPI / NCCL Communicator.
@@ -161,7 +181,7 @@ You might get confused about the three types of `rank`, and why we need multiple
 If we execute the code below,
 
 ```python
-x = raf.allreduce([x], "sum", rank_list=[[1, 2, 3], [0]]) 
+x = raf.allreduce([x], "sum", rank_list=[[1, 2, 3], [0]])
 ```
 
 then the execution flow will look like this,

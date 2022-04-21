@@ -115,7 +115,8 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                 # additional buffers in SGD status.
                 self.has_sgd_w = False
 
-                dctx = dist.get_context()
+                dcfg = dist.get_config()
+                comm = dist.get_communicator()
                 self.params = {}
                 for name, param in self.model.state().items():
                     # For each tensor "param" that requires gradient (i.e., training weights),
@@ -130,7 +131,7 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                         v_w = param
 
                         status_shape = param.shape
-                        if dctx.zero_opt_level:
+                        if dcfg.zero_opt_level:
                             # If optimizer status partitioning is enable, then the first axis of
                             # variant and weight is partitioned to 1/n. Accordingly, we have to
                             # also keep a param.w (size 1/n) locally.
@@ -139,7 +140,7 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                             param_nd = param.to(device="cpu")
                             if "float" in param.dtype and param.dtype != "float32":
                                 param_nd = param_nd.to(dtype="float32")
-                            slice_param = split_ndarray_with_padding(param_nd, dctx.size)[dctx.rank]
+                            slice_param = split_ndarray_with_padding(param_nd, comm.size)[comm.rank]
                             v_w = ndarray(
                                 slice_param,
                                 device=param.device,
@@ -183,7 +184,8 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                 record = self.ad_model._internal(dy, *args, **kwargs)
                 inputs = _get_func_inputs(record, [dy, *args], kwargs)
                 inputs = inputs[1:]  # remove dy
-                dctx = dist.get_context()
+                dcfg = dist.get_config()
+                comm = dist.get_communicator()
                 for i, param in enumerate(inputs):
                     dxi = dxs[i] if len(inputs) > 1 else dxs
                     if param in self.params and has_grad(dxi):
@@ -206,10 +208,10 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
 
                         # If the SGD status is partitioned, use all-gather to sync
                         # the updated weights.
-                        if dctx.zero_opt_level > 0:
+                        if dcfg.zero_opt_level > 0:
                             new_sgd_w = allgather(new_sgd_w, axis=0)
                             # Slice to remove the zero-padding if needed.
-                            if sgd_w.shape[0] * dctx.size > weight.shape[0]:
+                            if sgd_w.shape[0] * comm.size > weight.shape[0]:
                                 new_sgd_w = strided_slice(new_sgd_w, [0], [weight.shape[0]], [1])
 
                         # Update the model parameter.

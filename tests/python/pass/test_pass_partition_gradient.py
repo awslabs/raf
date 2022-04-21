@@ -78,10 +78,11 @@ def verify_ir(opt_level, ad_model, args, rank_size, rank, n_grad, n_pad):
         compile_vm_model(model, "cuda", [arg.to(device="cuda") for arg in args])
 
 
-@patch("raf.distributed.get_context")
+@patch("raf.distributed.get_communicator")
+@patch("raf.distributed.get_config")
 @pytest.mark.parametrize("opt_level", [1, 2])
 @pytest.mark.parametrize("batch", [7, 8])
-def test_basic(mock_get_context, opt_level, batch):
+def test_basic(mock_get_config, mock_get_comm, opt_level, batch):
     class Model(raf.Model):
         def build(self, input_shape=28, num_classes=10):
             self.conv1 = Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=False)
@@ -104,15 +105,20 @@ def test_basic(mock_get_context, opt_level, batch):
             out = self.linear1(out)
             return out
 
-    # Mock the context to apply AutoDataParallel in with_autodiff.
-    class MockContext:
+    # Mock dist config & communicator to let with_lans generate the desired IR.
+    class MockConfig:
         def __init__(self):
             self.enable_data_parallel = True
-            self.zero_opt_level = 1
+            self.zero_opt_level = opt_level
+
+    mock_get_config.return_value = MockConfig()
+
+    class MockComm:
+        def __init__(self):
             self.size = 4
             self.rank = 3
 
-    mock_get_context.return_value = MockContext()
+    mock_get_comm.return_value = MockComm()
     if opt_level == 2 and raf.build.with_nccl() is None:
         pytest.skip("NCCL is not supported")
 

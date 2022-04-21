@@ -271,25 +271,25 @@ def with_dialect(dialect):
     return decorator
 
 
-def get_dist_info(verbose=False):
-    """Helper function to get the distributed context info.
+def get_dist_comm_info(verbose=False):
+    """Helper function to get the distributed communicator info.
 
     Parameters
     ----------
     verbose: bool
-        Whether to print the distributed context information.
+        Whether to print the distributed communicator information.
 
     Returns
     -------
     Tuple[int, int, int]
         A tuple of (total rank, self rank, self local rank)
     """
-    dctx = dist.get_context()
-    root_rank = dctx.root_rank
-    rank = dctx.rank
-    size = dctx.size
-    local_rank = dctx.local_rank
-    local_size = dctx.local_size
+    comm = dist.get_communicator()
+    root_rank = comm.root_rank
+    rank = comm.rank
+    size = comm.size
+    local_rank = comm.local_rank
+    local_size = comm.local_size
 
     if verbose and rank == 0:
         node_info = f"root_rank={root_rank},rank={rank}, \
@@ -317,7 +317,7 @@ def skip_dist_test(min_rank_num=1, require_exact_rank=False):
     if not raf.build.with_distributed():
         return True
 
-    size, _, _ = get_dist_info()
+    size, _, _ = get_dist_comm_info()
     if require_exact_rank:
         return size != min_rank_num
     return size < min_rank_num

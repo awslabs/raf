@@ -24,7 +24,9 @@ MPICommunicator MPICommunicator::make(Value rank_list) {
 
   int initialized = 0;
   MPI_CALL(MPI_Initialized(&initialized));
-  if (initialized) return NullValue<MPICommunicator>();
+  if (initialized) {
+    LOG(FATAL) << "Cannot initialize MPI Communicator for 'MPI_Init' has already been called.";
+  }
 
   int rank, size;
   MPI_CALL(MPI_Init(nullptr, nullptr));
