@@ -16,7 +16,7 @@
 #include "../op/schema/init.h"
 #include "../op/schema/transform.h"
 #include "../op/schema/nn.h"
-#ifdef RAF_USE_CUDNN
+#ifdef RAF_CXX_USE_CUDNN
 #include "../op/dialect/cudnn/cudnn_utils.h"
 #endif
 
@@ -204,7 +204,7 @@ class DeviceAssigner : public ExprMutator {
         new_args.push_back(node->args[1]);
         return Call(node->op, new_args, node->attrs);
       } else if (device_str_ == "cuda" && node->args.size() < 3) {
-#ifdef RAF_USE_CUDNN
+#ifdef RAF_CXX_USE_CUDNN
         tvm::Array<Expr> new_args = node->args;
         auto val = ir::ConstantExtractValue(Downcast<RelayConstant>(node->args[1]));
         new_args.push_back(MakeConstant(
