@@ -267,7 +267,7 @@ class GradientPartitioner : public ExprMutator {
         grad_var = Downcast<Var>(arg_tuple->fields[0]);
       }
 
-      int64_t size = common::shape_utils::NElement(grad_var);
+      int64_t size = common::shape_utils::GetElementNum(grad_var);
       grad_var = GenPadCall(scope, grad_var);
       if (bucket_size_ < 2) {
         // Do not group redcue_scatter

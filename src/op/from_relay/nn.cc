@@ -197,25 +197,13 @@ RAF_OP_FROM_RELAY("nn.pad", "raf.op.pad",
                     return raf_args;
                   });
 
-// FIXME(@XIAO-XIA): Re-enable once dropout/dropout_dx can be dispatched to CuDNN.
-// RAF_OP_FROM_RELAY("nn.dropout", "raf.op._contrib_dropout",
-//                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
-//                     Array<Expr> raf_args = args;
-//                     const auto* relay_attrs = attrs.as<DropoutAttrs>();
-//                     raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->rate)));
-//                     return raf_args;
-//                   });
-RELAY_REGISTER_OP("nn.dropout")
-    .set_attr<op::FRAFFromRelay>("FRAFFromRelay", [](const Attrs& attrs, const Array<Expr>& args,
-                                                     const VarValueMap& val_map) {
-      LOG(WARNING) << "nn.dropout is unavailable in RAF, ignored";
-      const auto* relay_attrs = attrs.as<DropoutAttrs>();
-
-      Array<Expr> ret;
-      ret.push_back(args[0]);
-      ret.push_back(MakeConstant(ScalarValue::make(2)));
-      return Tuple(std::move(ret));
-    });
+RAF_OP_FROM_RELAY("nn.dropout", "raf.op._contrib_dropout",
+                  [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
+                    Array<Expr> raf_args = args;
+                    const auto* relay_attrs = attrs.as<DropoutAttrs>();
+                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->rate)));
+                    return raf_args;
+                  });
 
 }  // namespace from_relay
 }  // namespace op

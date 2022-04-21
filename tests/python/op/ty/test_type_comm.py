@@ -1,17 +1,18 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=no-member, no-self-use, protected-access, too-many-locals
+# pylint: disable=no-member, no-self-use, protected-access, too-many-locals, redefined-outer-name, invalid-name
 """Test collective communication operators in a cluster with 2 GPUs.
 As pytest do not support mpirun, thus we skip this test in pytest progress.
 To test collective_communication, you should run:
 `mpirun -np 2 python3 tests/python/op/ty/test_type_comm.py`
 """
+import os
 import pytest
 import numpy as np
 import raf
 from raf import distributed as dist
-from raf.testing import check_type, run_infer_type, skip_dist_test, get_dist_info
+from raf.testing import check_type, run_infer_type, skip_dist_test, get_dist_comm_info
 from tvm.relay import TensorType, FuncType, TupleType
 
 SKIP_REASON = "Distribution is not enabled or #rank is not expected"
@@ -34,7 +35,7 @@ def test_allreduce_with_tensor(computation):
     shape = (4, 4)
     dtype = "float32"
     model = TestModel()
-    _, rank, local_rank = get_dist_info()
+    _, rank, local_rank = get_dist_comm_info()
     device = f"cuda({local_rank})"
     x = np.ones(shape=shape, dtype=dtype) * (rank + 1)
     x = raf.array(x, device=device)
@@ -64,7 +65,7 @@ def test_allreduce_with_tensor_list(computation):
     shape2 = (3, 4, 5)
     dtype = "float32"
     model = TestModel()
-    _, rank, local_rank = get_dist_info()
+    _, rank, local_rank = get_dist_comm_info()
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=shape1, dtype=dtype) * (rank + 1)
     x2 = np.ones(shape=shape2, dtype=dtype) * (-rank - 1)
@@ -80,5 +81,18 @@ def test_allreduce_with_tensor_list(computation):
 
 
 if __name__ == "__main__":
+    if os.environ.get("RAF_FILE_STORE_PATH", None):
+        dist.set_default_communicator("void")
+        comm = dist.get_communicator()
+        size = int(
+            os.environ.get("OMPI_COMM_WORLD_SIZE", None) or os.environ.get("MPIRUN_NPROCS", None)
+        )
+        rank = int(
+            os.environ.get("OMPI_COMM_WORLD_RANK", None) or os.environ.get("MPIRUN_RANK", None)
+        )
+        comm.size = size
+        comm.rank = rank
+        comm.local_size = size
+        comm.local_rank = rank
     pytest.main([__file__])
     dist.RemoveCommunicator()

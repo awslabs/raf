@@ -206,22 +206,28 @@ def test_traced_lans(config):
 
 
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
-@patch("raf.distributed.get_context")
-def test_state_partition(mock_get_context):
+@patch("raf.distributed.get_communicator")
+@patch("raf.distributed.get_config")
+def test_state_partition(mock_get_config, mock_get_comm):
     """Note that this test only verifies the IR with LANS without checking the correctness.
     Accordingly, this test does not require multiple devices.
     """
     # pylint: disable=too-many-locals, protected-access
-    # Mock the context to let with_lans generate the desired IR.
-    class MockContext:
+    # Mock dist config & communicator to let with_lans generate the desired IR.
+    class MockConfig:
         def __init__(self):
             self.enable_data_parallel = True
             self.zero_opt_level = 2
-            self.size = 4
-            self.rank = 3
             self.group_bucket_size = 50000000
 
-    mock_get_context.return_value = MockContext()
+    mock_get_config.return_value = MockConfig()
+
+    class MockComm:
+        def __init__(self):
+            self.size = 4
+            self.rank = 3
+
+    mock_get_comm.return_value = MockComm()
 
     shape, n_classes = 28, 10
     batch_size = 7

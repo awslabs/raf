@@ -1,13 +1,14 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=no-self-use,invalid-name, protected-access, too-many-locals, too-many-branches
+# pylint: disable=no-self-use,invalid-name, protected-access, too-many-locals, too-many-branches, redefined-outer-name
 """Test collective communication operators in a cluster with 2 GPUs.
 As pytest do not support mpirun, thus we skip this test in pytest progress.
 To test collective_communication, you should run:
 `mpirun -np 2 python3 tests/python/distributed/test_collective_communication.py`
 (in ci/tash_python_unittest.sh)
 """
+import os
 import sys
 import pytest
 import numpy as np
@@ -15,9 +16,8 @@ import numpy as np
 import raf
 from raf import distributed as dist
 from raf._core.ndarray import Symbol
-from raf.testing import check, get_dist_info, skip_dist_test, run_vm_model, run_model
+from raf.testing import check, get_dist_comm_info, skip_dist_test, run_vm_model, run_model
 
-dctx = dist.get_context()
 SKIP_REASON = "Distribution is not enabled or #rank is not expected"
 
 
@@ -40,7 +40,7 @@ def test_allreduce_with_tensor(dtype, computation):
         pytest.skip("avg is not supported in NCCL < 2.10")
 
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype=dtype) * (rank + 1)
     x = raf.array(x, device=device)
@@ -92,7 +92,7 @@ def test_allreduce_with_tensor_list(computation):
         pytest.skip("avg is not supported in NCCL < 2.10")
 
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
@@ -156,7 +156,7 @@ def test_allreduce_with_subcomm(dtype, rank_list):
             return x
 
     model = TestModel()
-    _, rank, local_rank = get_dist_info(verbose=True)
+    _, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype=dtype) * (rank + 1)
     x = raf.array(x, device=device)
@@ -191,7 +191,7 @@ def test_allgather(axis):
             return x
 
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x = raf.array(x, device=device)
@@ -221,7 +221,7 @@ def test_allgather_with_tensor_list(axis):
             return raf.concatenate(x)
 
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
@@ -258,7 +258,7 @@ def test_allgather_with_subcomm(axis, rank_list):
             return raf.concatenate(x)
 
     model = TestModel()
-    _, rank, local_rank = get_dist_info(verbose=True)
+    _, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
@@ -297,7 +297,7 @@ def test_reduce_scatter(computation):
         pytest.skip("avg is not supported in NCCL < 2.10")
 
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     n_ones = np.ones(shape=(4, 4), dtype="float32")
     n_x = n_ones * (rank + 1)
@@ -362,7 +362,7 @@ def test_send_recv():
             out = raf.add(x, y)
             return Symbol.make_tuple([out, t])
 
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
     assert total_rank == 2, "This test only runs with 2 ranks"
 
     device = f"cuda({local_rank})"
@@ -395,7 +395,7 @@ def test_reduce(computation):
     if computation == "avg" and raf.build.with_nccl() < 21000:
         pytest.skip("avg is not supported in NCCL < 2.10")
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x = raf.array(x, device=device)
@@ -446,7 +446,7 @@ def test_reduce_list(computation):
     if computation == "avg" and raf.build.with_nccl() < 21000:
         pytest.skip("avg is not supported in NCCL < 2.10")
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
@@ -508,7 +508,7 @@ def test_broadcast():
             return res
 
     model = TestModel(root=0)
-    _, rank, local_rank = get_dist_info(verbose=True)
+    _, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x = raf.array(x, device=device)
@@ -537,7 +537,7 @@ def test_group_allgather(axis):
             return out[0], out[1]
 
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
     x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
@@ -576,7 +576,7 @@ def test_group_reduce_scatter(computation):
         pytest.skip("avg is not supported in NCCL < 2.10")
 
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_info(verbose=True)
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     n_ones = np.ones(shape=(4, 4), dtype="float32")
     n_x = n_ones * (rank + 1)
@@ -603,6 +603,19 @@ def test_group_reduce_scatter(computation):
 
 
 if __name__ == "__main__":
+    if os.environ.get("RAF_FILE_STORE_PATH", None):
+        dist.set_default_communicator("void")
+        comm = dist.get_communicator()
+        size = int(
+            os.environ.get("OMPI_COMM_WORLD_SIZE", None) or os.environ.get("MPIRUN_NPROCS", None)
+        )
+        rank = int(
+            os.environ.get("OMPI_COMM_WORLD_RANK", None) or os.environ.get("MPIRUN_RANK", None)
+        )
+        comm.size = size
+        comm.rank = rank
+        comm.local_size = size
+        comm.local_rank = rank
     exit_code = pytest.main([__file__])
     dist.RemoveCommunicator()
     sys.exit(exit_code)

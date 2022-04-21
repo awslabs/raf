@@ -41,16 +41,17 @@ def with_data_parallel(model):
         def forward(self, *args, **kwargs):
             # pylint: disable=protected-access, missing-function-docstring
             passes = []
-            dctx = dist.get_context()
+            dcfg = dist.get_config()
+            comm = dist.get_communicator()
             # TODO: Refactor AutoDataParallel to let it work on the IR after InlineBackward
             # so that it can be applied here.
-            # if dctx.enable_data_parallel:
+            # if dcfg.enable_data_parallel:
             #     passes.append(AutoDataParallel())
-            if dctx.zero_opt_level > 0:
+            if dcfg.zero_opt_level > 0:
                 passes.append(InferType())
                 passes.append(
                     PartitionGradient(
-                        dctx.zero_opt_level, dctx.size, dctx.rank, dctx.group_bucket_size
+                        dcfg.zero_opt_level, comm.size, comm.rank, dcfg.group_bucket_size
                     )
                 )
 

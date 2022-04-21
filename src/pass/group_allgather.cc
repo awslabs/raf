@@ -12,7 +12,8 @@
 #include "./let_list.h"
 #include "../common/shape_utils.h"
 #include "raf/op_utils.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
+#include "raf/communicator.h"
 #include <string>
 
 namespace raf {
@@ -20,15 +21,15 @@ namespace pass {
 namespace group_comm {
 
 using namespace raf::op;
-using raf::distributed::DistContext;
-
+using raf::distributed::DistConfig;
+using namespace raf::distributed::communicator;
 class CommGrouper : public ExprMutator {
  public:
   CommGrouper(const Function& func) : func_(func) {
-    auto dctx = DistContext::Global();
-
-    local_rank_ = dctx->local_rank;
-    bucket_size_ = dctx->group_bucket_size;
+    auto dcfg = DistConfig::Global();
+    auto comm = GetGlobalCommunicator();
+    local_rank_ = comm->local_rank;
+    bucket_size_ = dcfg->group_bucket_size;
     auto ell = ExplicitLetList::make(func->body);
     auto ret = ell->exprs.back().as<TupleNode>();
     ret_var_ = ell->vars.back();
@@ -61,7 +62,7 @@ class CommGrouper : public ExprMutator {
 
       bool comm_node = false;
 
-      Nodes re_nodes = DetectAllGatherUpdate(node);
+      Nodes re_nodes = MatchParamUpdateWithAllGather(node);
 
       Var update_var = re_nodes.update_var;
       if (update_var.defined()) {
@@ -72,8 +73,9 @@ class CommGrouper : public ExprMutator {
         auto add_node = re_nodes.add_node;
 
         auto gather_var = gather_node->var;
-        int64_t size = common::shape_utils::NElement(update_var);
+        int64_t size = common::shape_utils::GetElementNum(update_var);
         auto var_type = gather_var->checked_type_.as<TensorTypeNode>();
+        CHECK(var_type != nullptr);
         Var zero_input;
 
         Expr allgather_input;
@@ -198,17 +200,20 @@ class CommGrouper : public ExprMutator {
     const LetNode* gather_node;
     const LetNode* add_node;
   };
-  inline Nodes DetectAllGatherUpdate(const LetNode* node) {
+  // TODO @zhen-jia we will have an ANF-based pattern matching mechanism in the future.
+  inline Nodes MatchParamUpdateWithAllGather(const LetNode* node) {
     const LetNode* gather_node = nullptr;
     const LetNode* cast_node = nullptr;
     const LetNode* visit_node = nullptr;
     if (IsOp(node, cast_op_)) {
+      // Matching cast -> allgather -> update parameter throguht in place update add
       cast_node = node;
       gather_node = node->body.as<LetNode>();
       if (IsOp(gather_node, allgather_op_)) {
         visit_node = gather_node->body.as<LetNode>();
       }
     } else if (IsOp(node, allgather_op_)) {
+      // Matching allgather -> update parameter throguht in place update add
       gather_node = node;
       visit_node = node->body.as<LetNode>();
     }
@@ -224,6 +229,7 @@ class CommGrouper : public ExprMutator {
 
   inline Nodes FindUpdateVar(const LetNode* node) {
     if (IsOp(node, slice_op_)) {
+      // Machinig stride_slice followed by add node
       auto add_node = node->body.as<LetNode>();
       if (IsOp(add_node, add_op_)) {
         auto update_var = add_node->var;
@@ -232,7 +238,7 @@ class CommGrouper : public ExprMutator {
         }
       }
     } else {
-      // no slice op
+      // no slice op, only matching add node
       if (IsOp(node, add_op_)) {
         auto update_var = node->var;
         if (params_.count(update_var)) {

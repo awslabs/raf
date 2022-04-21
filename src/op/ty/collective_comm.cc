@@ -9,7 +9,7 @@
  */
 #include <tvm/relay/type.h>
 #include <tvm/tir/op.h>
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 #include "raf/communicator.h"
 #include "raf/type.h"
 #include "../schema/communication.h"
@@ -59,7 +59,7 @@ RAF_OP_TYPE("raf.op._reduce_scatter", "NCCLReduceScatter", ReduceScatterInfer);
 Type GroupReduceScatterInfer(const CallValues& value) {
   const auto* args = value->args.as<GroupReduceScatterArgs>();
   CHECK(args != nullptr);
-  int size = Communicator::Get()->size;
+  int size = GetGlobalCommunicator()->size;
   Array<Type> ret;
   for (const auto& tv : args->tensor_list) {
     const auto& ty = GetType(tv);
@@ -101,7 +101,12 @@ RAF_OP_TYPE("raf.op._recv", "NCCLRecv", RecvInfer);
 Type AllGatherInfer(const CallValues& value) {
   const auto* args = value->args.as<AllgatherArgs>();
   CHECK(args != nullptr);
-  auto size = Communicator::Get(args->rank_list)->size;
+  int size;
+  if (args->rank_list.defined()) {
+    size = Communicator::Get("void", args->rank_list)->size;
+  } else {
+    size = GetGlobalCommunicator()->size;
+  }
   auto ttype = GetType(args->x).as<TensorTypeNode>();
   auto shape = ttype->shape;
   auto new_size = shape[args->axis].as<IntImmNode>()->value * size;
@@ -114,7 +119,7 @@ RAF_OP_TYPE("raf.op._allgather", "NCCLAllGather", AllGatherInfer);
 Type GroupAllGatherInfer(const CallValues& value) {
   const auto* args = value->args.as<GroupAllgatherArgs>();
   CHECK(args != nullptr);
-  int size = Communicator::Get()->size;
+  int size = GetGlobalCommunicator()->size;
   Array<Type> ret;
   for (const auto& tv : args->tensor_list) {
     auto ttype = GetType(tv).as<TensorTypeNode>();

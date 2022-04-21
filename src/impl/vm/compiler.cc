@@ -19,7 +19,7 @@
 #include "raf/binding.h"
 #include "raf/type.h"
 #include "raf/pass.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 #include "./compiler.h"
 
 namespace tvm {
@@ -39,7 +39,7 @@ using namespace raf::op;
 using namespace raf::value;
 using binding::LookupBinding;
 using binding::NDArrayBinding;
-using raf::distributed::DistContext;
+using raf::distributed::DistConfig;
 using tvm::relay::Shape;
 
 /*!
@@ -842,8 +842,8 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   tvm::With<Device> dctx((*it).second);
   pass::PassContext pass_ctx = pass::PassContext::Current();
   tvm::With<pass::PassContext> ctx(pass_ctx);
-  auto dist_ctx = DistContext::Global();
-
+  auto dcfg = DistConfig::Global();
+  auto device_t = (*it).second.device_type();
   Array<pass::Pass> pass_seqs;
 
   // optimization passes that work on ANF
@@ -851,7 +851,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::InlineLet());
   pass_seqs.push_back(pass::DeadCodeElimination());
   // enable group all gather for ZeRO.
-  if (dist_ctx->zero_opt_level > 1 && dist_ctx->group_bucket_size > 1) {
+  if (dcfg->zero_opt_level > 1 && dcfg->group_bucket_size > 1 && device_t == DevType::kCUDA()) {
     pass_seqs.push_back(pass::GroupAllgather());
   }
 
@@ -870,8 +870,8 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
     pass_seqs.push_back(pass::EraseType());
 
     // optimization passes that transform BBNF into ANF
-    if ((*it).second.device_type() == DevType::kCUDA()) {
-      if (DistContext::Global()->enable_data_parallel) {
+    if (device_t == DevType::kCUDA()) {
+      if (DistConfig::Global()->enable_data_parallel) {
         // The current design of EnforceSync assumes ops are executed on multiple CUDA streams:
         // all computation ops are executed on a computation stream, and all communication
         // collectives are executed on another communication stream. Memory copy ops added in

@@ -18,14 +18,6 @@ Communicator Communicator::Get(const std::string& name, const Value rank_list) {
   return CommunicatorPool::Get()->GetCommunicator(name, rank_list);
 }
 
-Communicator Communicator::Get(const Value rank_list) {
-#ifdef RAF_USE_NCCL
-  return CommunicatorPool::Get()->GetCommunicator("nccl", rank_list);
-#else
-  return CommunicatorPool::Get()->GetCommunicator("void", rank_list);
-#endif
-}
-
 void Communicator::InitSubCommunicator(CommunicatorObj* sub_comm, const Value rank_list,
                                        const Communicator global_comm) {
   std::vector<std::vector<int64_t>> rank_list_;
@@ -63,14 +55,14 @@ void Communicator::InitSubCommunicator(CommunicatorObj* sub_comm, const Value ra
     sub_comm->root_rank = global_comm->rank;
     sub_comm->group_id = -1;
     sub_comm->group_size = group_size;
-    sub_comm->host_ids.push_back(global_comm->host_ids[global_comm->rank]);
+    sub_comm->host_ids.push_back(global_comm->host_ids.at(global_comm->rank));
   } else {
     // This rank is in rank_list
     auto& group = rank_list_[group_id];
     int local_size = 0;
     int local_rank = 0;
     for (auto i : group) {
-      sub_comm->host_ids.push_back(global_comm->host_ids[i]);
+      sub_comm->host_ids.push_back(global_comm->host_ids.at(i));
     }
     for (int p = 0; p < size; ++p) {
       if (p == rank) break;
@@ -116,10 +108,69 @@ VoidCommunicator VoidCommunicator::make(Value rank_list) {
     obj->group_size = 0;
     obj->host_ids.push_back(GetHostID());
   } else {
-    InitSubCommunicator(obj.get(), rank_list, Communicator::Get("void"));
+    InitSubCommunicator(obj.get(), rank_list, GetGlobalCommunicator());
   }
 
   return VoidCommunicator(obj);
+}
+
+class GlobalCommunicatorEntry {
+ public:
+  GlobalCommunicatorEntry() = default;
+
+  static GlobalCommunicatorEntry* ThreadLocal() {
+    using TLS = dmlc::ThreadLocalStore<GlobalCommunicatorEntry>;
+    return TLS::Get();
+  }
+  Communicator comm;
+};
+
+Communicator GetGlobalCommunicator() {
+  auto entry = GlobalCommunicatorEntry::ThreadLocal();
+  if (!entry->comm.defined()) {
+#ifdef RAF_USE_MPI
+    Communicator comm = Communicator::Get("mpi");
+#else
+    Communicator comm = Communicator::Get("void");
+#endif
+    entry->comm = comm;
+  }
+  return entry->comm;
+}
+
+void SetDefaultCommunicator(std::string name) {
+  auto entry = GlobalCommunicatorEntry::ThreadLocal();
+  entry->comm = Communicator::Get(name);
+}
+
+void SetGlobalRank(int rank) {
+  CHECK(GetGlobalCommunicator()->IsInstance<communicator::VoidCommunicatorObj>())
+      << "Only VoidCommunicator is mutable";
+  auto comm = GetGlobalCommunicator();
+  comm->rank = rank;
+  comm->world_rank = rank;
+}
+
+void SetGlobalSize(int size) {
+  CHECK(GetGlobalCommunicator()->IsInstance<communicator::VoidCommunicatorObj>())
+      << "Only VoidCommunicator is mutable";
+  auto comm = GetGlobalCommunicator();
+  comm->size = size;
+  comm->world_size = size;
+  // TODO: make `host_ids` configurable.
+  comm->host_ids = std::vector<uint64_t>(size, comm->host_ids[0]);
+}
+
+void SetGlobalLocalRank(int local_rank) {
+  CHECK(GetGlobalCommunicator()->IsInstance<communicator::VoidCommunicatorObj>())
+      << "Only VoidCommunicator is mutable";
+  GetGlobalCommunicator()->local_rank = local_rank;
+}
+
+void SetGlobalLocalSize(int local_size) {
+  CHECK(GetGlobalCommunicator()->IsInstance<communicator::VoidCommunicatorObj>())
+      << "Only VoidCommunicator is mutable";
+  GetGlobalCommunicator()->local_size = local_size;
 }
 
 RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.void")
@@ -128,6 +179,14 @@ RAF_REGISTER_GLOBAL("raf.distributed.communicator._make.void")
 RAF_REGISTER_GLOBAL("raf.distributed.RemoveCommunicator").set_body_typed([]() {
   CommunicatorPool::Get()->Remove();
 });
+
+RAF_REGISTER_GLOBAL("raf.distributed.GetGlobalCommunicator").set_body_typed(GetGlobalCommunicator);
+RAF_REGISTER_GLOBAL("raf.distributed.SetDefaultCommunicator")
+    .set_body_typed(SetDefaultCommunicator);
+RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalRank").set_body_typed(SetGlobalRank);
+RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalSize").set_body_typed(SetGlobalSize);
+RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalLocalRank").set_body_typed(SetGlobalLocalRank);
+RAF_REGISTER_GLOBAL("raf.distributed.SetGlobalLocalSize").set_body_typed(SetGlobalLocalSize);
 
 RAF_REGISTER_OBJECT_REFLECT(VoidCommunicatorObj);
 

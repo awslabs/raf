@@ -13,7 +13,7 @@
 #include "raf/registry.h"
 #include "raf/executor.h"
 #include "raf/pass.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 
 namespace raf {
 namespace model {
@@ -75,7 +75,7 @@ ObjectRef RunModel(ir::IRModule mod, Array<Expr> args) {
   passes.push_back(AutoDiff(requires_grads));
 
   // run auto parallel
-  if (distributed::DistContext::Global()->enable_data_parallel) {
+  if (distributed::DistConfig::Global()->enable_data_parallel) {
     passes.push_back(AutoDataParallel());
   }
 

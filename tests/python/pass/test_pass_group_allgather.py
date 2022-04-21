@@ -11,7 +11,7 @@ from raf.testing import one_hot_torch, randn
 from raf._ffi import pass_
 
 
-class MNMTest(raf.Model):
+class RAFTest(raf.Model):
     # pylint: disable=attribute-defined-outside-init
     def build(self, input_shape=28, num_classes=10):
         self.conv1 = Conv2d(in_channels=3, out_channels=6, kernel_size=5, padding=2, bias=False)
@@ -52,24 +52,29 @@ def lower(model, args):
 
 
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
-@patch("raf.distributed.get_context")
-def test_group(mock_get_context):
+@patch("raf.distributed.get_communicator")
+@patch("raf.distributed.get_config")
+def test_group(mock_get_config, mock_get_comm):
     # pylint: disable=too-many-locals, protected-access
     # Mock the context to let with_lans generate the desired IR.
-    class MockContext:
+    class MockConfig:
         def __init__(self):
             self.enable_data_parallel = True
             self.zero_opt_level = 2
-            self.size = 4
-            self.rank = 3
-            self.local_rank = 3
             self.group_bucket_size = 5000000000
 
-    mock_get_context.return_value = MockContext()
+    mock_get_config.return_value = MockConfig()
 
+    class MockComm:
+        def __init__(self):
+            self.size = 4
+            self.local_rank = 0
+            self.rank = 3
+
+    mock_get_comm.return_value = MockComm()
     shape, n_classes = 28, 10
     batch_size = 7
-    m_model = MNMTest(shape, 10)
+    m_model = RAFTest(shape, 10)
     m_model.train_mode()
     m_optimizer = raf.optim.lans.with_lans()(m_model)
 

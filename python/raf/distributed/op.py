@@ -4,7 +4,7 @@
 # pylint: disable=protected-access, invalid-name
 """Collective communication operators"""
 from .._op import sym
-from .context import get_context
+from .communicator import get_communicator
 
 
 def allreduce(x, computation="sum", rank_list=None):
@@ -43,16 +43,16 @@ def allgather(x, axis, rank_list=None):
 
     is_list = isinstance(x, (tuple, list))
 
-    dctx = get_context()
+    comm = get_communicator()
     if rank_list:
         for group in rank_list:
-            if dctx.rank in group:
+            if comm.rank in group:
                 size = len(group)
                 break
         else:
             size = 1
     else:
-        size = dctx.size
+        size = comm.size
 
     if not is_list:
         x = [x]

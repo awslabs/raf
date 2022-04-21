@@ -11,7 +11,7 @@
 #include <chrono>
 #include <thread>
 #include "raf/op_utils.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 #include "raf/nccl_communicator.h"
 #include "../../schema/communication.h"
 #include "./communication_utils.h"
@@ -282,7 +282,7 @@ class NCCLReduceScatter : public raf::op::OpEnv {
     const DLTensor* out = cv->out;
     size_in_bytes = BytesCompactTensor(*out);
     size = size_in_bytes / (out->dtype.bits / 8);
-    RequestWorkspace(&in_buffer, cv->device, size_in_bytes * DistContext::Global()->size);
+    RequestWorkspace(&in_buffer, cv->device, size_in_bytes * GetGlobalCommunicator()->size);
   }
 
  public:

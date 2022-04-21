@@ -14,7 +14,7 @@
 #include "raf/ir_ext.h"
 #include "raf/op.h"
 #include "raf/op_utils.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 #include "raf/pass.h"
 #include "raf/analysis.h"
 #include "./common.h"
@@ -27,7 +27,7 @@ namespace pass {
 namespace data_parallel_schedule {
 
 using namespace raf::ir;
-using raf::distributed::DistContext;
+using raf::distributed::DistConfig;
 using namespace raf::analysis;
 using op::IsCollectiveOp;
 using stream_pool::StreamTagEnum;

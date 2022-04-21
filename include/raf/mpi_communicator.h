@@ -19,7 +19,6 @@ namespace communicator {
 
 class MPICommunicatorObj final : public CommunicatorObj {
  public:
-  const MPI_Comm mpi_comm = MPI_COMM_WORLD;
   static constexpr const char* _type_key = "raf.distributed.MPICommunicator";
   ~MPICommunicatorObj();
   RAF_FINAL_OBJECT(MPICommunicatorObj, CommunicatorObj);

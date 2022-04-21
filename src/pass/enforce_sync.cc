@@ -10,7 +10,7 @@
 #include "raf/device.h"
 #include "raf/ir.h"
 #include "raf/ir_ext.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 #include "raf/pass.h"
 #include "raf/analysis.h"
 #include "raf/op.h"
@@ -24,7 +24,7 @@ namespace enforce_sync {
 using namespace raf::ir;
 using namespace raf::op;
 using namespace raf::value;
-using raf::distributed::DistContext;
+using namespace raf::distributed::communicator;
 using namespace raf::analysis;
 using stream_pool::StreamTagEnum;
 
@@ -483,7 +483,7 @@ class SyncEnforcer : ExprVisitor {
     auto device = Device::Current(/*allow_default=*/false);
     CHECK_NE(device.device_type(), DevType::kUnknown()) << "Encountered unknown device type.";
     device_id_ = device.device_id();
-    CHECK_EQ(device_id_, DistContext::Global()->local_rank) << "Current device id != local rank.";
+    CHECK_EQ(device_id_, GetGlobalCommunicator()->local_rank) << "Current device id != local rank.";
 
     if (!analyzer_.Analyse(func_->body)) {
       // no collectives found in expr. do nothing.
