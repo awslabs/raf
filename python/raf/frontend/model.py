@@ -219,7 +219,5 @@ class FrameworkModel(BaseModel):
             new_param = param.to(device=device, dtype=dtype)
             self.__aux_params[name] = new_param
 
-        if self._BaseModel__is_train:
-            self.__train_mod = AssignDevice(device)(self.__train_mod)
-        else:
-            self.__infer_mod = AssignDevice(device)(self.__infer_mod)
+        self.__train_mod = AssignDevice(device)(self.__train_mod)
+        self.__infer_mod = AssignDevice(device)(self.__infer_mod)
