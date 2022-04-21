@@ -95,8 +95,12 @@ if __name__ == "__main__":
     if os.environ.get("RAF_FILE_STORE_PATH", None):
         dist.set_default_communicator("void")
         comm = dist.get_communicator()
-        size = int(os.environ.get("OMPI_COMM_WORLD_SIZE"))
-        rank = int(os.environ.get("OMPI_COMM_WORLD_RANK"))
+        size = int(
+            os.environ.get("OMPI_COMM_WORLD_SIZE", None) or os.environ.get("MPIRUN_NPROCS", None)
+        )
+        rank = int(
+            os.environ.get("OMPI_COMM_WORLD_RANK", None) or os.environ.get("MPIRUN_RANK", None)
+        )
         comm.size = size
         comm.rank = rank
         comm.local_size = size

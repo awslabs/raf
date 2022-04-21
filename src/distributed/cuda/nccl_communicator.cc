@@ -24,7 +24,14 @@ class NCCLIdSyncHelper {
   NCCLIdSyncHelper() {
     const char* temp = getenv("RAF_FILE_STORE_PATH");
     if (temp == nullptr) {
-      LOG(FATAL) << "RAF_FILE_STORE_PATH is no set.";
+      LOG(WARNING) << "RAF_FILE_STORE_PATH is no set.";
+      base_path_ = "/tmp/.raf_file_store";
+      int res = syscall(std::bind(::access, base_path_.c_str(), F_OK));
+      // create the directory
+      if (res < 0) {
+        int rv = syscall(std::bind(mkdir, base_path_.c_str(), S_IRWXU | S_IRWXG | S_IRWXO));
+        SYSASSERT(rv, "mkdir");
+      }
     } else {
       base_path_ = std::string(temp);
     }
@@ -38,10 +45,12 @@ class NCCLIdSyncHelper {
     }
 
     if (rank == rank_vec[0]) {
+      // root rank, store NCCL id in the file
       auto vec = std::vector<uint8_t>(reinterpret_cast<uint8_t*>(nccl_id),
                                       reinterpret_cast<uint8_t*>(nccl_id) + NCCL_UNIQUE_ID_BYTES);
       fs_vec_.back()->Set(vec);
     } else {
+      // other ranks, read NCCL id from the file
       auto vec = fs_vec_.back()->Get();
       CHECK(vec.size() == NCCL_UNIQUE_ID_BYTES);
       std::memcpy(nccl_id, vec.data(), vec.size());
@@ -89,6 +98,7 @@ NCCLCommunicator NCCLCommunicator::make(Value rank_list) {
     obj->host_ids = global_comm->host_ids;
     obj->parent_comm = global_comm;
     cudaSetDevice(obj->local_rank);
+    // sync NCCL id between ranks
     if (global_comm->IsInstance<MPICommunicatorObj>()) {
       MPI_CALL(MPI_Bcast(reinterpret_cast<void*>(&nccl_id), sizeof(nccl_id), MPI_BYTE,
                          obj->root_rank, MPI_COMM_WORLD));
@@ -104,6 +114,7 @@ NCCLCommunicator NCCLCommunicator::make(Value rank_list) {
     InitSubCommunicator(obj.get(), rank_list, global_comm);
     obj->parent_comm = global_comm;
 
+    // sync NCCL id between ranks
     ncclUniqueId& root_nccl_id = nccl_id;
     if (global_comm->IsInstance<MPICommunicatorObj>()) {
       std::vector<ncclUniqueId> nccl_ids(obj->group_size);
