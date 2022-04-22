@@ -164,7 +164,7 @@ if (${RAF_USE_NCCL} STREQUAL "OFF")
 else ()
   set(RAF_CXX_FLAGS ${RAF_CXX_FLAGS} -DRAF_USE_NCCL)
   file(GLOB_RECURSE RAF_DISTRIBUTED_SOURCE_FILES
-    ${RAF_NCCL_SOURCE_FILES}/src/distributed/cuda/*.cc
+    ${RAF_NCCL_SOURCE_FILES}/src/distributed/cuda/nccl*.cc
     ${RAF_NCCL_SOURCE_FILES}/src/op/dialect/nccl/*.cc
   )
 endif()
@@ -174,7 +174,7 @@ if (${RAF_USE_MPI} STREQUAL "OFF")
 else ()
   set(RAF_CXX_FLAGS ${RAF_CXX_FLAGS} -DRAF_USE_MPI)
   file(GLOB_RECURSE RAF_MPI_SOURCE_FILES
-    ${CMAKE_CURRENT_LIST_DIR}/src/distributed/cuda/mpi_communicator.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/distributed/cuda/mpi*.cc
   )
 endif()
 
