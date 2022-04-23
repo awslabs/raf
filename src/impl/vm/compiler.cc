@@ -842,13 +842,18 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   tvm::With<Device> dctx((*it).second);
   pass::PassContext pass_ctx = pass::PassContext::Current();
   tvm::With<pass::PassContext> ctx(pass_ctx);
-
+  auto dcfg = DistConfig::Global();
+  auto device_t = (*it).second.device_type();
   Array<pass::Pass> pass_seqs;
 
   // optimization passes that work on ANF
   pass_seqs.push_back(pass::GradInputSelect());
   pass_seqs.push_back(pass::InlineLet());
   pass_seqs.push_back(pass::DeadCodeElimination());
+  // enable group all gather for ZeRO.
+  if (dcfg->zero_opt_level > 1 && dcfg->group_bucket_size > 1 && device_t == DevType::kCUDA()) {
+    pass_seqs.push_back(pass::GroupAllgather());
+  }
 
   bool enable_stream_schedule = true;
   if (!pass_ctx->GetConfig("raf.vm.optimize.anf_only", Bool(false)).value()) {
@@ -865,7 +870,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
     pass_seqs.push_back(pass::EraseType());
 
     // optimization passes that transform BBNF into ANF
-    if ((*it).second.device_type() == DevType::kCUDA()) {
+    if (device_t == DevType::kCUDA()) {
       if (DistConfig::Global()->enable_data_parallel) {
         // The current design of EnforceSync assumes ops are executed on multiple CUDA streams:
         // all computation ops are executed on a computation stream, and all communication

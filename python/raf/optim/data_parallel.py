@@ -49,7 +49,11 @@ def with_data_parallel(model):
             #     passes.append(AutoDataParallel())
             if dcfg.zero_opt_level > 0:
                 passes.append(InferType())
-                passes.append(PartitionGradient(dcfg.zero_opt_level, comm.size, comm.rank))
+                passes.append(
+                    PartitionGradient(
+                        dcfg.zero_opt_level, comm.size, comm.rank, dcfg.group_bucket_size
+                    )
+                )
 
             record = self.model._internal(*args, **kwargs)
             mod = record.mod

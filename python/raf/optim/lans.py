@@ -252,9 +252,6 @@ def with_lans(
                         if "float" not in w.dtype:
                             continue
 
-                        if self.dtype != "float32":
-                            dxi = _op.cast(dxi, "float32")
-
                         g_list.append(dxi)
                         x_list.append(w)
                         m_list.append(m)
