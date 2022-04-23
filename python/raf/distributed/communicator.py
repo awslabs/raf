@@ -65,8 +65,6 @@ class VoidCommunicator(Communicator):
             "rank",
             "local_size",
             "local_rank",
-            "world_size",
-            "world_rank",
         ]
         return {attr: getattr(self, attr) for attr in attr_keys}
 
