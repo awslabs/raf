@@ -164,8 +164,9 @@ if (${RAF_USE_NCCL} STREQUAL "OFF")
 else ()
   set(RAF_CXX_FLAGS ${RAF_CXX_FLAGS} -DRAF_USE_NCCL)
   file(GLOB_RECURSE RAF_DISTRIBUTED_SOURCE_FILES
-    ${RAF_NCCL_SOURCE_FILES}/src/distributed/cuda/nccl*.cc
-    ${RAF_NCCL_SOURCE_FILES}/src/op/dialect/nccl/*.cc
+  file(GLOB_RECURSE RAF_NCCL_SOURCE_FILES
+    ${CMAKE_CURRENT_LIST_DIR}/src/distributed/cuda/nccl*.cc
+    ${CMAKE_CURRENT_LIST_DIR}/src/op/dialect/nccl/*.cc
   )
 endif()
 
