@@ -358,6 +358,57 @@ def test_closure_with_const_args2():
     mod = raf._ffi.pass_.InferType()(mod)
 
 
+def test_closure_param_type_update():
+    shape = (10, 10)
+
+    class Model(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x):
+            out = raf._contrib_dropout(x)
+            out = raf.reshape(out[0], [100])
+            out = raf.cast(out, "float16")
+            return out
+
+    model = Model()
+    m_x, _ = randn(shape, dtype="float32")
+    mod = model._internal(m_x).mod
+    with raf.Device("cuda"):
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.FuseTVM()(mod)
+        mod = raf._ffi.pass_.DispatchDialect()(mod)
+        mod = raf._ffi.pass_.EraseType()(mod)
+        mod = raf._ffi.pass_.ToANormalForm()(mod)
+        mod = raf._ffi.pass_.InlinePrimitives()(mod)
+        mod = raf._ffi.pass_.InferType()(mod)
+
+    # def @main(%x: Tensor[(10, 10), float32]) -> Tensor[(100), float16] {
+    #   let %x1 = raf.op.cudnn._contrib_dropout(%x, float64(0.5), nullptr)
+    #       /* ty=(Tensor[(10, 10), float32], float32, uint8, Tensor[(13), uint8]) */;
+    #   %2 = fn (%p0: (Tensor[(10, 10), float32], float32, uint8, Tensor[(13), uint8]),
+    #            %p1: (int32,), %p2_v2: int64, Primitive=1, Dialect="tvm")
+    #     -> Tensor[(100), float16] {
+    #     %0 = %p0_v2.0;
+    #     %1 = raf.op.tvm.reshape(%0, %p1_v2, bool(0)) /* ty=Tensor[(100), float32] */;
+    #     raf.op.tvm.cast(%1, %p2_v2) /* ty=Tensor[(100), float16] */
+    #   };
+    #   let %x3 = %2(%x1, TupleValue([int32(100)]), str"float16") /* ty=Tensor[(100), float16] */;
+    #   %x3
+    # }
+    hit_count = 0
+    for line in raf.ir.AsText(mod).split("\n"):
+        if line.find("raf.op.cudnn._contrib_dropout") != -1:
+            hit_count += 1
+            assert line.find("ty=(Tensor[(10, 10), float32], float32, uint8") != -1
+        elif line.find("fn") != -1:
+            hit_count += 1
+            assert line.find("Tensor[(10, 10), float32], float32, uint8") != -1
+    assert hit_count == 2
+
+
 def test_multi_functions():
     # Create a symbolic model and run it
     class Add(raf.Model):

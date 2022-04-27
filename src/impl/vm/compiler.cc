@@ -912,7 +912,6 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
 
   // optimization passes that work on ANF
   pass_seqs.push_back(pass::InlinePrimitives());
-  pass_seqs.push_back(pass::PrintIR());
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::InplaceUpdate());
   if (!enable_stream_schedule) {
