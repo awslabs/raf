@@ -367,7 +367,7 @@ def test_closure_param_type_update():
 
         @raf.model.trace
         def forward(self, x):
-            out = raf._contrib_dropout(x)
+            out = raf._contrib_dropout(x) # pylint: disable=no-member
             out = raf.reshape(out[0], [100])
             out = raf.cast(out, "float16")
             return out

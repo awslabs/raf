@@ -137,14 +137,14 @@ class TypeInferencer : public ExprMutator {
       UpdateFuncParamVarMap(fn, call->args);
     }
 
-    Call ret;
+    Call ret = Call(call->op, args, call->attrs, call->type_args);
     if (const FunctionNode* fn = call->op.as<FunctionNode>()) {
-      auto ret_type = InferClosure(GetRef<Call>(call), GetRef<Function>(fn));
+      auto ret_type = InferClosure(ret, GetRef<Function>(fn));
       ret = Call(VisitExpr(call->op), args, call->attrs, call->type_args);
       ret->checked_type_ = ret_type;
     } else if (const GlobalVarNode* gvn = call->op.as<GlobalVarNode>()) {
       auto fn = Downcast<Function>(mod_->Lookup(GetRef<GlobalVar>(gvn)));
-      auto ret_type = InferClosure(GetRef<Call>(call), fn);
+      auto ret_type = InferClosure(ret, fn);
       ret = Call(VisitExpr(call->op), args, call->attrs, call->type_args);
       ret->op->checked_type_ = Unify(gvn->checked_type(), fn->checked_type());
       ret->checked_type_ = ret_type;
