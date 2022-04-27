@@ -196,10 +196,31 @@ class TypeInferencer : public ExprMutator {
 
   Type InferClosure(const Call& call) {
     // TODO(@hzfan): perform template param deduction to eliminate type_params
-    FuncType fty = Downcast<FuncType>(call->op->checked_type());
+    auto fn = Downcast<Function>(call->op);
+    FuncType fty = Downcast<FuncType>(fn->checked_type());
+
     CHECK_EQ(call->args.size(), fty->arg_types.size());
+    bool update_closure = false;
     for (size_t i = 0; i < call->args.size(); ++i) {
-      Unify(call->args[i]->checked_type(), fty->arg_types[i]);
+      try {
+        auto param_type = Unify(call->args[i]->checked_type(), fty->arg_types[i]);
+        fn->params[i]->checked_type_ = param_type;
+      } catch (const dmlc::Error& e) {
+        // If caller type and closure parameter type is inconsistent, update the closure parameter
+        // type if it is the first caller.
+        CHECK(type_updated_closures_.find(fn) == type_updated_closures_.end())
+            << "The following closure is called more than once "
+            << "but callers have inconsistent types:" << std::endl
+            << raf::ir::AsText(fn) << std::endl
+            << e.what();
+        update_closure = true;
+        fn->params[i]->checked_type_ = call->args[i]->checked_type();
+      }
+    }
+
+    if (update_closure) {
+      // TODO: Should infer type the closure body again.
+      type_updated_closures_.insert(fn);
     }
     return fty->ret_type;
   }
@@ -380,6 +401,8 @@ class TypeInferencer : public ExprMutator {
    * E.g. Let %a = %b; Let %c = some_op(%a). The var_value_map_ will map %b to some_op.
    */
   std::unordered_map<const VarNode*, Expr> var_value_map_;
+  /*! \brief A set of type-updated closures. */
+  std::unordered_set<Function, ObjectPtrHash, ObjectPtrEqual> type_updated_closures_;
   /*! \brief Track visited Expr to avoid indefinite recursion in IR with recursive functions */
   std::unordered_set<Expr, ObjectPtrHash, ObjectPtrEqual> visited_;
 };
