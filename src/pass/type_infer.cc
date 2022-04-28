@@ -197,7 +197,6 @@ class TypeInferencer : public ExprMutator {
     auto fty = Downcast<FuncType>(op->checked_type());
     CHECK_EQ(fty->type_constraints.size(), 1);
     TypeInference ti = Downcast<TypeInference>(fty->type_constraints[0]);
-    return ti->func(call_values);
     try {
       return ti->func(call_values);
     } catch (const dmlc::Error& e) {

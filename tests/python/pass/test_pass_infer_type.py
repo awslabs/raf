@@ -358,6 +358,7 @@ def test_closure_with_const_args2():
     mod = raf._ffi.pass_.InferType()(mod)
 
 
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 def test_closure_param_type_update():
     shape = (10, 10)
 
