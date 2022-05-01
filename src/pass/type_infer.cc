@@ -51,14 +51,19 @@ class TypeInferencer : public ExprMutator {
   }
 
   Expr VisitExpr_(const VarNode* op) override {
-    if (!op->checked_type_.defined()) {
-      if (op->type_annotation.defined()) {
-        op->checked_type_ = op->type_annotation;
+    auto var = GetRef<Var>(op);
+    if (closure_param_map_.count(var) > 0) {
+      // Use the updated closure parame var.
+      var = closure_param_map_[var];
+    }
+    if (!var->checked_type_.defined()) {
+      if (var->type_annotation.defined()) {
+        var->checked_type_ = var->type_annotation;
       } else {
-        op->checked_type_ = IncompleteType(kType);
+        var->checked_type_ = IncompleteType(kType);
       }
     }
-    return GetRef<Var>(op);
+    return var;
   }
 
   Expr VisitExpr_(const GlobalVarNode* op) override {
@@ -71,7 +76,7 @@ class TypeInferencer : public ExprMutator {
     return std::move(GetRef<GlobalVar>(op));
   }
 
-  CallValues SchemaToValue(Array<Expr> args, const OpNode* op) {
+  CallValues SchemaToValue(Array<Expr> args, const Op op) {
     CallValues call_values = CallValues::make();
     Array<Value> arg_values;
     for (const auto& arg : args) {
@@ -81,8 +86,8 @@ class TypeInferencer : public ExprMutator {
         arg_values.push_back(GetValue(arg));
       }
     }
-    call_values->args = GetOpAttr<op::FRAFSchema>(GetRef<Op>(op), "FRAFSchema")(arg_values);
-    call_values->callee = OpValue::make(GetRef<Op>(op));
+    call_values->args = GetOpAttr<op::FRAFSchema>(op, "FRAFSchema")(arg_values);
+    call_values->callee = OpValue::make(op);
     return call_values;
   }
 
@@ -120,7 +125,7 @@ class TypeInferencer : public ExprMutator {
     static std::unordered_set<std::string> shape_list{
         "raf.op.shape", "raf.op.get_reduce_axis", "raf.op.get_kept_dims", "raf.op.concatenate_dx"};
     if (opn && shape_list.count(opn->name)) {
-      CallValues call_values = SchemaToValue(args, opn);
+      CallValues call_values = SchemaToValue(args, GetRef<Op>(opn));
       declare_op[GetRef<Op>(opn)](call_values);
       if (call_values->out.defined()) {
         Expr re = ir::MakeConstant(call_values->out);
@@ -132,44 +137,52 @@ class TypeInferencer : public ExprMutator {
       UpdateFuncParamVarMap(fn, call->args);
     }
 
-    Expr op = VisitExpr(call->op);
-    Call ret = Call(op, args, call->attrs, call->type_args);
-    if (const FunctionNode* fn = ret->op.as<FunctionNode>()) {
-      ret->checked_type_ = InferClosure(ret);
-    } else if (const GlobalVarNode* gvn = ret->op.as<GlobalVarNode>()) {
-      ret->op->checked_type_ =
-          Unify(gvn->checked_type(), mod_->Lookup(GetRef<GlobalVar>(gvn))->checked_type());
-      ret->checked_type_ = InferClosure(ret);
-    } else if (const OpNode* opn = ret->op.as<OpNode>()) {
-      ret->checked_type_ = InferPrimitive(ret, opn);
-    } else if (ret->op.as<VarNode>() || ret->op.as<LetNode>()) {
-      // handle recursive func call when op is a var node
-      if (op->checked_type()->IsInstance<IncompleteTypeNode>()) {
-        ret->checked_type_ = IncompleteType(kType);
-      } else {
-        // The var node can be a result of the output type of a func call. A var node
-        // here is valid if it points to a function. Check that the type is a FuncType
-        // and the args of the Call match the type of the FuncType. If yes, return the
-        // FuncType's ret_type.
-        if (const auto* var_node = ret->op.as<VarNode>()) {
-          VisitPrimitiveClosureFromCallerArgs(var_node, call->args);
-        }
-        const FuncTypeNode* fty_node = ret->op->checked_type_.as<FuncTypeNode>();
-        CHECK(fty_node);
-        for (size_t i = 0; i < fty_node->arg_types.size(); i++) {
-          ret->args[i]->checked_type_ = Unify(fty_node->arg_types[i], ret->args[i]->checked_type());
-        }
-        ret->checked_type_ = fty_node->ret_type;
-      }
-    } else if (const auto* ftn = op->checked_type().as<FuncTypeNode>()) {
-      ret->checked_type_ = ftn->ret_type;
+    Call ret = Call(call->op, args, call->attrs, call->type_args);
+    if (const FunctionNode* fn = call->op.as<FunctionNode>()) {
+      auto ret_type = InferClosure(ret, GetRef<Function>(fn));
+      ret = Call(VisitExpr(call->op), args, call->attrs, call->type_args);
+      ret->checked_type_ = ret_type;
+    } else if (const GlobalVarNode* gvn = call->op.as<GlobalVarNode>()) {
+      auto fn = Downcast<Function>(mod_->Lookup(GetRef<GlobalVar>(gvn)));
+      auto ret_type = InferClosure(ret, fn);
+      ret = Call(VisitExpr(call->op), args, call->attrs, call->type_args);
+      ret->op->checked_type_ = Unify(gvn->checked_type(), fn->checked_type());
+      ret->checked_type_ = ret_type;
     } else {
-      LOG(FATAL) << "Invalid op type: " << call->op->GetTypeKey();
+      Expr op = VisitExpr(call->op);
+      ret = Call(op, args, call->attrs, call->type_args);
+      if (const OpNode* opn = ret->op.as<OpNode>()) {
+        ret->checked_type_ = InferPrimitive(ret, GetRef<Op>(opn));
+      } else if (ret->op.as<VarNode>() || ret->op.as<LetNode>()) {
+        // handle recursive func call when op is a var node
+        if (op->checked_type()->IsInstance<IncompleteTypeNode>()) {
+          ret->checked_type_ = IncompleteType(kType);
+        } else {
+          // The var node can be a result of the output type of a func call. A var node
+          // here is valid if it points to a function. Check that the type is a FuncType
+          // and the args of the Call match the type of the FuncType. If yes, return the
+          // FuncType's ret_type.
+          if (const auto* var_node = ret->op.as<VarNode>()) {
+            VisitPrimitiveClosureFromCallerArgs(var_node, call->args);
+          }
+          const FuncTypeNode* fty_node = ret->op->checked_type_.as<FuncTypeNode>();
+          CHECK(fty_node);
+          for (size_t i = 0; i < fty_node->arg_types.size(); i++) {
+            ret->args[i]->checked_type_ =
+                Unify(fty_node->arg_types[i], ret->args[i]->checked_type());
+          }
+          ret->checked_type_ = fty_node->ret_type;
+        }
+      } else if (const auto* ftn = op->checked_type().as<FuncTypeNode>()) {
+        ret->checked_type_ = ftn->ret_type;
+      } else {
+        LOG(FATAL) << "Invalid op type: " << call->op->GetTypeKey();
+      }
     }
     return ret;
   }
 
-  Type InferPrimitive(const Call& call, const OpNode* op) {
+  Type InferPrimitive(const Call& call, const Op op) {
     // Only type inference from leaf to root is supported.
     // Thus incomplete inputs will not be inferred from outputs.
     // Instead, the incompleteness propogates.
@@ -194,14 +207,42 @@ class TypeInferencer : public ExprMutator {
     }
   }
 
-  Type InferClosure(const Call& call) {
+  Type InferClosure(const Call& call, const Function& fn) {
     // TODO(@hzfan): perform template param deduction to eliminate type_params
-    FuncType fty = Downcast<FuncType>(call->op->checked_type());
-    CHECK_EQ(call->args.size(), fty->arg_types.size());
+    bool update_closure = false;
+    Array<Var> new_params;
     for (size_t i = 0; i < call->args.size(); ++i) {
-      Unify(call->args[i]->checked_type(), fty->arg_types[i]);
+      try {
+        // Try to unify caller type and param type.
+        Unify(call->args[i]->checked_type(), fn->params[i]->type_annotation);
+        new_params.push_back(MakeVar(fn->params[i]->name_hint(), fn->params[i]->type_annotation));
+      } catch (const dmlc::Error& e) {
+        // If caller type and closure parameter type are inconsistent and this is the first caller,
+        // update the closure parameter type; othewise throw an error.
+        CHECK(visited_closures_.find(fn) == visited_closures_.end())
+            << "The following closure is called more than once "
+            << "but callers have inconsistent types:" << std::endl
+            << raf::ir::AsText(fn) << std::endl
+            << e.what();
+        update_closure = true;
+        new_params.push_back(MakeVar(fn->params[i]->name_hint(), call->args[i]->checked_type()));
+      }
     }
-    return fty->ret_type;
+
+    Function new_fn = fn;
+    if (update_closure) {
+      // If param types have to be updated, create a new closure with updated param types.
+      // Note that in this case we also have to mutate the closure body to use the updated
+      // param vars, so the closure body cannot be visited in advance.
+      for (size_t i = 0; i < new_params.size(); ++i) {
+        closure_param_map_[fn->params[i]] = new_params[i];
+      }
+      new_fn = WithFields(fn, new_params);
+      UpdateFuncParamVarMap(new_fn.as<FunctionNode>(), call->args);
+    }
+    new_fn = Downcast<Function>(VisitExpr(new_fn));
+    visited_closures_[fn] = new_fn;
+    return Downcast<FuncType>(new_fn->checked_type())->ret_type;
   }
 
   void UpdateFuncParamVarMap(const FunctionNode* fn, const Array<Expr>& args) {
@@ -352,25 +393,29 @@ class TypeInferencer : public ExprMutator {
   }
 
   Expr VisitExpr_(const FunctionNode* op) override {
-    if (visited_.count(GetRef<Function>(op))) {
-      if (!op->checked_type_.defined()) {
-        op->checked_type_ = IncompleteType(kType);
-      }
-      return GetRef<Function>(op);
+    auto fn = GetRef<Function>(op);
+    if (visited_closures_.count(fn) > 0) {
+      fn = visited_closures_[fn];
     }
-    visited_.insert(GetRef<Function>(op));
+    if (visited_.count(fn)) {
+      if (!fn->checked_type_.defined()) {
+        fn->checked_type_ = IncompleteType(kType);
+      }
+      return fn;
+    }
+    visited_.insert(fn);
     Array<Var> params;
     Array<Type> param_types;
-    for (const auto& p : op->params) {
+    for (const auto& p : fn->params) {
       Var param = Downcast<Var>(VisitExpr(p));
       params.push_back(param);
       param_types.push_back(param->checked_type());
     }
-    Expr body = VisitExpr(op->body);
+    Expr body = VisitExpr(fn->body);
     Type ret_type =
-        op->ret_type.defined() ? Unify(body->checked_type(), op->ret_type) : body->checked_type();
-    Function func(params, body, ret_type, op->type_params, op->attrs);
-    func->checked_type_ = FuncType(param_types, ret_type, op->type_params, {});
+        fn->ret_type.defined() ? Unify(body->checked_type(), fn->ret_type) : body->checked_type();
+    Function func(params, body, ret_type, fn->type_params, fn->attrs);
+    func->checked_type_ = FuncType(param_types, ret_type, fn->type_params, {});
     return func;
   }
 
@@ -380,6 +425,10 @@ class TypeInferencer : public ExprMutator {
    * E.g. Let %a = %b; Let %c = some_op(%a). The var_value_map_ will map %b to some_op.
    */
   std::unordered_map<const VarNode*, Expr> var_value_map_;
+  /*! \brief Mapping from original closures to visited ones (may have type-updated params). */
+  std::unordered_map<Function, Function, ObjectPtrHash, ObjectPtrEqual> visited_closures_;
+  /*! \brief Mapping from original closure params to type-updated ones. */
+  std::unordered_map<Var, Var, ObjectPtrHash, ObjectPtrEqual> closure_param_map_;
   /*! \brief Track visited Expr to avoid indefinite recursion in IR with recursive functions */
   std::unordered_set<Expr, ObjectPtrHash, ObjectPtrEqual> visited_;
 };
