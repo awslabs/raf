@@ -191,16 +191,16 @@ OpEnv* CutlassMatmulOpEnv::make(const CallValues& cv) {
   if (!matched_pattern || !valid) {
     std::stringstream ss;
     ss << "[CUTLASS] Cannot JIT: matched pattern? " << matched_pattern << ", valid? " << valid;
-    dispatch_error_msgs.push_back(ss.str());
-    return nullptr;
+    op_env->error_msgs.push_back(ss.str());
+    return op_env.release();
   }
   try {
     op_env->Init(cv);
   } catch (const dmlc::Error& e) {
     std::stringstream ss;
     ss << "[CUTLASS] Failed to JIT: " << e.what();
-    dispatch_error_msgs.push_back(ss.str());
-    return nullptr;
+    op_env->error_msgs.push_back(ss.str());
+    return op_env.release();
   }
   return op_env.release();
 }

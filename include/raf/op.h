@@ -32,8 +32,6 @@ class Requests;
 namespace raf {
 namespace op {
 
-extern std::vector<std::string> dispatch_error_msgs;
-
 class CallValuesNode : public ir::Object {
  public:
   mutable value::Value callee;
@@ -78,6 +76,12 @@ class OpEnv {
    * \param output The output value.
    */
   virtual void Execute(const std::vector<value::Value>& inputs, value::Value output) = 0;
+
+  /*! \brief Whether this OpEnv is valid. */
+  std::vector<std::string> error_msgs;
+  bool HasError() {
+    return !error_msgs.empty();
+  }
 
   void RequestWorkspace(void** dest, const Device& device, int64_t nbytes);
   void RequestStream(void** dest, const Device& device, int tag_idx);
