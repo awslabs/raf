@@ -210,39 +210,47 @@ class TypeInferencer : public ExprMutator {
   Type InferClosure(const Call& call, const Function& fn) {
     // TODO(@hzfan): perform template param deduction to eliminate type_params
     bool update_closure = false;
+    Function curr_fn = fn;
+    if (visited_closures_.count(fn) > 0) {
+      curr_fn = visited_closures_[fn];
+    }
+
     Array<Var> new_params;
     for (size_t i = 0; i < call->args.size(); ++i) {
       try {
         // Try to unify caller type and param type.
-        Unify(call->args[i]->checked_type(), fn->params[i]->type_annotation);
-        new_params.push_back(MakeVar(fn->params[i]->name_hint(), fn->params[i]->type_annotation));
+        Unify(call->args[i]->checked_type(), curr_fn->params[i]->type_annotation);
+        new_params.push_back(MakeVar(curr_fn->params[i]->name_hint(), curr_fn->params[i]->type_annotation));
       } catch (const dmlc::Error& e) {
         // If caller type and closure parameter type are inconsistent and this is the first caller,
         // update the closure parameter type; othewise throw an error.
-        CHECK(visited_closures_.find(fn) == visited_closures_.end())
+        CHECK(visited_closures_.find(curr_fn) == visited_closures_.end())
             << "The following closure is called more than once "
             << "but callers have inconsistent types:" << std::endl
-            << raf::ir::AsText(fn) << std::endl
+            << raf::ir::AsText(curr_fn) << std::endl
             << e.what();
         update_closure = true;
-        new_params.push_back(MakeVar(fn->params[i]->name_hint(), call->args[i]->checked_type()));
+        new_params.push_back(MakeVar(curr_fn->params[i]->name_hint(), call->args[i]->checked_type()));
       }
     }
 
-    Function new_fn = fn;
     if (update_closure) {
       // If param types have to be updated, create a new closure with updated param types.
       // Note that in this case we also have to mutate the closure body to use the updated
       // param vars, so the closure body cannot be visited in advance.
       for (size_t i = 0; i < new_params.size(); ++i) {
-        closure_param_map_[fn->params[i]] = new_params[i];
+        closure_param_map_[curr_fn->params[i]] = new_params[i];
       }
-      new_fn = WithFields(fn, new_params);
-      UpdateFuncParamVarMap(new_fn.as<FunctionNode>(), call->args);
+      curr_fn = WithFields(curr_fn, new_params);
+      UpdateFuncParamVarMap(curr_fn.as<FunctionNode>(), call->args);
     }
-    new_fn = Downcast<Function>(VisitExpr(new_fn));
-    visited_closures_[fn] = new_fn;
-    return Downcast<FuncType>(new_fn->checked_type())->ret_type;
+    curr_fn = Downcast<Function>(VisitExpr(curr_fn));
+    
+    // Mark both the original and updated closure as visited because they are not allowed
+    // to be updated anymore.
+    visited_closures_[fn] = curr_fn;
+    visited_closures_[curr_fn] = curr_fn;
+    return Downcast<FuncType>(curr_fn->checked_type())->ret_type;
   }
 
   void UpdateFuncParamVarMap(const FunctionNode* fn, const Array<Expr>& args) {

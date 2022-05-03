@@ -368,7 +368,18 @@ def test_closure_param_type_update():
 
         @raf.model.trace
         def forward(self, x):
+            # First closure
             out = raf._contrib_dropout(x)  # pylint: disable=no-member
+            out = raf.reshape(out[0], [100])
+            out = raf.cast(out, "float16")
+
+            # Second closure
+            out = raf._contrib_dropout(out)  # pylint: disable=no-member
+            out = raf.cast(out[0], "float32")
+            out = raf.reshape(out, shape)
+
+            # Should reuse the first closure
+            out = raf._contrib_dropout(out)  # pylint: disable=no-member
             out = raf.reshape(out[0], [100])
             out = raf.cast(out, "float16")
             return out
@@ -387,27 +398,43 @@ def test_closure_param_type_update():
         mod = raf._ffi.pass_.InferType()(mod)
 
     # def @main(%x: Tensor[(10, 10), float32]) -> Tensor[(100), float16] {
-    #   let %x1 = raf.op.cudnn._contrib_dropout(%x, float64(0.5), nullptr)
-    #       /* ty=(Tensor[(10, 10), float32], float32, uint8, Tensor[(13), uint8]) */;
+    #   let %x1 = raf.op.cudnn._contrib_dropout(%x, float64(0.5), nullptr);
     #   %2 = fn (%p0: (Tensor[(10, 10), float32], float32, uint8, Tensor[(13), uint8]),
-    #            %p1: (int32,), %p2_v2: int64, Primitive=1, Dialect="tvm")
-    #     -> Tensor[(100), float16] {
-    #     %0 = %p0_v2.0;
-    #     %1 = raf.op.tvm.reshape(%0, %p1_v2, bool(0)) /* ty=Tensor[(100), float32] */;
-    #     raf.op.tvm.cast(%1, %p2_v2) /* ty=Tensor[(100), float16] */
+    #            %p1: (int32,), %p2: int64, Primitive=1, Dialect="tvm") -> Tensor[(100), float16] {
+    #     %0 = %p0.0;
+    #     %1 = raf.op.tvm.reshape(%0, %p1, bool(0));
+    #     raf.op.tvm.cast(%1, %p2)
     #   };
-    #   let %x3 = %2(%x1, TupleValue([int32(100)]), str"float16") /* ty=Tensor[(100), float16] */;
-    #   %x3
+    #   let %x3 = %2(%x1, TupleValue([int32(100)]), str"float16");
+    #   let %x4 = raf.op.cudnn._contrib_dropout(%x3, float64(0.5), nullptr);
+    #   %5 = fn (%p01: (Tensor[(100), float16], float32, uint8, Tensor[(13), uint8]),
+    #            %p11: int64, %p21: (int32, int32), Primitive=1, Dialect="tvm")
+    #     -> Tensor[(10, 10), float32] {
+    #     %3 = %p01.0;
+    #     %4 = raf.op.tvm.cast(%3, %p11);
+    #     raf.op.tvm.reshape(%4, %p21, bool(0))
+    #   };
+    #   let %x6 = %5(%x4, str"float32", TupleValue([int32(10), int32(10)]));
+    #   let %x7 = raf.op.cudnn._contrib_dropout(%x6, float64(0.5), nullptr);
+    #   let %x8 = %2(%x7, TupleValue([int32(100)]), str"float16");
+    #   %x8
     # }
     hit_count = 0
     for line in raf.ir.AsText(mod).split("\n"):
-        if line.find("raf.op.cudnn._contrib_dropout") != -1:
+        if line.find("raf.op.cudnn._contrib_dropout") != -1 and line.find("float16") == -1:
+            # Should hit 2 times
             hit_count += 1
             assert line.find("ty=(Tensor[(10, 10), float32], float32, uint8") != -1
-        elif line.find("fn") != -1:
+        elif (
+            line.find(
+                'fn (%p0: (Tensor[(10, 10), float32], float32, uint8, Tensor[(13), uint8]), %p1: (int32,), %p2: int64, Primitive=1, Dialect="tvm") -> Tensor[(100), float16]'
+            )
+            != -1
+        ):  # pylint: disable=line-too-long
+            # Should hit 1 time if the closure is reused
             hit_count += 1
             assert line.find("Tensor[(10, 10), float32], float32, uint8") != -1
-    assert hit_count == 2
+    assert hit_count == 3
 
 
 def test_multi_functions():
