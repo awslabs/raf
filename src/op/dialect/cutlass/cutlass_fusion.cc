@@ -75,7 +75,7 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
   OpEnv* env = nullptr;
   auto fmake_tune = [&env, &call](FMaker maker) {
     env = maker(call);
-    if (env) {
+    if (!env->HasError()) {
       Tune(call, env);
     }
   };
