@@ -397,46 +397,30 @@ def test_closure_param_type_update():
         mod = raf._ffi.pass_.InlinePrimitives()(mod)
         mod = raf._ffi.pass_.InferType()(mod)
 
-    # def @main(%x: Tensor[(10, 10), float32]) -> Tensor[(100), float16] {
-    #   let %x1 = raf.op.cudnn._contrib_dropout(%x, float64(0.5), nullptr);
-    #   %2 = fn (%p0: (Tensor[(10, 10), float32], float32, uint8, Tensor[(13), uint8]),
-    #            %p1: (int32,), %p2: int64, Primitive=1, Dialect="tvm") -> Tensor[(100), float16] {
-    #     %0 = %p0.0;
-    #     %1 = raf.op.tvm.reshape(%0, %p1, bool(0));
-    #     raf.op.tvm.cast(%1, %p2)
-    #   };
-    #   let %x3 = %2(%x1, TupleValue([int32(100)]), str"float16");
-    #   let %x4 = raf.op.cudnn._contrib_dropout(%x3, float64(0.5), nullptr);
-    #   %5 = fn (%p01: (Tensor[(100), float16], float32, uint8, Tensor[(13), uint8]),
-    #            %p11: int64, %p21: (int32, int32), Primitive=1, Dialect="tvm")
-    #     -> Tensor[(10, 10), float32] {
-    #     %3 = %p01.0;
-    #     %4 = raf.op.tvm.cast(%3, %p11);
-    #     raf.op.tvm.reshape(%4, %p21, bool(0))
-    #   };
-    #   let %x6 = %5(%x4, str"float32", TupleValue([int32(10), int32(10)]));
-    #   let %x7 = raf.op.cudnn._contrib_dropout(%x6, float64(0.5), nullptr);
-    #   let %x8 = %2(%x7, TupleValue([int32(100)]), str"float16");
-    #   %x8
-    # }
-    hit_count = 0
-    for line in raf.ir.AsText(mod).split("\n"):
-        if line.find("raf.op.cudnn._contrib_dropout") != -1 and line.find("float16") == -1:
-            # Should hit 2 times
-            hit_count += 1
-            assert line.find("ty=(Tensor[(10, 10), float32], float32, uint8") != -1
-        elif (
-            # pylint: disable=line-too-long
-            line.find(
-                'fn (%p0: (Tensor[(10, 10), float32], float32, uint8, Tensor[(13), uint8]), %p1: (int32,), %p2: int64, Primitive=1, Dialect="tvm") -> Tensor[(100), float16]'
-            )
-            != -1
-            # pylint: enable=line-too-long
-        ):
-            # Should hit 1 time if the closure is reused
-            hit_count += 1
-            assert line.find("Tensor[(10, 10), float32], float32, uint8") != -1
-    assert hit_count == 3, "Unexpected {hit_count}: %s" % raf.ir.AsText(mod)
+    class ResultChecker(relay.ExprVisitor):
+        def __init__(self):
+            super(ResultChecker, self).__init__()
+            self.cudnn_dropout_cnt = 0
+
+        def visit_let(self, let):
+            call_op = let.value.op
+            if (
+                not isinstance(call_op, relay.Function)
+                and call_op.name == "raf.op.cudnn._contrib_dropout"
+            ):
+                # Make sure 3 dropouts are dispatched to cudnn.
+                self.cudnn_dropout_cnt += 1
+            super().visit_let(let)
+
+        def visit_function(self, fn):
+            # The mask in CuDNN dropout has 0-dim so the closure param should be updated.
+            dropout_mask_type = fn.params[0].checked_type.fields[1]
+            assert len(dropout_mask_type.shape) == 0
+            super().visit_function(fn)
+
+    checker = ResultChecker()
+    checker.visit(mod["main"].body)
+    assert checker.cudnn_dropout_cnt == 3
 
 
 def test_multi_functions():
