@@ -426,11 +426,13 @@ def test_closure_param_type_update():
             hit_count += 1
             assert line.find("ty=(Tensor[(10, 10), float32], float32, uint8") != -1
         elif (
+            # pylint: disable=line-too-long
             line.find(
                 'fn (%p0: (Tensor[(10, 10), float32], float32, uint8, Tensor[(13), uint8]), %p1: (int32,), %p2: int64, Primitive=1, Dialect="tvm") -> Tensor[(100), float16]'
             )
             != -1
-        ):  # pylint: disable=line-too-long
+            # pylint: enable=line-too-long
+        ):
             # Should hit 1 time if the closure is reused
             hit_count += 1
             assert line.find("Tensor[(10, 10), float32], float32, uint8") != -1
