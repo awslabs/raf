@@ -220,7 +220,8 @@ class TypeInferencer : public ExprMutator {
       try {
         // Try to unify caller type and param type.
         Unify(call->args[i]->checked_type(), curr_fn->params[i]->type_annotation);
-        new_params.push_back(MakeVar(curr_fn->params[i]->name_hint(), curr_fn->params[i]->type_annotation));
+        new_params.push_back(
+            MakeVar(curr_fn->params[i]->name_hint(), curr_fn->params[i]->type_annotation));
       } catch (const dmlc::Error& e) {
         // If caller type and closure parameter type are inconsistent and this is the first caller,
         // update the closure parameter type; othewise throw an error.
@@ -230,7 +231,8 @@ class TypeInferencer : public ExprMutator {
             << raf::ir::AsText(curr_fn) << std::endl
             << e.what();
         update_closure = true;
-        new_params.push_back(MakeVar(curr_fn->params[i]->name_hint(), call->args[i]->checked_type()));
+        new_params.push_back(
+            MakeVar(curr_fn->params[i]->name_hint(), call->args[i]->checked_type()));
       }
     }
 
@@ -245,7 +247,7 @@ class TypeInferencer : public ExprMutator {
       UpdateFuncParamVarMap(curr_fn.as<FunctionNode>(), call->args);
     }
     curr_fn = Downcast<Function>(VisitExpr(curr_fn));
-    
+
     // Mark both the original and updated closure as visited because they are not allowed
     // to be updated anymore.
     visited_closures_[fn] = curr_fn;
