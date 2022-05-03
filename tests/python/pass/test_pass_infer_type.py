@@ -436,7 +436,7 @@ def test_closure_param_type_update():
             # Should hit 1 time if the closure is reused
             hit_count += 1
             assert line.find("Tensor[(10, 10), float32], float32, uint8") != -1
-    assert hit_count == 3
+    assert hit_count == 3, "Unexpected {hit_count}: %s" % raf.ir.AsText(mod)
 
 
 def test_multi_functions():
