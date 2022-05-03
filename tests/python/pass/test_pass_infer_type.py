@@ -368,7 +368,18 @@ def test_closure_param_type_update():
 
         @raf.model.trace
         def forward(self, x):
+            # First closure
             out = raf._contrib_dropout(x)  # pylint: disable=no-member
+            out = raf.reshape(out[0], [100])
+            out = raf.cast(out, "float16")
+
+            # Second closure
+            out = raf._contrib_dropout(out)  # pylint: disable=no-member
+            out = raf.cast(out[0], "float32")
+            out = raf.reshape(out, shape)
+
+            # Should reuse the first closure
+            out = raf._contrib_dropout(out)  # pylint: disable=no-member
             out = raf.reshape(out[0], [100])
             out = raf.cast(out, "float16")
             return out
@@ -386,28 +397,30 @@ def test_closure_param_type_update():
         mod = raf._ffi.pass_.InlinePrimitives()(mod)
         mod = raf._ffi.pass_.InferType()(mod)
 
-    # def @main(%x: Tensor[(10, 10), float32]) -> Tensor[(100), float16] {
-    #   let %x1 = raf.op.cudnn._contrib_dropout(%x, float64(0.5), nullptr)
-    #       /* ty=(Tensor[(10, 10), float32], float32, uint8, Tensor[(13), uint8]) */;
-    #   %2 = fn (%p0: (Tensor[(10, 10), float32], float32, uint8, Tensor[(13), uint8]),
-    #            %p1: (int32,), %p2_v2: int64, Primitive=1, Dialect="tvm")
-    #     -> Tensor[(100), float16] {
-    #     %0 = %p0_v2.0;
-    #     %1 = raf.op.tvm.reshape(%0, %p1_v2, bool(0)) /* ty=Tensor[(100), float32] */;
-    #     raf.op.tvm.cast(%1, %p2_v2) /* ty=Tensor[(100), float16] */
-    #   };
-    #   let %x3 = %2(%x1, TupleValue([int32(100)]), str"float16") /* ty=Tensor[(100), float16] */;
-    #   %x3
-    # }
-    hit_count = 0
-    for line in raf.ir.AsText(mod).split("\n"):
-        if line.find("raf.op.cudnn._contrib_dropout") != -1:
-            hit_count += 1
-            assert line.find("ty=(Tensor[(10, 10), float32], float32, uint8") != -1
-        elif line.find("fn") != -1:
-            hit_count += 1
-            assert line.find("Tensor[(10, 10), float32], float32, uint8") != -1
-    assert hit_count == 2
+    class ResultChecker(relay.ExprVisitor):
+        def __init__(self):
+            super(ResultChecker, self).__init__()
+            self.cudnn_dropout_cnt = 0
+
+        def visit_let(self, let):
+            call_op = let.value.op
+            if (
+                not isinstance(call_op, relay.Function)
+                and call_op.name == "raf.op.cudnn._contrib_dropout"
+            ):
+                # Make sure 3 dropouts are dispatched to cudnn.
+                self.cudnn_dropout_cnt += 1
+            super().visit_let(let)
+
+        def visit_function(self, fn):
+            # The mask in CuDNN dropout has 0-dim so the closure param should be updated.
+            dropout_mask_type = fn.params[0].checked_type.fields[1]
+            assert len(dropout_mask_type.shape) == 0
+            super().visit_function(fn)
+
+    checker = ResultChecker()
+    checker.visit(mod["main"].body)
+    assert checker.cudnn_dropout_cnt == 3
 
 
 def test_multi_functions():
