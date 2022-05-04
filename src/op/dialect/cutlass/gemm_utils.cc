@@ -23,7 +23,7 @@ void CutlassGemmOpEnv::InitGemmOperation(
     int ldd, int batch_count, int64_t batch_stride_A, int64_t batch_stride_B,
     int64_t batch_stride_C, int64_t batch_stride_D, EpilogueKindExt epilogue_math_op,
     const std::string& preferred_name) {
-  functional_key_ = std::make_unique<GemmFunctionalKeyExt>(
+  functional_key_ = std::make_shared<GemmFunctionalKeyExt>(
       provider_, GemmKind::kUniversal, element_compute, element_scalar, element_A, layout_A,
       ComplexTransform::kNone, element_B, layout_B, ComplexTransform::kNone, element_C,
       epilogue_math_op);
@@ -51,7 +51,7 @@ void CutlassGemmOpEnv::InitGemmOperation(
                                          ptr_D_check, ldd, 0, kMaximumAlignmentSize);
 
   // Find the best kernel in descending order of preference.
-  preference_key_ = std::make_unique<GemmPreferenceKey>(compute_capability(), alignment);
+  preference_key_ = std::make_shared<GemmPreferenceKey>(compute_capability(), alignment);
   Operation const* operation = find_gemm_operation(operators_it, *preference_key_, preferred_name);
   CHECK(operation);
   operation_ = operation;
@@ -84,7 +84,7 @@ void CutlassGemmOpEnv::InitGemmOperation(
                                       batch_stride_D};
 }
 
-std::vector<std::unique_ptr<TunableConfig>> CutlassGemmOpEnv::ListTunableConfigs() {
+std::vector<std::shared_ptr<TunableConfig>> CutlassGemmOpEnv::ListTunableConfigs() {
   // Tunable configuration: split_k_slices
   // Split axis k into 1 slice (no slicing) or 4 slices
   const static std::vector<int> split_k_slices = {1, 2, 4, 8};
@@ -112,18 +112,18 @@ std::vector<std::unique_ptr<TunableConfig>> CutlassGemmOpEnv::ListTunableConfigs
       }
     }
   }
-  std::vector<std::unique_ptr<TunableConfig>> rets;
+  std::vector<std::shared_ptr<TunableConfig>> rets;
   for (const auto& name : kernel_names) {
     for (const auto& i_split_k_slices : split_k_slices) {
       for (const auto& i_split_k_mode : split_k_mode) {
-        rets.push_back(std::make_unique<GemmTunableConfig>(name, i_split_k_mode, i_split_k_slices));
+        rets.push_back(std::make_shared<GemmTunableConfig>(name, i_split_k_mode, i_split_k_slices));
       }
     }
   }
   return rets;
 }
 
-void CutlassGemmOpEnv::SetTunableConfig(const std::unique_ptr<TunableConfig>& tunable) {
+void CutlassGemmOpEnv::SetTunableConfig(const std::shared_ptr<TunableConfig>& tunable) {
   tunable_ = *static_cast<GemmTunableConfig*>(tunable.get());
 }
 
