@@ -253,7 +253,7 @@ class RAF2TVM : public ExprMutator {
 
 HashKey HashFusedFunc(const Function& func) {
   HashKey key;
-  key << raf::ir::AsText(func, true);
+  key << tvm::AsText(func, true);
   return key;
 }
 
