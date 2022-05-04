@@ -280,7 +280,7 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
   Function func = Downcast<Function>(raf_to_tvm());
   env->env_name = TruncateName(GetUniqueName(raf_to_tvm.func_name));
 
-  auto key = HashFusedFunc(func);
+  auto key = HashFusedFunc(Downcast<ClosureValue>(call->callee)->func);
   TVMModuleCacheEntry entry;
   if (const auto* compiled = cache->Get(key.byte_vector)) {
     entry = *compiled;
