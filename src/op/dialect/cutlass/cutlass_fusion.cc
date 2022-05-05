@@ -63,7 +63,7 @@ MetaPersistCache<CUTLASSConfigCacheEntry> CacheConfig("cutlass_fusion_config");
 
 HashKey HashFusedFunc(const Function& func) {
   HashKey key;
-  key << tvm::AsText(func, true);
+  key << raf::ir::AsText(func, true);
   return key;
 }
 

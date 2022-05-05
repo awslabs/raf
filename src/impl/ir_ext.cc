@@ -71,7 +71,7 @@ ObjectRef ConstantExtractValue(RelayConstant _node) {
   return node->value;
 }
 
-Var MakeVar_(Id vid, Type type_annotation, Var may_share = Var()) {
+Var MakeVar_(Id vid, Type type_annotation, Var may_share) {
   ObjectPtr<ExtendedVarNode> n = make_object<ExtendedVarNode>();
   n->vid = std::move(vid);
   n->type_annotation = std::move(type_annotation);
