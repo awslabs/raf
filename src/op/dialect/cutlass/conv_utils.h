@@ -35,9 +35,9 @@ class CutlassConvOpEnv : public CutlassOpEnv {
   explicit CutlassConvOpEnv(const CallValues& call) : CutlassOpEnv(call) {
   }
 
-  std::vector<std::unique_ptr<TunableConfig>> ListTunableConfigs() override;
+  std::vector<std::shared_ptr<TunableConfig>> ListTunableConfigs() override;
 
-  void SetTunableConfig(const std::unique_ptr<TunableConfig>& tunable) override;
+  void SetTunableConfig(const std::shared_ptr<TunableConfig>& tunable) override;
 
   /*!
    * \brief Initialize a convolution operator
@@ -85,9 +85,9 @@ class CutlassConvOpEnv : public CutlassOpEnv {
   /*! \brief Convolution operator arguments */
   ConvArguments arguments_;
   /*! \brief Conv functional key */
-  std::unique_ptr<ConvFunctionalKeyExt> functional_key_;
+  std::shared_ptr<ConvFunctionalKeyExt> functional_key_;
   /*! \brief Conv functional key */
-  std::unique_ptr<ConvPreferenceKey> preference_key_;
+  std::shared_ptr<ConvPreferenceKey> preference_key_;
   /*! \brief Tunable configuration for cutlass conv */
   ConvTunableConfig tunable_;
 };

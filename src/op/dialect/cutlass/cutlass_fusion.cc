@@ -9,6 +9,7 @@
  */
 #include <limits>
 
+#include "raf/cache.h"
 #include "raf/value.h"
 #include "raf/profiler.h"
 #include "raf/registry.h"
@@ -30,23 +31,69 @@ using namespace raf::ir;
 using namespace raf::value;
 using raf::registry::TypedPackedFunc;
 
+/*! \brief The persist cache entry of the best CUTLASS tuned config. */
+class CUTLASSConfigCacheEntry {
+ public:
+  explicit CUTLASSConfigCacheEntry() {
+  }
+
+  CUTLASSConfigCacheEntry(std::shared_ptr<TunableConfig> config) : config_(config) {
+  }
+
+  std::shared_ptr<TunableConfig> GetConfig() {
+    return config_;
+  }
+
+  static CUTLASSConfigCacheEntry Load(const std::string path) {
+    // Not support deserialization yet.
+    throw;
+  }
+
+  bool Save(const std::string& path) {
+    // Not support serialization yet.
+    return false;
+  }
+
+ private:
+  /*! \brief The tunable config. */
+  std::shared_ptr<TunableConfig> config_;
+};
+
+MetaPersistCache<CUTLASSConfigCacheEntry> CacheConfig("cutlass_fusion_config");
+
+HashKey HashFusedFunc(const Function& func) {
+  HashKey key;
+  key << tvm::AsText(func, true);
+  return key;
+}
+
 OpEnv* Tune(const op::CallValues& call, OpEnv* op_env) {
   CutlassOpEnv* env = static_cast<CutlassOpEnv*>(op_env);
-  std::vector<std::unique_ptr<TunableConfig>> tunable = env->ListTunableConfigs();
-  const int number = 10, repeat = 1, min_repeat_ms = 0;
-  std::unique_ptr<TunableConfig> best;
-  double min_time = std::numeric_limits<double>::max();
-  for (auto& i : tunable) {
-    env->SetTunableConfig(i);
-    env->Init(call);
-    Array<FloatValue> result = TimeEvaluator(TypedPackedFunc<void()>([&]() { env->Execute(call); }),
-                                             call->device, number, repeat, min_repeat_ms)();
-    CHECK_EQ(result.size(), 1U);
-    if (result[0]->value < min_time) {
-      min_time = result[0]->value;
-      best = std::move(i);
+  auto key = HashFusedFunc(Downcast<ClosureValue>(call->callee)->func);
+  std::shared_ptr<TunableConfig> best;
+
+  if (const auto* compiled = CacheConfig.Get(key.byte_vector)) {
+    CUTLASSConfigCacheEntry entry = *compiled;
+    best = entry.GetConfig();
+  } else {
+    std::vector<std::shared_ptr<TunableConfig>> tunable = env->ListTunableConfigs();
+    const int number = 10, repeat = 1, min_repeat_ms = 0;
+    double min_time = std::numeric_limits<double>::max();
+    for (auto& config : tunable) {
+      env->SetTunableConfig(config);
+      env->Init(call);
+      Array<FloatValue> result =
+          TimeEvaluator(TypedPackedFunc<void()>([&]() { env->Execute(call); }), call->device,
+                        number, repeat, min_repeat_ms)();
+      CHECK_EQ(result.size(), 1U);
+      if (result[0]->value < min_time) {
+        min_time = result[0]->value;
+        best = config;
+      }
     }
+    CacheConfig.Set(key.byte_vector, CUTLASSConfigCacheEntry(best));
   }
+
   env->SetTunableConfig(best);
   env->Init(call);
   return env;
