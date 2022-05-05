@@ -212,18 +212,18 @@ Value DeserializeValue(dmlc::Stream* strm) {
     }
     case kOpValue: {
       strm->Read(&str);
-      Op op = Downcast<Op>(tvm::LoadJSON(str));
+      Op op = Downcast<Op>(serialization::LoadJSON(str));
       return OpValue::make(op);
     }
     case kClosureValue: {
       strm->Read(&str);
-      auto func = Downcast<Function>(tvm::LoadJSON(str));
+      auto func = Downcast<Function>(serialization::LoadJSON(str));
       uint64_t cnt;
       std::unordered_map<Var, Value, ObjectPtrHash, ObjectPtrEqual> env;
       strm->Read(&cnt);
       for (uint64_t i = 0; i < cnt; ++i) {
         strm->Read(&str);
-        Var var = Downcast<Var>(tvm::LoadJSON(str));
+        Var var = Downcast<Var>(serialization::LoadJSON(str));
         Value val = DeserializeValue(strm);
         env.emplace(var, val);
       }
