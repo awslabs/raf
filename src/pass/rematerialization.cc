@@ -920,7 +920,19 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
 
       float compute_cost = 0.0f;
       int64_t ws_size = 0;
-      if (profiler_) {
+
+      // Get the call node op if applicable.
+      Op op;
+      if (auto call_node = exprs[i].as<CallNode>()) {
+        if (auto op_node = call_node->op.as<OpNode>()) {
+          op = GetRef<Op>(op_node);
+        }
+      }
+
+      if (op.defined() && IsNonDeterministicOp(op)) {
+        // Non-deterministic ops cannot be recomputed
+        compute_cost = std::numeric_limits<float>::max();
+      } else if (profiler_) {
         // Try to profile the op
         auto exec_time_and_ws_size = profiler_->ProfileOp(exprs[i]);
         // Default is to repeat once, so we take the first element
