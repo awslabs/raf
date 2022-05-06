@@ -295,9 +295,12 @@ def with_lans(
                                     )
                                 next_w = _op.add(new_weight, self.zero, out=p)
                             else:
-                                # LANS inplace upates the weight
-                                # So the new  weight is just the input weight
-                                next_w = new_w
+                                if self.dtype != "float32":
+                                    next_w = _op.add(new_w, self.zero, out=p)
+                                else:
+                                    # LANS inplace upates the weight
+                                    # So the new  weight is just the input weight
+                                    next_w = new_w
 
                             trace_mutate_attr(param_model, name.split(".")[-1], next_w)
                             trace_mutate_attr(self, f"{name}.m", next_m)
