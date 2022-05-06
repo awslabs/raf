@@ -144,7 +144,7 @@ class DropoutImplementedByCUDNNDropoutBackward : public raf::op::OpEnv {
   float dropout;
   size_t stateSizeInBytes;
   size_t reserveSpaceSizeInBytes;
-  std::shared_ptr<Memory> states;
+  void* states;
 
   explicit DropoutImplementedByCUDNNDropoutBackward(const CallValues& cv) {
     this->arg_indices = {/*dy=*/0, /*reserve_space=*/1};
@@ -159,9 +159,7 @@ class DropoutImplementedByCUDNNDropoutBackward : public raf::op::OpEnv {
     CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropoutDesc));
     CUDNN_CALL(
         cudnnDropoutGetStatesSize(CUDNNThreadEntry::ThreadLocal()->handle, &stateSizeInBytes));
-    states = Memory::Alloc(cv->device, stateSizeInBytes);
-    CUDNN_CALL(cudnnSetDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
-                                         dropout, states->data, stateSizeInBytes, 0));
+    RequestWorkspace(&states, cv->device, stateSizeInBytes);
   }
 
  public:
@@ -182,6 +180,8 @@ class DropoutImplementedByCUDNNDropoutBackward : public raf::op::OpEnv {
     DLTensor* dy = args->dy;
     DLTensor* reserve_space = args->reserve_space;
 
+    CUDNN_CALL(cudnnRestoreDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
+                                             dropout, states, stateSizeInBytes, 0));
     CUDNN_CALL(cudnnDropoutBackward(CUDNNThreadEntry::ThreadLocal()->handle, dropoutDesc, dydesc,
                                     dy->data, dxdesc, dx->data, reserve_space->data,
                                     reserveSpaceSizeInBytes));
@@ -193,6 +193,8 @@ class DropoutImplementedByCUDNNDropoutBackward : public raf::op::OpEnv {
     DLTensor* dy = inputs[0];
     DLTensor* reserve_space = inputs[1];
 
+    CUDNN_CALL(cudnnRestoreDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
+                                             dropout, states, stateSizeInBytes, 0));
     CUDNN_CALL(cudnnDropoutBackward(CUDNNThreadEntry::ThreadLocal()->handle, dropoutDesc, dydesc,
                                     dy->data, dxdesc, dx->data, reserve_space->data,
                                     reserveSpaceSizeInBytes));
