@@ -115,16 +115,16 @@ class DropoutImplementedByCUDNNDropoutForward : public raf::op::OpEnv {
 
   explicit DropoutImplementedByCUDNNDropoutForward(const CallValues& cv) {
     auto op = Op::Get("raf.op._contrib_dropout");
-    this->arg_indices = {
-        fschema_index[op]("x"),
-        fschema_index[op]("in_states"),
-    };
     auto args = cv->args.as<raf::op::schema::DropoutArgs>();
     dropout = args->p;
     TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     DLTensor* out = tv->fields[0];
     void* state_data = nullptr;
+
+    // Note that we do not put "in_states" in arg_indices because we do not expect
+    // in_states to be used in the VM. 
+    this->arg_indices = {fschema_index[op]("x")};
 
     bool is_first_dropout = false;
     if (args->in_states.get() == nullptr) {
