@@ -123,7 +123,7 @@ class DropoutImplementedByCUDNNDropoutForward : public raf::op::OpEnv {
     void* state_data = nullptr;
 
     // Note that we do not put "in_states" in arg_indices because we do not expect
-    // in_states to be used in the VM. 
+    // in_states to be used in the VM.
     this->arg_indices = {fschema_index[op]("x")};
 
     bool is_first_dropout = false;
