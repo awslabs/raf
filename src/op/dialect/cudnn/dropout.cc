@@ -37,8 +37,10 @@ class DropoutStatePool {
   }
 
   ~DropoutStatePool() {
-    if (memory != nullptr) {
-      memory.reset();
+    for (auto pair : state_pool) {
+      if (pair.second != nullptr) {
+        pair.second.reset();
+      }
     }
   }
 
@@ -56,38 +58,39 @@ class DropoutStatePool {
   }
 
   /*!
-   * \brief Get an existing dropout state buffer of the given device. If the state buffer for
-   * the device is not created, then this function initializes a new one.
+   * \brief Get an existing dropout state buffer of the given ratio.
+   * If the state buffer for the ratio is not created, then this function initializes a new one.
    */
-  std::pair<std::shared_ptr<Memory>, bool> GetState() {
+  std::pair<std::shared_ptr<Memory>, bool> GetState(float ratio) {
     bool init = false;
     std::lock_guard<std::mutex> lock(mutex);
-    if (memory == nullptr) {
+    if (state_pool.count(ratio) == 0) {
       size_t stateSizeInBytes = GetDropoutStateSizeInBytes();
-      memory = memory_pool::Memory::Alloc(device, stateSizeInBytes);
+      state_pool[ratio] = memory_pool::Memory::Alloc(device, stateSizeInBytes);
       init = true;
     }
-    return {memory, init};
+    return {state_pool[ratio], init};
   }
 
  public:
   Device device;
-  std::shared_ptr<Memory> memory = nullptr;
+  std::unordered_map<float, std::shared_ptr<Memory>> state_pool;
   std::mutex mutex;
 };
 
 RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutStateSizeInBytes")
     .set_body_typed(GetDropoutStateSizeInBytes);
-RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutState").set_body_typed([](const Device& dev) {
-  auto state_n_init = DropoutStatePool::Get(dev)->GetState();
-  CHECK(!state_n_init.second)
-      << "Getting dropout state before running at least one dropout op is not allowed.";
-  auto buf = state_n_init.first;
-  auto stateSizeInBytes = GetDropoutStateSizeInBytes();
-  TensorValue state = TensorValue::Assemble(dev, DType(DTypeCode::kInt(), 8), {stateSizeInBytes},
-                                            {}, buf->data, buf);
-  return state;
-});
+RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutState")
+    .set_body_typed([](const Device& dev, double dropout) {
+      auto state_n_init = DropoutStatePool::Get(dev)->GetState(dropout);
+      CHECK(!state_n_init.second)
+          << "Getting dropout state before running one dropout op with that ratio is not allowed.";
+      auto buf = state_n_init.first;
+      auto stateSizeInBytes = GetDropoutStateSizeInBytes();
+      TensorValue state = TensorValue::Assemble(dev, DType(DTypeCode::kInt(), 8),
+                                                {stateSizeInBytes}, {}, buf->data, buf);
+      return state;
+    });
 RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")
     .set_body_typed([](TensorType x) {
       size_t reserveSpaceSizeInBytes;
@@ -114,6 +117,7 @@ class DropoutImplementedByCUDNNDropoutForward : public raf::op::OpEnv {
         fschema_index[op]("in_states"),
     };
     auto args = cv->args.as<raf::op::schema::DropoutArgs>();
+    dropout = args->p;
     TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     DLTensor* out = tv->fields[0];
@@ -122,7 +126,7 @@ class DropoutImplementedByCUDNNDropoutForward : public raf::op::OpEnv {
     bool is_first_dropout = false;
     if (args->in_states.get() == nullptr) {
       // If no state is provided, use the internal one.
-      auto state_n_init = DropoutStatePool::Get(cv->device)->GetState();
+      auto state_n_init = DropoutStatePool::Get(cv->device)->GetState(dropout);
       auto buf = state_n_init.first;
       is_first_dropout = state_n_init.second;
       state_data = buf->data;
@@ -132,7 +136,6 @@ class DropoutImplementedByCUDNNDropoutForward : public raf::op::OpEnv {
     }
     xdesc = NormalizeTensorType(SquashTensorShape(x, {}));
     ydesc = NormalizeTensorType(SquashTensorShape(out, {}));
-    dropout = args->p;
     CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropoutDesc));
     stateSizeInBytes = GetDropoutStateSizeInBytes();
     CUDNN_CALL(cudnnDropoutGetReserveSpaceSize(xdesc, &reserveSpaceSizeInBytes));
@@ -204,18 +207,18 @@ class DropoutImplementedByCUDNNDropoutBackward : public raf::op::OpEnv {
   explicit DropoutImplementedByCUDNNDropoutBackward(const CallValues& cv) {
     this->arg_indices = {/*dy=*/0, /*reserve_space=*/1};
     auto args = cv->args.as<raf::op::schema::DropoutDxArgs>();
+    dropout = args->p;
     DLTensor* dx = cv->out;
     DLTensor* dy = args->dy;
     DLTensor* reserve_space = args->reserve_space;
     dxdesc = NormalizeTensorType(SquashTensorShape(dx, {}));
     dydesc = NormalizeTensorType(SquashTensorShape(dy, {}));
-    dropout = args->p;
     reserveSpaceSizeInBytes = ComputeStorageInBytes(SquashTensorShape(reserve_space, {}));
     CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropoutDesc));
     CUDNN_CALL(
         cudnnDropoutGetStatesSize(CUDNNThreadEntry::ThreadLocal()->handle, &stateSizeInBytes));
 
-    void* state_data = DropoutStatePool::Get(cv->device)->GetState().first->data;
+    void* state_data = DropoutStatePool::Get(cv->device)->GetState(dropout).first->data;
     CUDNN_CALL(cudnnRestoreDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
                                              dropout, state_data, stateSizeInBytes, 0));
   }
