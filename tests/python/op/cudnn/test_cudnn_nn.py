@@ -312,7 +312,7 @@ def test_raf_dropout(dropout):
 
     # reproducible
     r_y = raf._contrib_dropout(x, dropout, raf.array(state_0, device="cuda"))[0]
-    check(m_y0, r_y)
+    check(m_y1, r_y)
 
     # backward
     # dy, _ = randn_torch(shape, dtype=dtype, device="cuda")
