@@ -7,6 +7,7 @@
  * \file src/op/dialect/cudnn/dropout.cc
  * \brief cuDNN dropout operators.
  */
+#include <tvm/support/random_engine.h>
 #include "raf/ir.h"
 #include "raf/registry.h"
 #include "raf/op_utils.h"
@@ -30,36 +31,71 @@ int64_t GetDropoutStateSizeInBytes() {
   return stateSizeInBytes;
 }
 
-int64_t GetDropoutReserveSpaceSizeInBytes(TensorType x) {
-  size_t reserveSpaceSizeInBytes;
-  cudnnTensorDescriptor_t xdesc = NormalizeTensorType(x);
-  CUDNN_CALL(cudnnDropoutGetReserveSpaceSize(xdesc, &reserveSpaceSizeInBytes));
-  CUDNN_CALL(cudnnDestroyTensorDescriptor(xdesc));
-  return reserveSpaceSizeInBytes;
-}
+class DropoutStatePool {
+ public:
+  explicit DropoutStatePool(const Device& dev) : device(dev) {
+  }
 
-TensorValue GetDropoutState(double dropout, int64_t seed) {
-  Device device(DevType::kCUDA(), 0);
-  size_t stateSizeInBytes = GetDropoutStateSizeInBytes();
-  cudnnDropoutDescriptor_t dropoutDesc;
-  CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropoutDesc));
-  std::shared_ptr<Memory> memory = memory_pool::Memory::Alloc(device, stateSizeInBytes);
-  TensorValue state =
-      TensorValue::Assemble(device, DType(DTypeCode::kInt(), 8),
-                            {static_cast<int64_t>(stateSizeInBytes)}, {}, memory->data, memory);
-  DLTensor* dlt = state;
-  CUDNN_CALL(cudnnSetDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
-                                       dropout, dlt->data, stateSizeInBytes,
-                                       static_cast<uint64_t>(seed)));
-  CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropoutDesc));
-  return state;
-}
+  ~DropoutStatePool() {
+    if (memory != nullptr) {
+      memory.reset();
+    }
+  }
+
+  static std::shared_ptr<DropoutStatePool> Get(const Device& dev) {
+    static registry::PerDeviceStore<DropoutStatePool, false>* pool =
+        new registry::PerDeviceStore<DropoutStatePool, false>();
+    std::shared_ptr<DropoutStatePool>& ret = pool->Get(dev);
+    if (ret == nullptr) {
+      std::lock_guard<std::mutex> lock(pool->mutex_);
+      if (ret == nullptr) {
+        ret = std::make_shared<DropoutStatePool>(dev);
+      }
+    }
+    return ret;
+  }
+
+  /*!
+   * \brief Get an existing dropout state buffer of the given device. If the state buffer for
+   * the device is not created, then this function initializes a new one.
+   */
+  std::pair<std::shared_ptr<Memory>, bool> GetState() {
+    bool init = false;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (memory == nullptr) {
+      size_t stateSizeInBytes = GetDropoutStateSizeInBytes();
+      memory = memory_pool::Memory::Alloc(device, stateSizeInBytes);
+      init = true;
+    }
+    return {memory, init};
+  }
+
+ public:
+  Device device;
+  std::shared_ptr<Memory> memory = nullptr;
+  std::mutex mutex;
+};
 
 RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutStateSizeInBytes")
     .set_body_typed(GetDropoutStateSizeInBytes);
-RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutState").set_body_typed(GetDropoutState);
+RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutState").set_body_typed([](const Device& dev) {
+  auto state_n_init = DropoutStatePool::Get(dev)->GetState();
+  CHECK(!state_n_init.second)
+      << "Getting dropout state before running at least one dropout op is not allowed.";
+  auto buf = state_n_init.first;
+  auto stateSizeInBytes = GetDropoutStateSizeInBytes();
+  TensorValue state = TensorValue::Assemble(dev, DType(DTypeCode::kInt(), 8), {stateSizeInBytes},
+                                            {}, buf->data, buf);
+  return state;
+});
 RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutReserveSpaceSizeInBytes")
-    .set_body_typed(GetDropoutReserveSpaceSizeInBytes);
+    .set_body_typed([](TensorType x) {
+      size_t reserveSpaceSizeInBytes;
+      cudnnTensorDescriptor_t xdesc = NormalizeTensorType(x);
+      CUDNN_CALL(cudnnDropoutGetReserveSpaceSize(xdesc, &reserveSpaceSizeInBytes));
+      CUDNN_CALL(cudnnDestroyTensorDescriptor(xdesc));
+      return (int64_t)reserveSpaceSizeInBytes;
+    });
 
 static auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
 
@@ -81,16 +117,36 @@ class DropoutImplementedByCUDNNDropoutForward : public raf::op::OpEnv {
     TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     DLTensor* out = tv->fields[0];
-    DLTensor* state = args->in_states.value();
+    void* state_data = nullptr;
+
+    bool is_first_dropout = false;
+    if (args->in_states.get() == nullptr) {
+      // If no state is provided, use the internal one.
+      auto state_n_init = DropoutStatePool::Get(cv->device)->GetState();
+      auto buf = state_n_init.first;
+      is_first_dropout = state_n_init.second;
+      state_data = buf->data;
+    } else {
+      DLTensor* state_tensor = args->in_states.value();
+      state_data = state_tensor->data;
+    }
     xdesc = NormalizeTensorType(SquashTensorShape(x, {}));
     ydesc = NormalizeTensorType(SquashTensorShape(out, {}));
     dropout = args->p;
     CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropoutDesc));
-    CUDNN_CALL(
-        cudnnDropoutGetStatesSize(CUDNNThreadEntry::ThreadLocal()->handle, &stateSizeInBytes));
+    stateSizeInBytes = GetDropoutStateSizeInBytes();
     CUDNN_CALL(cudnnDropoutGetReserveSpaceSize(xdesc, &reserveSpaceSizeInBytes));
-    CUDNN_CALL(cudnnRestoreDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
-                                             dropout, state->data, stateSizeInBytes, 0));
+
+    if (is_first_dropout) {
+      auto seed = tvm::support::LinearCongruentialEngine::DeviceRandom();
+      CUDNN_CALL(cudnnSetDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
+                                           dropout, state_data, stateSizeInBytes, seed));
+    } else {
+      // The dropout desc has been initialized so we just restore it. Note that in this case
+      // random seend is useless so we simply put 0.
+      CUDNN_CALL(cudnnRestoreDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
+                                               dropout, state_data, stateSizeInBytes, 0));
+    }
   }
 
  public:
@@ -144,7 +200,6 @@ class DropoutImplementedByCUDNNDropoutBackward : public raf::op::OpEnv {
   float dropout;
   size_t stateSizeInBytes;
   size_t reserveSpaceSizeInBytes;
-  void* states;
 
   explicit DropoutImplementedByCUDNNDropoutBackward(const CallValues& cv) {
     this->arg_indices = {/*dy=*/0, /*reserve_space=*/1};
@@ -159,7 +214,10 @@ class DropoutImplementedByCUDNNDropoutBackward : public raf::op::OpEnv {
     CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropoutDesc));
     CUDNN_CALL(
         cudnnDropoutGetStatesSize(CUDNNThreadEntry::ThreadLocal()->handle, &stateSizeInBytes));
-    RequestWorkspace(&states, cv->device, stateSizeInBytes);
+
+    void* state_data = DropoutStatePool::Get(cv->device)->GetState().first->data;
+    CUDNN_CALL(cudnnRestoreDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
+                                             dropout, state_data, stateSizeInBytes, 0));
   }
 
  public:
@@ -180,8 +238,6 @@ class DropoutImplementedByCUDNNDropoutBackward : public raf::op::OpEnv {
     DLTensor* dy = args->dy;
     DLTensor* reserve_space = args->reserve_space;
 
-    CUDNN_CALL(cudnnRestoreDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
-                                             dropout, states, stateSizeInBytes, 0));
     CUDNN_CALL(cudnnDropoutBackward(CUDNNThreadEntry::ThreadLocal()->handle, dropoutDesc, dydesc,
                                     dy->data, dxdesc, dx->data, reserve_space->data,
                                     reserveSpaceSizeInBytes));
@@ -193,8 +249,6 @@ class DropoutImplementedByCUDNNDropoutBackward : public raf::op::OpEnv {
     DLTensor* dy = inputs[0];
     DLTensor* reserve_space = inputs[1];
 
-    CUDNN_CALL(cudnnRestoreDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
-                                             dropout, states, stateSizeInBytes, 0));
     CUDNN_CALL(cudnnDropoutBackward(CUDNNThreadEntry::ThreadLocal()->handle, dropoutDesc, dydesc,
                                     dy->data, dxdesc, dx->data, reserve_space->data,
                                     reserveSpaceSizeInBytes));
