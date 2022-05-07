@@ -425,14 +425,10 @@ void ContribDropout(const CallValues& call) {
                                            /*dtype=*/DType(DTypeCode::kFloat(), 32),
                                            /*shape=*/mask_shape);
   // valid for cudnn only
-  TensorValue out_states = TensorValue::Assemble(/*dev=*/x->device,
-                                                 /*dtype=*/DType(DTypeCode::kUInt(), 8),
-                                                 /*shape=*/states_shape);
-  // valid for cudnn only
   TensorValue reserve_space = TensorValue::Assemble(/*dev=*/x->device,
                                                     /*dtype=*/DType(DTypeCode::kUInt(), 8),
                                                     /*shape=*/reserve_space_shape);
-  call->out = TupleValue::make(tvm::Array<Value>({output, mask, out_states, reserve_space}));
+  call->out = TupleValue::make(tvm::Array<Value>({output, mask, reserve_space}));
   call->device = x->device;
 }
 

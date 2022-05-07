@@ -83,6 +83,9 @@ RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutStateSizeInBytes")
 RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutState")
     .set_body_typed([](const Device& dev, double dropout) {
       auto state_n_init = DropoutStatePool::Get(dev)->GetState(dropout);
+      // Make sure we don't create state in this function because it should be created and
+      // initialized by the first dropout op. Creating state in this function makes it never
+      // be initialized.
       CHECK(!state_n_init.second)
           << "Getting dropout state before running one dropout op with that ratio is not allowed.";
       auto buf = state_n_init.first;
@@ -141,12 +144,14 @@ class DropoutImplementedByCUDNNDropoutForward : public raf::op::OpEnv {
     CUDNN_CALL(cudnnDropoutGetReserveSpaceSize(xdesc, &reserveSpaceSizeInBytes));
 
     if (is_first_dropout) {
+      // Initial dropout desc with a certain ratio. This desc will be shared by all dropout ops
+      // with the same ratio.
       auto seed = tvm::support::LinearCongruentialEngine::DeviceRandom();
       CUDNN_CALL(cudnnSetDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
                                            dropout, state_data, stateSizeInBytes, seed));
     } else {
-      // The dropout desc has been initialized so we just restore it. Note that in this case
-      // random seend is useless so we simply put 0.
+      // The dropout desc has been globally initialized so we just restore it. Note that
+      // in this case random seend has no effect so we simply put 0.
       CUDNN_CALL(cudnnRestoreDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
                                                dropout, state_data, stateSizeInBytes, 0));
     }
@@ -169,7 +174,7 @@ class DropoutImplementedByCUDNNDropoutForward : public raf::op::OpEnv {
     TupleValue tv = Downcast<TupleValue>(cv->out);
     DLTensor* x = args->x;
     DLTensor* out = tv->fields[0];
-    DLTensor* reserve_space = tv->fields[3];
+    DLTensor* reserve_space = tv->fields[2];
 
     CUDNN_CALL(cudnnDropoutForward(CUDNNThreadEntry::ThreadLocal()->handle, dropoutDesc, xdesc,
                                    x->data, ydesc, out->data, reserve_space->data,
@@ -181,7 +186,7 @@ class DropoutImplementedByCUDNNDropoutForward : public raf::op::OpEnv {
     TupleValue tv = Downcast<TupleValue>(output);
     DLTensor* x = inputs[0];
     DLTensor* out = tv->fields[0];
-    DLTensor* reserve_space = tv->fields[3];
+    DLTensor* reserve_space = tv->fields[2];
 
     CUDNN_CALL(cudnnDropoutForward(CUDNNThreadEntry::ThreadLocal()->handle, dropoutDesc, xdesc,
                                    x->data, ydesc, out->data, reserve_space->data,
