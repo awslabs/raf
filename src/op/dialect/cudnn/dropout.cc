@@ -182,7 +182,7 @@ class DropoutImplementedByCUDNNDropoutForward : public raf::op::OpEnv {
   }
 
   void Execute(const std::vector<Value>& inputs, Value output) {
-    CHECK_EQ(inputs.size(), 2);
+    CHECK_GE(inputs.size(), 1);
     TupleValue tv = Downcast<TupleValue>(output);
     DLTensor* x = inputs[0];
     DLTensor* out = tv->fields[0];
