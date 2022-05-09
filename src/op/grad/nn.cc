@@ -38,7 +38,7 @@ Array<Expr> ContribDropoutGrad(const Expr& orig_call, const Array<Expr> orig_arg
   const static auto dropout_dx = Op::Get("raf.op._contrib_dropout_dx");
   const Expr& dy = AsTupleExpr(dout, 2)[0];
   const Expr& mask = TupleGetItem(y, 1);
-  const Expr& reserve_space = TupleGetItem(y, 3);
+  const Expr& reserve_space = TupleGetItem(y, 2);
   const Expr& p = orig_args[1];
   return {Call(dropout_dx, {dy, mask, reserve_space, p})};
 }

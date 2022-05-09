@@ -312,18 +312,12 @@ Type ContribDropoutInfer(const CallValues& value) {
     reserve_space = TensorType(reserve_space_shape, DataType::UInt(8));
   }
 #endif
-  TensorType states_ty;
-  if (args->in_states.defined()) {
-    states_ty = Downcast<TensorType>(GetType(args->in_states.value()));
-  } else {
-    states_ty = TensorType({}, DataType::UInt(8));
-  }
   Array<PrimExpr> mask_shape;
   if (include_mask) {
     mask_shape = x_ty->shape;
   }
   TensorType mask_ty(mask_shape, DataType::Float(32));
-  return TupleType(Array<Type>{x_ty, mask_ty, states_ty, reserve_space});
+  return TupleType(Array<Type>{x_ty, mask_ty, reserve_space});
 }
 
 static const auto ContribDropoutBase = ContribDropoutInfer<true, true>;

@@ -398,8 +398,6 @@ inline size_t ComputeStorageInBytes(const ir::TensorType& type) {
   return size;
 }
 
-TensorValue GetDropoutState(double dropout, int64_t seed);
-
 }  // namespace cudnn
 }  // namespace op
 }  // namespace raf

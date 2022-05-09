@@ -127,7 +127,7 @@ inline bool IsReshapeOp(const Op& op) {
 
 inline bool IsNonDeterministicOp(const Op& op) {
   static std::unordered_set<Op, ObjectPtrHash, ObjectPtrEqual> non_deterministic_ops{
-      Op::Get("raf.op._contrib_dropout")};
+      Op::Get("raf.op._contrib_dropout"), Op::Get("raf.op._contrib_dropout_dx")};
   return IsInOpSet(op, non_deterministic_ops);
 }
 
