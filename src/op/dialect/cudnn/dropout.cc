@@ -83,13 +83,17 @@ RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutStateSizeInBytes")
 RAF_REGISTER_GLOBAL("raf.backend.cudnn.GetDropoutState")
     .set_body_typed([](const Device& dev, double dropout) {
       auto state_n_init = DropoutStatePool::Get(dev)->GetState(dropout);
-      // Make sure we don't create state in this function because it should be created and
-      // initialized by the first dropout op. Creating state in this function makes it never
-      // be initialized.
-      CHECK(!state_n_init.second)
-          << "Getting dropout state before running one dropout op with that ratio is not allowed.";
       auto buf = state_n_init.first;
       auto stateSizeInBytes = GetDropoutStateSizeInBytes();
+      if (state_n_init.second) {
+        // If the state buffer is newly created, then initialize it.
+        cudnnDropoutDescriptor_t dropoutDesc;
+        auto seed = tvm::support::LinearCongruentialEngine::DeviceRandom();
+        CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropoutDesc));
+        CUDNN_CALL(cudnnSetDropoutDescriptor(dropoutDesc, CUDNNThreadEntry::ThreadLocal()->handle,
+                                             dropout, buf->data, stateSizeInBytes, seed));
+        CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropoutDesc));
+      }
       TensorValue state = TensorValue::Assemble(dev, DType(DTypeCode::kInt(), 8),
                                                 {stateSizeInBytes}, {}, buf->data, buf);
       return state;

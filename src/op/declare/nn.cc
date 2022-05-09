@@ -396,7 +396,6 @@ void ContribDropout(const CallValues& call) {
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  std::vector<int64_t> states_shape;
   std::vector<int64_t> reserve_space_shape;
   // The CUDNN compute generates reserve_space for backward usage.
 #ifdef RAF_USE_CUDA
@@ -407,12 +406,6 @@ void ContribDropout(const CallValues& call) {
     reserve_space_shape.push_back(reserve_space_size_in_bytes->value);
   }
 #endif
-  if (args->in_states.defined()) {
-    const DLTensor* in_states = args->in_states.value();
-    for (size_t i = 0; i < in_states->ndim; i++) {
-      states_shape.push_back(tvm::Integer(in_states->shape[i]));
-    }
-  }
   TensorValue output = TensorValue::Assemble(/*dev=*/x->device,
                                              /*dtype=*/x->dtype,
                                              /*shape=*/shape);

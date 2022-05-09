@@ -294,25 +294,25 @@ def test_raf_dropout(dropout):
     x, _ = randint(shape, low=10, high=20, dtype=dtype, device="cuda")
     x.requires_grad = True
 
-    # forward
-    m_y0 = raf._contrib_dropout(x, dropout)[0]
-
     # get the random state. Note that its values will be modified after each dropout call
     state = ndarray.from_tensor_value(
         raf._ffi.backend.cudnn.GetDropoutState(raf.Device("cuda"), dropout)
     )
+    state_0 = numpy(state)
+
+    # forward
+    m_y0 = raf._contrib_dropout(x, dropout)[0]
     check_dropout(x, m_y0)
 
     # check whether the state is updated
-    state_0 = numpy(state)
     m_y1 = raf._contrib_dropout(x, dropout)[0]
     state_1 = numpy(state)
     assert not np.array_equal(state_0, state_1)
     assert not np.array_equal(numpy(m_y0), numpy(m_y1))
 
-    # reproducible: state_0 results in m_y1
+    # reproducible
     r_y = raf._contrib_dropout(x, dropout, raf.array(state_0, device="cuda"))[0]
-    check(m_y1, r_y)
+    check(m_y0, r_y)
 
     # backward
     dy, _ = randn_torch(shape, dtype=dtype, device="cuda")
