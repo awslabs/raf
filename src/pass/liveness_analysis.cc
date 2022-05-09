@@ -162,7 +162,6 @@ void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const CallNode* node) {
     CHECK(var != nullptr) << "Expected the first argument of reshape op to be a Var, but got "
                           << node->args[0]->GetTypeKey();
     this->VisitExpr_(var);
-
   } else {
     Var dummy = analyzer_->CreateTensorVar(node->checked_type());
     analyzer_->Init(let_var_, dummy);
@@ -176,6 +175,14 @@ void LivenessAnalyzer::ForwardAnalyzer::VisitExpr_(const TupleNode* node) {
     if (field.as<VarNode>()) {
       // Ignore constant fields (e.g., NoGradValue)
       var = Downcast<Var>(field);
+    } else if (auto const_node = field.as<ConstantNode>()) {
+      // If the constant is a tensor, it is folded by constant folding and initialized
+      // in this tuple. For example: `let %a2 = (%p0, %a1, tensor(5x5, float32, cuda(0)))`.
+      // In this case, we have to create a dummy liveness var for it, because this tensor
+      // might be used in the future such as `let %a3 = %a2.2`.
+      if (auto ttype = const_node->checked_type().as<TensorTypeNode>()) {
+        var = analyzer_->CreateTensorVar(GetRef<TensorType>(ttype));
+      }
     }
     fields.push_back(var);
   }
@@ -281,7 +288,17 @@ void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const CallNode* node) {
 }
 
 void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const TupleNode* node) {
-  analyzer_->live_[let_var_] = analyzer_->vset_[MergeLive(let_var_)];
+  Array<Var> var_fields;
+  for (const auto& field : node->fields) {
+    // If the field is a constant, then its life must start from this tuple,
+    // so we do not merge its life with other fields.
+    if (field.as<VarNode>()) {
+      var_fields.push_back(Downcast<Var>(field));
+    }
+  }
+  Var d1 = analyzer_->Merge(var_fields);
+  Var d2 = MergeLive(d1, let_var_);
+  analyzer_->live_[let_var_] = analyzer_->vset_[d2];
 }
 
 void LivenessAnalyzer::BackwardAnalyzer::VisitExpr_(const TupleGetItemNode* node) {
