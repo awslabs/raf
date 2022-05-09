@@ -7,7 +7,7 @@ import pytest
 import raf
 from raf._lib import tvm, relay
 from raf.ir import ScopeBuilder
-from raf._ffi.pass_ import InferType, LivenessAnalysis, ManifestAlloc
+from raf._ffi.pass_ import InferType, LivenessAnalysis, ManifestAlloc, FoldConstant
 from raf.testing import randn
 
 
@@ -208,6 +208,32 @@ def test_direct_assign():
         "a1": {"param_0"},
         "a2": {"t_0"},
         "a3": {"t_0"},
+        "n_1": {"t_1"},
+    }
+    verify_live_in_set(mod, expected)
+
+
+def test_folded_const_in_tuple():
+    shape = (5, 5)
+
+    sb = ScopeBuilder()
+    p0 = raf.ir.var("p0", shape=shape)
+    a1 = sb.let("a1", raf.ir.op.relu(p0))
+    x0 = sb.let("x0", raf.ir.op.zeros(raf.ir.const(shape), raf.ir.const("float32")))
+    # x0 will be folded and we should have "let %a2 = (%p0, %a1, tensor(5x5, float32, cpu(0)))"
+    a2 = sb.let("a2", relay.Tuple([p0, a1, x0]))
+    a3 = sb.let("a3", relay.TupleGetItem(a2, 2))
+    sb.ret(a3)
+    mod = tvm.IRModule.from_expr(relay.Function([p0], sb.get()))
+    mod = InferType()(mod)
+    mod = FoldConstant()(mod)
+    mod = InferType()(mod)
+
+    expected = {
+        "n_0": {},
+        "a1": {"param_0"},
+        "a2": {"param_0", "t_0"},
+        "a3": {"t_1"},  # t_1 is the folded const generated at %a2
         "n_1": {"t_1"},
     }
     verify_live_in_set(mod, expected)
