@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=missing-function-docstring, undefined-loop-variable, unused-argument
+# pylint: disable=missing-function-docstring, undefined-loop-variable, unused-argument, invalid-name
 """Compute definition and schedules for data transform operators"""
 import numpy as np
 
@@ -11,7 +11,7 @@ from .._lib import strategy
 from .._lib import tvm as _tvm  # pylint: disable=unused-import
 from .._lib import _reg
 
-_topi = _tvm.topi  # pylint: disable=invalid-name,no-member
+_topi = _tvm.topi  # pylint: disable=no-member
 
 
 def _to_const_tensor(x):
@@ -190,12 +190,13 @@ _reg.register_injective_schedule("raf.op.tvm.take_dx")
 
 @register_compute("raf.op.tvm.strided_slice_dx")
 def strided_slice_dx_compute(attrs, inputs, output_type):
-    dy = inputs[0]
-    begin, end, strides, slice_mode = attrs.begin, attrs.end, attrs.strides, attrs.slice_mode
-    var = _tvm.te.placeholder(shape=attrs.primal_shape, dtype=dy.dtype)
-    out = _topi.nn.strided_slice(var, begin, end, strides, None, slice_mode)
-    grads = _tvm.te.gradient(out, [var], head=dy)
-    return grads
+    assert attrs.slice_mode == "end"
+    v = inputs[0]
+    data = _topi.full(attrs.primal_shape, v.dtype, 0.0)
+    begin = _to_const_tensor(attrs.begin)
+    end = _to_const_tensor(attrs.end)
+    strides = _to_const_tensor(attrs.strides)
+    return [_topi.strided_set(data, v, begin, end, strides)]
 
 
 _reg.register_injective_schedule("raf.op.tvm.strided_slice_dx")
