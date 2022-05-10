@@ -492,20 +492,6 @@ SCHEMAS = {
         Arg(name="src", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="value::Value"),
     ],
-    "transform.h::scatter_strided_slice": [
-        Arg(name="x", cxx_type="value::BaseTensorValue"),
-        Arg(name="src", cxx_type="value::BaseTensorValue"),
-        Arg(name="begin", cxx_type="std::vector<int64_t>", cxx_normalizer="IntTuple"),
-        Arg(name="end", cxx_type="std::vector<int64_t>", cxx_normalizer="IntTuple"),
-        Arg(
-            name="strides",
-            cxx_type="std::vector<int64_t>",
-            cxx_normalizer="IntTuple",
-            cxx_default="{}",
-            py_default="None",
-        ),
-        Arg(name="slice_mode", cxx_type="std::string", cxx_default='"end"', py_default='"end"'),
-    ],
     "transform.h::transpose": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(
@@ -560,6 +546,19 @@ SCHEMAS = {
             py_default="None",
         ),
         Arg(name="slice_mode", cxx_type="std::string", cxx_default='"end"', py_default='"end"'),
+    ],
+    "transform.h::strided_set": [
+        Arg(name="data", cxx_type="value::BaseTensorValue"),
+        Arg(name="v", cxx_type="value::BaseTensorValue"),
+        Arg(name="begin", cxx_type="std::vector<int64_t>", cxx_normalizer="IntTuple"),
+        Arg(name="end", cxx_type="std::vector<int64_t>", cxx_normalizer="IntTuple"),
+        Arg(
+            name="strides",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple",
+            cxx_default="{}",
+            py_default="None",
+        ),
     ],
     "likes.h::sum_dx": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
