@@ -633,5 +633,38 @@ def test_not_call():
     verify_remat(model, args, 4.01172, expected(), (5.01172, 4.01172))
 
 
+def test_concat():
+    """
+    A simple test program to check whether the remat pass can handle concat.
+    No actual rematerialization is taking place.
+    """
+    device = "cpu"
+    shape = (16, 16, 64, 64)  # 4 MBs
+
+    def get_mod():
+        relu_op = raf._ffi.op.GetOp("raf.op.relu")
+        concat_op = raf._ffi.op.GetOp("raf.op.concatenate")
+
+        # param: 8 MBs
+        p_0 = raf.ir.var("p0", shape=shape)
+        p_1 = raf.ir.var("p1", shape=shape)
+
+        sb = ScopeBuilder()
+        a_1 = sb.let("a1", relay.Call(relu_op, [p_0]))
+        a_2 = sb.let("a2", relay.Call(relu_op, [p_1]))
+        a_3 = sb.let("a3", relay.Tuple([a_1, a_2]))
+        a_4 = sb.let("a4", relay.Call(concat_op, [a_3, raf.ir.const(1)]))
+        sb.ret(a_4)
+        func = relay.Function([p_0, p_1], sb.get())
+        return tvm.IRModule.from_expr(func)
+
+    m_p0, _ = randn(shape, device=device)
+    m_p1, _ = randn(shape, device=device)
+
+    # Set the memory budget to be higher than the peak
+    # The IR should remain unchanged after the remat pass
+    verify_remat(get_mod(), [m_p0, m_p1], 32, get_mod()["main"], (24.00, 24.00))
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

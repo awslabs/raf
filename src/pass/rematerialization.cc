@@ -32,7 +32,7 @@ constexpr float kMegaBytes = 1048576;
 constexpr float kGigaBytes = 1073741824;
 
 // Whether to display verbose logging.
-#define SHOW_VERBOSE_LOG 0
+#define SHOW_VERBOSE_LOG 1
 
 // Whether to update tensor index when rematerialization. If defined, then
 // the rematerialized tensors are less likely to be freed and rematerialized again.
@@ -592,6 +592,11 @@ class Rematerializer : public ExprMutator {
     static const auto reshape_op = Op::Get("raf.op.reshape");
 
     auto tensor_infos = tensor_infos_.GetTensorInfoFromLetVar(target_let_var);
+    if (tensor_infos.size() > 1) {
+      // TODO: Handle tuple. This happens for ops taking a tuple as an argument (e.g., concat).
+      // Ideally we should check each element in the tuple and correct their types.
+      return target_let_var;
+    }
     auto curr_let_var = tensor_infos[0]->let_var;
 
     // Do nothing if the types are already match.
@@ -603,7 +608,6 @@ class Rematerializer : public ExprMutator {
     // If not match, then the target let_var must be in a tensor type.
     auto target_type = target_let_var->checked_type().as<TensorTypeNode>();
     CHECK(target_type != nullptr);
-    CHECK_EQ(tensor_infos.size(), 1U);
 
     // Need to generate a TupleGetItem node.
     if (auto tuple_type_node = curr_let_var->checked_type().as<TupleTypeNode>()) {
@@ -1027,6 +1031,7 @@ Pass Rematerialization() {
     } else {
       LOG(INFO) << "Using GFLOPS-based cost estimation. ";
     }
+    LOG(INFO) << raf::ir::AsText(f);
     return Downcast<Function>(
         rematerialization::Rematerializer(&analyzer, device, f, m, memory_budget, profiler).Run());
   };
