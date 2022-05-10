@@ -32,7 +32,7 @@ constexpr float kMegaBytes = 1048576;
 constexpr float kGigaBytes = 1073741824;
 
 // Whether to display verbose logging.
-#define SHOW_VERBOSE_LOG 1
+#define SHOW_VERBOSE_LOG 0
 
 // Whether to update tensor index when rematerialization. If defined, then
 // the rematerialized tensors are less likely to be freed and rematerialized again.
@@ -1031,7 +1031,6 @@ Pass Rematerialization() {
     } else {
       LOG(INFO) << "Using GFLOPS-based cost estimation. ";
     }
-    LOG(INFO) << raf::ir::AsText(f);
     return Downcast<Function>(
         rematerialization::Rematerializer(&analyzer, device, f, m, memory_budget, profiler).Run());
   };
