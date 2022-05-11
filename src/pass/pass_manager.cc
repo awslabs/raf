@@ -7,7 +7,6 @@
  * \file src/pass/pass_manager.cc
  * \brief Infrastructure for transformation passes.
  */
-#include <sys/stat.h>
 #include <tvm/node/repr_printer.h>
 
 #include "raf/file.h"
