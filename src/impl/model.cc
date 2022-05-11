@@ -58,7 +58,7 @@ ObjectRef RunModel(ir::IRModule mod, Array<Expr> args) {
   if (!requires_grad) {
     // TODO(haibin): add simplify inference pass - simplify the compute of
     // BN, LN, Dropout, GN, etc.
-    raf::pass::RAFSequential seq({CanonicalizeOps(), FoldConstant()});
+    raf::pass::RAFSequential seq({CanonicalizeOps(), FoldConstant()}, "interpreter_infer_optimize");
     updated_mod = seq(updated_mod);
     func = Downcast<Function>(updated_mod->Lookup("main"));
     auto call_node = Call(func, args);
@@ -81,7 +81,7 @@ ObjectRef RunModel(ir::IRModule mod, Array<Expr> args) {
 
   // run const folding pass
   passes.push_back(FoldConstant());
-  raf::pass::RAFSequential seq(passes);
+  raf::pass::RAFSequential seq(passes, "interpreter_optimize");
   updated_mod = seq(updated_mod);
   func = Downcast<Function>(updated_mod->Lookup("main"));
   TupleValue result = Downcast<TupleValue>(Interpret(Call(func, args), updated_mod));
