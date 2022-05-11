@@ -19,7 +19,6 @@ from raf.testing import (
     randint,
     check,
     run_vm_model,
-    scatter_strided_slice_python,
 )
 import tvm.topi.testing as npx  # pylint: disable=no-name-in-module
 
@@ -242,7 +241,7 @@ def test_scatter(shape, axis, device):
     ],
 )
 @pytest.mark.parametrize("dtype", ["float16", "float32"])
-def test_scatter_strided_slice(device, params, dtype):
+def test_strided_set(device, params, dtype):
     # Skip float16 tests on CPU since it may not be supported and not much performance benefit.
     if dtype == "float16" and device == "cpu":
         pytest.skip("float16 is not supported on CPU")
@@ -251,9 +250,9 @@ def test_scatter_strided_slice(device, params, dtype):
     n_slice = npx.strided_slice_python(n_x, begin, end, strides)
     m_src, n_src = randn(n_slice.shape, device=device, dtype=dtype)
 
-    model = TestModel(raf._op.sym.scatter_strided_slice, begin=begin, end=end, strides=strides)
+    model = TestModel(raf._op.sym.strided_set, begin=begin, end=end, strides=strides)
     m_y = model(m_x, m_src)
-    n_y = scatter_strided_slice_python(n_x, n_src, begin, end, strides)
+    n_y = npx.strided_set_python(n_x, n_src, begin, end, strides)
     v_y = run_vm_model(model, device, [m_x, m_src])
 
     check(m_y, n_y)

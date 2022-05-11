@@ -496,52 +496,6 @@ HashKey ScatterDxHasher(const std::vector<Type>& param_types, const Type& y_type
 RAF_TVM(scatter_dx, ScatterDx, ScatterDxArgs, ScatterDxSchema2Args, ScatterDxSchemaArgNames,
         ScatterDxSchema2Attrs, ScatterDxHasher, kInjective);
 
-std::vector<Value> ScatterStridedSliceSchema2Args(const ScatterStridedSliceArgs* args) {
-  return {args->x, args->src};
-}
-
-std::vector<std::string> ScatterStridedSliceSchemaArgNames(const op::CallValues& call) {
-  return {"x", "src"};
-}
-
-Attrs ScatterStridedSliceSchema2Attrs(const ScatterStridedSliceArgs* args) {
-  auto attrs = make_object<StridedSliceAttrs>();
-  CHECK_EQ(args->begin.size(), args->end.size());
-  CHECK_EQ(args->begin.size(), args->strides.size());
-  std::vector<Integer> begin, end, strides;
-  TensorType x_type = Downcast<TensorType>(GetType(args->x));
-  int i;
-  for (i = 0; i < args->begin.size(); i++) {
-    begin.emplace_back(args->begin[i]);
-    end.emplace_back(args->end[i]);
-    strides.emplace_back(args->strides[i]);
-  }
-  for (; i < x_type->shape.size(); i++) {
-    begin.emplace_back(0);
-    end.emplace_back(x_type->shape[i].as<tvm::tir::IntImmNode>()->value);
-    strides.emplace_back(1);
-  }
-  attrs->begin = Array<Integer>(begin.begin(), begin.end());
-  attrs->end = Array<Integer>(end.begin(), end.end());
-  attrs->strides = Array<Integer>(strides.begin(), strides.end());
-  attrs->slice_mode = args->slice_mode;
-  return Attrs(attrs);
-}
-
-HashKey ScatterStridedSliceHasher(const std::vector<Type>& param_types, const Type& y_type,
-                                  const ScatterStridedSliceArgs* args) {
-  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
-  key << args->begin;
-  key << args->end;
-  key << args->strides;
-  key << args->slice_mode;
-  return key;
-}
-
-RAF_TVM(scatter_strided_slice, ScatterStridedSlice, ScatterStridedSliceArgs,
-        ScatterStridedSliceSchema2Args, ScatterStridedSliceSchemaArgNames,
-        ScatterStridedSliceSchema2Attrs, ScatterStridedSliceHasher, kInjective);
-
 std::vector<Value> ConcatenateSchema2Args(const ConcatenateArgs* args) {
   std::vector<Value> ret;
   for (auto v : args->x) {
@@ -1121,6 +1075,49 @@ HashKey StridedSliceDxHasher(const std::vector<Type>& param_types, const Type& y
 
 RAF_TVM(strided_slice_dx, StridedSliceDx, StridedSliceDxArgs, StridedSliceDxSchema2Args,
         StridedSliceDxSchemaArgNames, StridedSliceDxSchema2Attrs, StridedSliceDxHasher, kInjective);
+
+std::vector<Value> StridedSetSchema2Args(const StridedSetArgs* args) {
+  return {args->data, args->v};
+}
+
+std::vector<std::string> StridedSetSchemaArgNames(const op::CallValues& call) {
+  return {"data", "v"};
+}
+
+Attrs StridedSetSchema2Attrs(const StridedSetArgs* args) {
+  auto attrs = make_object<StridedSliceAttrs>();
+  CHECK_EQ(args->begin.size(), args->end.size());
+  CHECK_EQ(args->begin.size(), args->strides.size());
+  std::vector<Integer> begin, end, strides;
+  TensorType data_type = Downcast<TensorType>(GetType(args->data));
+  int i;
+  for (i = 0; i < args->begin.size(); i++) {
+    begin.emplace_back(args->begin[i]);
+    end.emplace_back(args->end[i]);
+    strides.emplace_back(args->strides[i]);
+  }
+  for (; i < data_type->shape.size(); i++) {
+    begin.emplace_back(0);
+    end.emplace_back(data_type->shape[i].as<tvm::tir::IntImmNode>()->value);
+    strides.emplace_back(1);
+  }
+  attrs->begin = Array<Integer>(begin.begin(), begin.end());
+  attrs->end = Array<Integer>(end.begin(), end.end());
+  attrs->strides = Array<Integer>(strides.begin(), strides.end());
+  return Attrs(attrs);
+}
+
+HashKey StridedSetHasher(const std::vector<Type>& param_types, const Type& y_type,
+                         const StridedSetArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->begin;
+  key << args->end;
+  key << args->strides;
+  return key;
+}
+
+RAF_TVM(strided_set, StridedSet, StridedSetArgs, StridedSetSchema2Args, StridedSetSchemaArgNames,
+        StridedSetSchema2Attrs, StridedSetHasher, kInjective);
 
 std::vector<Value> WhereSchema2Args(const WhereArgs* args) {
   return {args->condition, args->x, args->y};

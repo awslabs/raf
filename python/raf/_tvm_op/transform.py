@@ -1,15 +1,24 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=missing-function-docstring, undefined-loop-variable, unused-argument
+# pylint: disable=missing-function-docstring, undefined-loop-variable, unused-argument, invalid-name
 """Compute definition and schedules for data transform operators"""
+import numpy as np
+
 from raf._tvm_op.nn import schedule_generic
 from .._lib import register_compute
 from .._lib import strategy
 from .._lib import tvm as _tvm  # pylint: disable=unused-import
 from .._lib import _reg
 
-_topi = _tvm.topi  # pylint: disable=invalid-name,no-member
+_topi = _tvm.topi  # pylint: disable=no-member
+
+
+def _to_const_tensor_1d(x, dtype="int32"):
+    x = _topi.utils.get_const_tuple(x)
+    x = np.array(x, dtype=dtype)
+    x = _topi.utils.const_vector(x)
+    return x
 
 
 @register_compute("raf.op.tvm.embedding")
@@ -102,24 +111,17 @@ def scatter_dx_like_compute(attrs, inputs, output_type):
     return [out]
 
 
-@register_compute("raf.op.tvm.scatter_strided_slice")
-def scatter_strided_slice_compute(attrs, inputs, output_type):
-    x, src = inputs
-    begin, end, strides, slice_mode = attrs.begin, attrs.end, attrs.strides, attrs.slice_mode
-
-    ones = _tvm.topi.full_like(src, _tvm.tir.const(1.0, x.dtype))
-    var = _tvm.te.placeholder(shape=x.shape, dtype=x.dtype)
-    slices = _topi.nn.strided_slice(var, begin, end, strides, None, slice_mode)
-    matched_slices = _tvm.te.gradient(slices, [var], head=ones)[0]
-    matched_slices_value = _tvm.te.gradient(slices, [var], head=src)[0]
-
-    out = matched_slices_value * matched_slices + x * (1 - matched_slices)
-    return [out]
+@register_compute("raf.op.tvm.strided_set")
+def strided_set_compute(attrs, inputs, output_type):
+    data, v = inputs
+    begin = _to_const_tensor_1d(attrs.begin)
+    end = _to_const_tensor_1d(attrs.end)
+    strides = _to_const_tensor_1d(attrs.strides)
+    return [_topi.strided_set(data, v, begin, end, strides)]
 
 
 _reg.register_strategy("raf.op.tvm.scatter", strategy.scatter_strategy)
 _reg.register_injective_schedule("raf.op.tvm.scatter_dx")
-_reg.register_injective_schedule("raf.op.tvm.scatter_strided_slice")
 _reg.register_injective_schedule("raf.op.tvm.transpose_dx")
 _reg.register_injective_schedule("raf.op.tvm.transpose")
 _reg.register_injective_schedule("raf.op.tvm.swap_axis")
@@ -145,6 +147,7 @@ _reg.register_injective_schedule("raf.op.tvm.full_like")
 _reg.register_injective_schedule("raf.op.tvm.batch_flatten")
 _reg.register_injective_schedule("raf.op.tvm.arange")
 _reg.register_injective_schedule("raf.op.tvm.strided_slice")
+_reg.register_injective_schedule("raf.op.tvm.strided_set")
 _reg.register_reduce_schedule("raf.op.tvm.collapse_sum_like")
 
 
@@ -187,12 +190,13 @@ _reg.register_injective_schedule("raf.op.tvm.take_dx")
 
 @register_compute("raf.op.tvm.strided_slice_dx")
 def strided_slice_dx_compute(attrs, inputs, output_type):
-    dy = inputs[0]
-    begin, end, strides, slice_mode = attrs.begin, attrs.end, attrs.strides, attrs.slice_mode
-    var = _tvm.te.placeholder(shape=attrs.primal_shape, dtype=dy.dtype)
-    out = _topi.nn.strided_slice(var, begin, end, strides, None, slice_mode)
-    grads = _tvm.te.gradient(out, [var], head=dy)
-    return grads
+    assert attrs.slice_mode == "end"
+    v = inputs[0]
+    data = _topi.full(attrs.primal_shape, v.dtype, 0.0)
+    begin = _to_const_tensor_1d(attrs.begin)
+    end = _to_const_tensor_1d(attrs.end)
+    strides = _to_const_tensor_1d(attrs.strides)
+    return [_topi.strided_set(data, v, begin, end, strides)]
 
 
 _reg.register_injective_schedule("raf.op.tvm.strided_slice_dx")

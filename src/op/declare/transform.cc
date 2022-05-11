@@ -437,6 +437,24 @@ RAF_OP_DECLARE("raf.op.strided_slice_dx", [](const CallValues& call) {
   throw;
 });
 
+RAF_OP_DECLARE("raf.op.strided_set", [](const CallValues& call) {
+  const auto* args = call->args.as<StridedSetArgs>();
+  CHECK(args != nullptr);
+  DLTensor* data = args->data;
+  DLTensor* v = args->v;
+
+  CHECK(!args->begin.empty()) << "strided_set received invalid begin";
+  CHECK(!args->end.empty()) << "strided_set received invalid end";
+  CHECK_EQ(args->begin.size(), args->end.size()) << "begin.size() != end.size()";
+  CHECK_EQ(data->ndim, v->ndim);
+
+  std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
+  call->device = data->device;
+  call->out = TensorValue::Assemble(/*dev=*/data->device,
+                                    /*dtype=*/data->dtype,
+                                    /*shape=*/shape);
+});
+
 RAF_OP_DECLARE("raf.op.sequence_mask", [](const CallValues& call) {
   const auto* args = call->args.as<SequenceMaskArgs>();
   CHECK(args != nullptr);
@@ -823,24 +841,6 @@ RAF_OP_DECLARE("raf.op.scatter_dx", [](const CallValues& call) {
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);
   call->device = x->device;
-});
-
-RAF_OP_DECLARE("raf.op.scatter_strided_slice", [](const CallValues& call) {
-  const auto* args = call->args.as<ScatterStridedSliceArgs>();
-  CHECK(args != nullptr);
-  DLTensor* x = args->x;
-  DLTensor* src_tensor = args->src;
-
-  CHECK(!args->begin.empty()) << "scatter_strided_slice received invalid begin";
-  CHECK(!args->end.empty()) << "scatter_strided_slice received invalid end";
-  CHECK_EQ(args->begin.size(), args->end.size()) << "begin.size() != end.size()";
-  CHECK_EQ(x->ndim, src_tensor->ndim);
-
-  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  call->device = x->device;
-  call->out = TensorValue::Assemble(/*dev=*/x->device,
-                                    /*dtype=*/x->dtype,
-                                    /*shape=*/shape);
 });
 
 RAF_OP_DECLARE("raf.op.clip", [](const CallValues& call) {
