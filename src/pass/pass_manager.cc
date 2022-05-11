@@ -7,10 +7,10 @@
  * \file src/pass/pass_manager.cc
  * \brief Infrastructure for transformation passes.
  */
-
-#include <tvm/ir/transform.h>
+#include <sys/stat.h>
 #include <tvm/node/repr_printer.h>
 
+#include "raf/file.h"
 #include "raf/pass.h"
 #include "raf/pass_manager.h"
 #include "raf/registry.h"
@@ -98,10 +98,38 @@ inline Pass GetPass(const String& pass_name) {
   return (*f)();
 }
 
+std::string DumpAfterPassIRToFile(std::string dump_ir_path, const IRModule& mod, size_t idx,
+                                  std::string pass_name) {
+  if (dump_ir_path.empty()) {
+    return "";
+  }
+  // Dump the IR to the folder.
+  std::ofstream ofs(dump_ir_path + "/" + std::to_string(idx) + "_" + pass_name + ".txt");
+  ofs << raf::ir::AsText(mod);
+  return dump_ir_path;
+}
+
 // TODO(zhiics): we currenlty only sequentially execute each pass in
 // a RAFSequential without the consideration of their orders. The phase
 // ordering problem needs to be handled in the future.
 IRModule RAFSequentialNode::operator()(IRModule mod, const PassContext& pass_ctx) const {
+  const char* raf_dump_ir_to = getenv("RAF_DUMP_IR_TO");
+  std::string dump_ir_path = "";
+  if (raf_dump_ir_to != nullptr) {
+    dump_ir_path = std::string(raf_dump_ir_to);
+    // Create parent directory if it doesn't exist.
+    CreateDir(dump_ir_path);
+
+    // Create a unique sequence directory.
+    dump_ir_path += "/" + pass_info->name;
+    if (DirExists(dump_ir_path)) {
+      dump_ir_path += "_1";
+    }
+    CreateDir(dump_ir_path);
+    DumpAfterPassIRToFile(dump_ir_path, mod, 0, "init");
+  }
+
+  size_t pass_cnt = 1;
   for (const Pass& pass : passes) {
     ICHECK(pass.defined()) << "Found undefined pass for optimization.";
     const PassInfo& pass_info = pass->Info();
@@ -111,6 +139,7 @@ IRModule RAFSequentialNode::operator()(IRModule mod, const PassContext& pass_ctx
       mod = GetPass(it)(std::move(mod), pass_ctx);
     }
     mod = pass(std::move(mod), pass_ctx);
+    DumpAfterPassIRToFile(dump_ir_path, mod, pass_cnt++, pass_info->name);
   }
   return mod;
 }

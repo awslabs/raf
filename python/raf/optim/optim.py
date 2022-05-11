@@ -80,7 +80,7 @@ def with_autodiff(model):
                 # TODO: Refactor AutoDataParallel to let it work on the IR after InlineBackward.
                 passes += [AutoDataParallel()]
             passes += [InferType(), FoldConstant(), DeadCodeElimination(), InlineBackward()]
-            seq = RAFSequential(passes)
+            seq = RAFSequential(passes, "with_autodiff")
             mod = seq(mod)
             inputs = _get_func_inputs(record, args, kwargs)
             inputs = inputs + [get_symbol_handle(dy)]

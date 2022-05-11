@@ -930,7 +930,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::ManifestAlloc());
   pass_seqs.push_back(pass::MemoryPlan());
 
-  pass::RAFSequential seq(pass_seqs);
+  pass::RAFSequential seq(pass_seqs, "vm_compiler_optimize");
   return seq(mod);
 }
 
