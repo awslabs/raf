@@ -14,9 +14,9 @@ from .._lib import _reg
 _topi = _tvm.topi  # pylint: disable=no-member
 
 
-def _to_const_tensor(x):
+def _to_const_tensor_1d(x, dtype="int32"):
     x = _topi.utils.get_const_tuple(x)
-    x = np.array(x, dtype="int32")
+    x = np.array(x, dtype=dtype)
     x = _topi.utils.const_vector(x)
     return x
 
@@ -114,9 +114,9 @@ def scatter_dx_like_compute(attrs, inputs, output_type):
 @register_compute("raf.op.tvm.strided_set")
 def strided_set_compute(attrs, inputs, output_type):
     data, v = inputs
-    begin = _to_const_tensor(attrs.begin)
-    end = _to_const_tensor(attrs.end)
-    strides = _to_const_tensor(attrs.strides)
+    begin = _to_const_tensor_1d(attrs.begin)
+    end = _to_const_tensor_1d(attrs.end)
+    strides = _to_const_tensor_1d(attrs.strides)
     return [_topi.strided_set(data, v, begin, end, strides)]
 
 
@@ -193,9 +193,9 @@ def strided_slice_dx_compute(attrs, inputs, output_type):
     assert attrs.slice_mode == "end"
     v = inputs[0]
     data = _topi.full(attrs.primal_shape, v.dtype, 0.0)
-    begin = _to_const_tensor(attrs.begin)
-    end = _to_const_tensor(attrs.end)
-    strides = _to_const_tensor(attrs.strides)
+    begin = _to_const_tensor_1d(attrs.begin)
+    end = _to_const_tensor_1d(attrs.end)
+    strides = _to_const_tensor_1d(attrs.strides)
     return [_topi.strided_set(data, v, begin, end, strides)]
 
 
