@@ -198,7 +198,7 @@ class NCCLAllGather : public NCCLOpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _allgather, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._allgather", NCCLAllGather::make);
 
-class NCCLGroupAllGather : NCCLOpEnv {
+class NCCLGroupAllGather : public NCCLOpEnv {
   explicit NCCLGroupAllGather(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._group_allgather");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
@@ -250,7 +250,7 @@ class NCCLGroupAllGather : NCCLOpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _group_allgather, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._group_allgather", NCCLGroupAllGather::make);
 
-class NCCLReduceScatter : NCCLOpEnv {
+class NCCLReduceScatter : public NCCLOpEnv {
   void* in_buffer;
   size_t size_in_bytes;
   size_t size;
@@ -334,7 +334,7 @@ class NCCLReduceScatter : NCCLOpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _reduce_scatter, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._reduce_scatter", NCCLReduceScatter::make);
 
-class NCCLGroupReduceScatter : NCCLOpEnv {
+class NCCLGroupReduceScatter : public NCCLOpEnv {
   std::vector<size_t> sizes;
   ncclRedOp_t compute;
 
