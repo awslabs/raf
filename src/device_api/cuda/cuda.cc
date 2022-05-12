@@ -35,6 +35,7 @@ class CUDADeviceAPI final : public DeviceAPI {
   }
 
   void* AllocMemory(int64_t nbytes, int64_t alignment) override {
+    CUDA_CALL(cudaSetDevice(device_id_));
     void* ptr = nullptr;
     // TODO(@junrushao1994): make sure it is correct
     CHECK_EQ(512 % alignment, 0);
@@ -49,6 +50,7 @@ class CUDADeviceAPI final : public DeviceAPI {
 #if CUDA_VERSION >= 11030
   void SetDevice(const int dev_id) override {
     device_id_ = dev_id;
+    CUDA_CALL(cudaSetDevice(dev_id));
   }
 
   static cudaMemPool_t GetCUDAMemoryPool(int dev_id) {

@@ -13,6 +13,7 @@
 #include "raf/op_utils.h"
 #include "raf/dist_config.h"
 #include "raf/nccl_communicator.h"
+#include "../../../src/common/cuda_utils.h"
 #include "../../schema/communication.h"
 #include "./communication_utils.h"
 
@@ -27,16 +28,23 @@ using stream_pool::StreamTagEnum;
 
 RAF_REGISTER_DIALECT("nccl").set_enable(DevType::kCUDA());
 
-class NCCLAllReduce : public raf::op::OpEnv {
+class NCCLOpEnv : public raf::op::OpEnv {
+ protected:
   void* stream;
   void* communicator;
+  explicit NCCLOpEnv(const CallValues& cv) {
+    CUDA_CALL(cudaSetDevice(cv->device.device_id()));
+  }
+};
+
+class NCCLAllReduce : public NCCLOpEnv {
   void* fused_data;
   size_t total_size = 0;
   std::vector<size_t> tuple_sizes;
   DType dtype;
   ncclRedOp_t compute;
 
-  explicit NCCLAllReduce(const CallValues& cv) {
+  explicit NCCLAllReduce(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._allreduce");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     auto args = cv->args.as<raf::op::schema::AllreduceArgs>();
@@ -146,10 +154,8 @@ class NCCLAllReduce : public raf::op::OpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _allreduce, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._allreduce", NCCLAllReduce::make);
 
-class NCCLAllGather : public raf::op::OpEnv {
-  void* stream;
-  void* communicator;
-  explicit NCCLAllGather(const CallValues& cv) {
+class NCCLAllGather : public NCCLOpEnv {
+  explicit NCCLAllGather(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._allgather");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     auto args = cv->args.as<raf::op::schema::AllgatherArgs>();
@@ -192,10 +198,8 @@ class NCCLAllGather : public raf::op::OpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _allgather, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._allgather", NCCLAllGather::make);
 
-class NCCLGroupAllGather : public raf::op::OpEnv {
-  void* stream;
-  void* communicator;
-  explicit NCCLGroupAllGather(const CallValues& cv) {
+class NCCLGroupAllGather : NCCLOpEnv {
+  explicit NCCLGroupAllGather(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._group_allgather");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("tensor_list")};
@@ -246,15 +250,13 @@ class NCCLGroupAllGather : public raf::op::OpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _group_allgather, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._group_allgather", NCCLGroupAllGather::make);
 
-class NCCLReduceScatter : public raf::op::OpEnv {
-  void* stream;
-  void* communicator;
+class NCCLReduceScatter : NCCLOpEnv {
   void* in_buffer;
   size_t size_in_bytes;
   size_t size;
   ncclRedOp_t compute;
 
-  explicit NCCLReduceScatter(const CallValues& cv) {
+  explicit NCCLReduceScatter(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._reduce_scatter");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
@@ -332,13 +334,11 @@ class NCCLReduceScatter : public raf::op::OpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _reduce_scatter, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._reduce_scatter", NCCLReduceScatter::make);
 
-class NCCLGroupReduceScatter : public raf::op::OpEnv {
-  void* stream;
-  void* communicator;
+class NCCLGroupReduceScatter : NCCLOpEnv {
   std::vector<size_t> sizes;
   ncclRedOp_t compute;
 
-  explicit NCCLGroupReduceScatter(const CallValues& cv) {
+  explicit NCCLGroupReduceScatter(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._group_reduce_scatter");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("tensor_list")};
@@ -415,16 +415,14 @@ class NCCLGroupReduceScatter : public raf::op::OpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _group_reduce_scatter, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._group_reduce_scatter", NCCLGroupReduceScatter::make);
 
-class NCCLBroadcast : public raf::op::OpEnv {
-  void* stream;
-  void* communicator;
+class NCCLBroadcast : public NCCLOpEnv {
   void* fused_data;
   size_t total_size = 0;
   std::vector<size_t> tuple_sizes;
   DType dtype;
   int root;
 
-  explicit NCCLBroadcast(const CallValues& cv) {
+  explicit NCCLBroadcast(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._broadcast");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
@@ -507,12 +505,10 @@ class NCCLBroadcast : public raf::op::OpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _broadcast, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._broadcast", NCCLBroadcast::make);
 
-class NCCLSend : public raf::op::OpEnv {
-  void* stream;
-  void* communicator;
+class NCCLSend : public NCCLOpEnv {
   int peer;
 
-  explicit NCCLSend(const CallValues& cv) {
+  explicit NCCLSend(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._send");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
@@ -553,14 +549,14 @@ class NCCLSend : public raf::op::OpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _send, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._send", NCCLSend::make);
 
-class NCCLRecv : public raf::op::OpEnv {
+class NCCLRecv : public NCCLOpEnv {
   void* stream;
   void* communicator;
   int peer;
   std::vector<int64_t> shape;
   DType dtype;
 
-  explicit NCCLRecv(const CallValues& cv) {
+  explicit NCCLRecv(const CallValues& cv) : NCCLOpEnv(cv) {
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator, "nccl", NullValue<Value>());
     const auto* args = cv->args.as<raf::op::schema::RecvArgs>();
@@ -598,7 +594,7 @@ class NCCLRecv : public raf::op::OpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _recv, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._recv", NCCLRecv::make);
 
-class NCCLReduce : public raf::op::OpEnv {
+class NCCLReduce : public NCCLOpEnv {
   void* stream;
   void* communicator;
   ncclRedOp_t compute;
@@ -608,7 +604,7 @@ class NCCLReduce : public raf::op::OpEnv {
   std::vector<size_t> tuple_sizes;
   void* fused_data;
 
-  explicit NCCLReduce(const CallValues& cv) {
+  explicit NCCLReduce(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._reduce");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};

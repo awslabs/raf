@@ -119,8 +119,8 @@ class GlobalCommunicatorEntry {
   GlobalCommunicatorEntry() = default;
 
   static GlobalCommunicatorEntry* ThreadLocal() {
-    using TLS = dmlc::ThreadLocalStore<GlobalCommunicatorEntry>;
-    return TLS::Get();
+    static GlobalCommunicatorEntry entry;
+    return &entry;
   }
   Communicator comm;
 };
