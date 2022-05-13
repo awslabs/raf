@@ -112,6 +112,8 @@ NCCLCommunicator NCCLCommunicator::make(Value rank_list) {
   } else {
     // Create Sub-communicator
     InitSubCommunicator(obj.get(), rank_list, global_comm);
+    cudaSetDevice(global_comm->local_rank);
+
     obj->parent_comm = global_comm;
 
     // sync NCCL id between ranks

@@ -108,8 +108,8 @@ class CommunicatorPool {
   }
 
   static CommunicatorPool* Get() {
-    static CommunicatorPool* instance = dmlc::ThreadLocalStore<CommunicatorPool>::Get();
-    return instance;
+    static CommunicatorPool instance;
+    return &instance;
   }
 
   Communicator GetCommunicator(const std::string& name, const Value rank_list) {
