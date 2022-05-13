@@ -71,7 +71,6 @@ def test_binary_ops_without_grad(ops, shape, dtype, device):
     [
         (torch.mul, raf._op.sym.multiply),
         (torch.div, raf._op.sym.divide),
-        (torch.pow, raf._op.sym.power),
         (torch.add, raf._op.sym.add),
         (torch.sub, raf._op.sym.subtract),
     ],
@@ -87,6 +86,24 @@ def test_binary_ops_with_grad(ops, shape, dtype, device):
     t_y.backward(t_dy)
 
     verify_op(m_op, [m_x1, m_x2], device, t_y, m_dy, [t_x1.grad, t_x2.grad])
+
+
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize("dtype", ["float32"])
+def test_power(dtype, device):
+    x1 = np.random.randn(2, 2).astype("float32")
+    x1[0][0] = 0  # Assign 0 to test the corner case.
+    t_x1 = torch.Tensor(x1).to(device)
+    t_x1.requires_grad = True
+    m_x1 = raf.array(x1, device=device)
+    m_x1.requires_grad = True
+
+    m_x2, t_x2 = randn_torch((), dtype=dtype, device=device, requires_grad=True)
+    t_y = torch.pow(t_x1, t_x2)
+    m_dy, t_dy = randn_torch(t_y.shape, dtype=dtype, device=device)
+    t_y.backward(t_dy)
+
+    verify_op(raf._op.sym.power, [m_x1, m_x2], device, t_y, m_dy, [t_x1.grad, t_x2.grad])
 
 
 # logical_and only allows bool input s
