@@ -118,7 +118,7 @@ class GlobalCommunicatorEntry {
  public:
   GlobalCommunicatorEntry() = default;
 
-  static GlobalCommunicatorEntry* ThreadLocal() {
+  static GlobalCommunicatorEntry* Get() {
     static GlobalCommunicatorEntry entry;
     return &entry;
   }
@@ -126,7 +126,7 @@ class GlobalCommunicatorEntry {
 };
 
 Communicator GetGlobalCommunicator() {
-  auto entry = GlobalCommunicatorEntry::ThreadLocal();
+  auto entry = GlobalCommunicatorEntry::Get();
   if (!entry->comm.defined()) {
 #ifdef RAF_USE_MPI
     Communicator comm = Communicator::Get("mpi");
@@ -139,7 +139,7 @@ Communicator GetGlobalCommunicator() {
 }
 
 void SetDefaultCommunicator(std::string name) {
-  auto entry = GlobalCommunicatorEntry::ThreadLocal();
+  auto entry = GlobalCommunicatorEntry::Get();
   entry->comm = Communicator::Get(name);
 }
 
