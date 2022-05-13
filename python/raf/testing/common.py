@@ -42,13 +42,12 @@ def get_arr_addr(arr):
 def numpy(x):
     """Helper function to convert x to numpy"""
     import torch
-    import mxnet as mx
 
     if isinstance(x, (raf.ndarray, raf._core.value.TensorValue)):
         return x.numpy()
     if isinstance(x, torch.Tensor):
         return x.detach().cpu().numpy()
-    if isinstance(x, mx.nd.NDArray):
+    if hasattr(x, "asnumpy"):
         return x.asnumpy()
     if np.isscalar(x):
         return np.array(x)
@@ -56,11 +55,17 @@ def numpy(x):
     return x
 
 
-def check(m_x, m_y, *, rtol=1e-5, atol=1e-5):
+def check(m_x, m_y, *, rtol=1e-5, atol=1e-5, dump_name_when_error=None):
     """Helper function to check if m_x and m_y are equal"""
     m_x = numpy(m_x)
     m_y = numpy(m_y)
-    np.testing.assert_allclose(m_x, m_y, rtol=rtol, atol=atol)
+    try:
+        np.testing.assert_allclose(m_x, m_y, rtol=rtol, atol=atol)
+    except Exception as err:  # pylint: disable=broad-except
+        if dump_name_when_error is not None:
+            m_x.tofile(dump_name_when_error + "_x.npy", sep=",")
+            m_y.tofile(dump_name_when_error + "_y.npy", sep=",")
+        raise Exception(err)
 
 
 def to_torch_dev(device_str):
