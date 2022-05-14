@@ -71,7 +71,7 @@ def test_workspace():
 
     # The memory at Conv2D should be 1 MB+workspace, but the workspace should be
     # freed afterward, so the following ReLU should only have 2 MBs.
-    verify_memory(get_mod(), "cuda", [(1, 2), 2, 1], True)
+    verify_memory(get_mod(), "cuda", [(1, float("inf")), 2, 1], True)
 
 
 if __name__ == "__main__":
