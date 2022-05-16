@@ -4,12 +4,12 @@
  */
 
 /*!
- * \file partitioning.cc
+ * \file partition_utils.cc
  * \brief Utility functions for partitioning ANF into multiple functions. An
  * example can be found in the comments of anf_partition.cc.
  */
 
-#include "./partitioning.h"
+#include "./partition_utils.h"
 
 namespace raf {
 namespace pass {

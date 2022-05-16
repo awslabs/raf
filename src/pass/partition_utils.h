@@ -4,7 +4,7 @@
  */
 
 /*!
- * \file partitioning.h
+ * \file partition_utils.h
  * \brief Utility functions for partitioning ANF into multiple functions. An
  * example can be found in the comments of anf_partition.cc.
  */

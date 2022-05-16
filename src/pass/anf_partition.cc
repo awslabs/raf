@@ -45,7 +45,7 @@
 #include <vector>
 #include "./common.h"
 #include "./liveness_analysis.h"
-#include "./partitioning.h"
+#include "./partition_utils.h"
 
 namespace raf {
 namespace pass {
