@@ -560,7 +560,7 @@ def test_group_allgather(axis):
         check(y2, target_y2)
 
 
-@pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
 def test_group_reduce_scatter(computation):
     class TestModel(raf.Model):
