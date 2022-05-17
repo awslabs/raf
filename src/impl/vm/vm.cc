@@ -33,7 +33,6 @@
 #include "raf/vm/vm.h"
 #include "raf/device_api.h"
 #include "raf/profiler.h"
-#include "raf/scope_timer.h"
 #include "raf/memory_profiler.h"
 #include "raf/stream_pool.h"
 #include "../../requests.h"
@@ -1056,7 +1055,6 @@ VirtualMachine::PrepareOpEnv(const VMContext& ctx, const Instruction& instr) {
     // Cache hit. Reuse the OpEnv from the cache.
     op_env = *p;
   } else {
-    RAF_TIMED("JIT", false);
     // Create a new OpEnv.
     auto call_values = CallValues::make();
     Value callee = ctx.ReadRegister(instr.invoke_jit.op_reg);
