@@ -104,7 +104,7 @@ def test_sgd(config):
     for i in range(batch_size):
         t_optimizer.zero_grad()
         m_x, t_x = randn_torch([1, 3, config[1], config[1]], requires_grad=True, device="cuda")
-        m_y, t_y = one_hot_torch(batch_size=1, num_classes=config[2], device="cuda")
+        m_y, t_y = one_hot_torch(size=1, num_classes=config[2], device="cuda")
         m_loss = m_model(m_x, m_y)
         t_loss = t_model(t_x, t_y)
         m_loss.backward()
@@ -197,7 +197,7 @@ def test_traced_sgd(config):
     for i in range(batch_size):
         m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
         m_x, t_x = randn_torch([1, 3, config[1], config[1]], requires_grad=True, device=device)
-        m_y, t_y = one_hot_torch(batch_size=1, num_classes=config[2], device=device)
+        m_y, t_y = one_hot_torch(size=1, num_classes=config[2], device=device)
         m_loss = run_vm_model(m_optimizer, device, [m_dy, m_x, m_y])
         t_optimizer.zero_grad()
         t_loss = t_model(t_x, t_y)
@@ -273,7 +273,7 @@ def test_state_partition(mock_get_config, mock_get_comm):
     device = "cuda"
     m_x, _ = randn_torch([batch_size, 3, shape, shape], requires_grad=True, device=device)
     m_dy, _ = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
-    m_ytrue, _ = one_hot_torch(batch_size=batch_size, num_classes=n_classes, device=device)
+    m_ytrue, _ = one_hot_torch(size=batch_size, num_classes=n_classes, device=device)
     args = [m_dy, m_x, m_ytrue]
 
     record = m_optimizer._internal(*args)

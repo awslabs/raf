@@ -134,7 +134,7 @@ executor = None
 for _ in range(num_epoch):
     # Prepare input data, use random data as example here
     r_x, _ = randn_torch(input_shape, device=device, dtype="float32")
-    r_ytrue, _ = one_hot_torch(batch_size=batch_size, num_classes=10, device=device)
+    r_ytrue, _ = one_hot_torch(size=batch_size, num_classes=10, device=device)
     args = [dy, r_x, r_ytrue]
 
     # Initialize the VM at the first iteration.
@@ -158,7 +158,7 @@ batch_size = 8
 
 dy, _ = randn_torch((), std=0.0, mean=1.0, requires_grad=False, device=device)  # dy = tensor(1.0)
 r_x, _ = randn_torch(input_shape, device=device, dtype="float32")
-r_ytrue, _ = one_hot_torch(batch_size=batch_size, num_classes=10, device=device)
+r_ytrue, _ = one_hot_torch(size=batch_size, num_classes=10, device=device)
 args = [dy, r_x, r_ytrue]
 
 ret = optimizer(*args)

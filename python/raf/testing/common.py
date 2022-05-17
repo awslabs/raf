@@ -143,29 +143,31 @@ def randn_mxnet(
     return m_x, mx_x
 
 
-def one_hot_torch(batch_size, num_classes, device="cpu"):
+def one_hot_torch(size, num_classes, device="cpu"):
     """Helper function to generate one hot tensors in raf and torch"""
     import torch
 
-    targets = np.random.randint(0, num_classes, size=batch_size)
+    size = tuple(size) if isinstance(size, (list, tuple)) else (size,)
+    targets = np.random.randint(0, num_classes, size=size)
     m_x = raf.array(targets, device=device)
     t_x = torch.tensor(
         targets, requires_grad=False, device=to_torch_dev(device)
     )  # pylint: disable=not-callable
-    assert list(m_x.shape) == [batch_size]
-    assert list(t_x.shape) == [batch_size]
+    assert list(m_x.shape) == size
+    assert list(t_x.shape) == size
     return m_x, t_x
 
 
-def one_hot_mxnet(batch_size, num_classes, device="cpu"):
+def one_hot_mxnet(size, num_classes, device="cpu"):
     """Helper function to generate one hot tensors in raf and mxnet"""
     import mxnet as mx
 
-    targets = np.random.randint(0, num_classes, size=batch_size)
+    size = tuple(size) if isinstance(size, (list, tuple)) else (size,)
+    targets = np.random.randint(0, num_classes, size=size)
     raf_x = raf.array(targets, device=device)
     mx_x = mx.nd.array(targets, ctx=mx.cpu())  # pylint: disable=not-callable
-    assert list(raf_x.shape) == [batch_size]
-    assert list(mx_x.shape) == [batch_size]
+    assert list(raf_x.shape) == size
+    assert list(mx_x.shape) == size
     return raf_x, mx_x
 
 

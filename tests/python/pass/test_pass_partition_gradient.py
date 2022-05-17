@@ -143,7 +143,7 @@ def test_basic(mock_get_config, mock_get_comm, opt_level, batch):
     ad_model = with_autodiff(model)
     m_x, _ = randn((batch, 3, 28, 28), dtype="float32")
     m_dy, _ = randn((), dtype="float32")
-    m_ytrue, _ = one_hot_torch(batch_size=batch, num_classes=10)
+    m_ytrue, _ = one_hot_torch(size=batch, num_classes=10)
 
     if batch == 8:
         # The gradient of conv2d_dx and nll_loss is dividable so no padding is need.

@@ -49,7 +49,7 @@ def run_model(device):
     m_model.train_mode()
 
     m_x, _ = randn([4, 3, 28, 28], device=device, requires_grad=True)
-    m_y, _ = one_hot_torch(batch_size=4, num_classes=10, device=device)
+    m_y, _ = one_hot_torch(size=4, num_classes=10, device=device)
     m_dy, _ = randn((), device=device)
 
     model_train = raf.optim.sgd.with_sgd()(m_model)
