@@ -73,7 +73,7 @@ def test_lenet(shape_dict, mode):
         check(m_y, t_y, rtol=tol, atol=tol)
         return
 
-    m_ytrue, t_ytrue = one_hot_torch(batch_size=batch_size, num_classes=10, device=device)
+    m_ytrue, t_ytrue = one_hot_torch(size=batch_size, num_classes=10, device=device)
     m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False, dtype=dtype)
 
     # append loss function
@@ -165,7 +165,7 @@ def test_conv_bn(shape_dict, mode, fuse):
         check(m_y, t_y, rtol=1e-4, atol=1e-4)
         return
 
-    m_ytrue, t_ytrue = one_hot_torch(batch_size=batch_size, num_classes=6 * 24 * 24, device=device)
+    m_ytrue, t_ytrue = one_hot_torch(size=batch_size, num_classes=6 * 24 * 24, device=device)
     m_dy, t_dy = randn_torch((), std=0.0, mean=1.0, device=device, requires_grad=False)
 
     # append loss function
@@ -285,7 +285,7 @@ def test_mm_dropout(shape_dict, p, device, mode):
             check(m_y, t_y, rtol=1e-4, atol=1e-4)
         return
 
-    m_ytrue, t_ytrue = one_hot_torch(batch_size=batch_size, num_classes=30, device=device)
+    m_ytrue, t_ytrue = one_hot_torch(size=batch_size, num_classes=30, device=device)
 
     # append loss function
     out = m_model.record(m_x)

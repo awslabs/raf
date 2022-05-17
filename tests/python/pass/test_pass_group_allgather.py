@@ -81,7 +81,7 @@ def test_group(mock_get_config, mock_get_comm):
     device = "cuda"
     m_x, _ = randn([batch_size, 3, shape, shape], requires_grad=True, device=device)
     m_dy, _ = randn((), device=device, requires_grad=False)
-    m_ytrue, _ = one_hot_torch(batch_size=batch_size, num_classes=n_classes, device=device)
+    m_ytrue, _ = one_hot_torch(size=batch_size, num_classes=n_classes, device=device)
     args = [m_dy, m_x, m_ytrue]
 
     record = m_optimizer._internal(*args)
