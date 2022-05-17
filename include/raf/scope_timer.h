@@ -4,8 +4,8 @@
  */
 
 /*!
- * \file profiler.h
- * \brief profiler
+ * \file scope_timer.h
+ * \brief Scope timer that times the execution time of a code scope (e.g., function).
  */
 #pragma once
 #include "raf/profiler.h"
