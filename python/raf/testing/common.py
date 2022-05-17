@@ -153,8 +153,8 @@ def one_hot_torch(size, num_classes, device="cpu"):
     t_x = torch.tensor(
         targets, requires_grad=False, device=to_torch_dev(device)
     )  # pylint: disable=not-callable
-    assert list(m_x.shape) == size
-    assert list(t_x.shape) == size
+    assert tuple(m_x.shape) == size
+    assert tuple(t_x.shape) == size
     return m_x, t_x
 
 
@@ -166,8 +166,8 @@ def one_hot_mxnet(size, num_classes, device="cpu"):
     targets = np.random.randint(0, num_classes, size=size)
     raf_x = raf.array(targets, device=device)
     mx_x = mx.nd.array(targets, ctx=mx.cpu())  # pylint: disable=not-callable
-    assert list(raf_x.shape) == size
-    assert list(mx_x.shape) == size
+    assert tuple(raf_x.shape) == size
+    assert tuple(mx_x.shape) == size
     return raf_x, mx_x
 
 
