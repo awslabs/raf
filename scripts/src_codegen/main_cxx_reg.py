@@ -590,7 +590,7 @@ int {SCHEMA_NAME}(const std::string& field) {{
     schema_name = snake_to_pascal(schema_name)
     args = []
     for i, entry in enumerate(schema):
-        args.append(ARG.format(I=i, FIELD=entry.name))
+        args.append("  " + ARG.format(I=i, FIELD=entry.name))
     args = "\n".join(map(add_no_lint, args))
     return VALUE_TO_SCHEMA.format(SCHEMA_NAME=schema_name, ARGS=args)
 
