@@ -54,6 +54,11 @@ class ScopeTimerPool {
     }
   }
 
+  void Reset() {
+    std::lock_guard<std::mutex> lock(mutex);
+    time_pool.clear();
+  }
+
   std::vector<float> GetSamplesByName(std::string name) {
     return time_pool[name];
   }

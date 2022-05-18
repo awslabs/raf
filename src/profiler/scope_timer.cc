@@ -17,5 +17,9 @@ RAF_REGISTER_GLOBAL("raf.scope_timer.DumpReport").set_body_typed([]() {
   ScopeTimerPool::Get()->DumpReport();
 });
 
+RAF_REGISTER_GLOBAL("raf.scope_timer.Reset").set_body_typed([]() {
+  ScopeTimerPool::Get()->Reset();
+});
+
 }  // namespace scope_timer
 }  // namespace raf
