@@ -914,6 +914,11 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::InlinePrimitives());
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::InplaceUpdate());
+
+  // Do a full inline here to make sure the rest of the passes work
+  pass_seqs.push_back(pass::LambdaLift());
+  pass_seqs.push_back(pass::InlineClosure());
+
   if (!enable_stream_schedule) {
     // TODO(@comaniac): Support rematerialization with multi-streaming.
     pass_seqs.push_back(pass::InferType());

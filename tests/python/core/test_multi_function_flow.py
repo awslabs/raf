@@ -140,8 +140,7 @@ def test_simple_convnet():
         conv_out0 = sb_l0.let("conv_out0", conv2d_call(inp_l0, wgt_l0))
         relu_out0 = sb_l0.let("relu_out0", raf.ir.op.relu(conv_out0))
         sb_l0.ret(relu_out0)
-        func_l0 = relay.Function([inp_l0, wgt_l0], sb_l0.get()).with_attr("Primitive", tvm.tir.IntImm("int32", 1))
-        func_l0 = func_l0.with_attr("Dialect", "tvm")
+        func_l0 = relay.Function([inp_l0, wgt_l0], sb_l0.get())
         layer0 = sb.let('layer0', func_l0)
 
         # Layer 1
@@ -151,8 +150,7 @@ def test_simple_convnet():
         conv_out1 = sb_l1.let("conv_out1", conv2d_call(inp_l1, wgt_l1))
         relu_out1 = sb_l1.let("relu_out1", raf.ir.op.relu(conv_out1))
         sb_l1.ret(relu_out1)
-        func_l1 = relay.Function([inp_l1, wgt_l1], sb_l1.get()).with_attr("Primitive", tvm.tir.IntImm("int32", 1))
-        func_l1 = func_l1.with_attr("Dialect", "tvm")
+        func_l1 = relay.Function([inp_l1, wgt_l1], sb_l1.get())
         layer1 = sb.let('layer1', func_l1)
 
         # Call layer0 twice
