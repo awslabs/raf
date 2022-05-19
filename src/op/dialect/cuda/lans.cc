@@ -21,7 +21,6 @@ using namespace raf::value;
 using device_api::DeviceAPI;
 #define CHUNK_SIZE 65536
 #define FLOAT_BYTES 4
-#define HALF_BYTES 2
 
 class LansImpl : public raf::op::OpEnv {
  public:
@@ -38,7 +37,7 @@ class LansImpl : public raf::op::OpEnv {
     DLTensor* t0 = ir::Downcast<TensorValue>(args->tensor_list[0]);
     auto datatype = t0->dtype;
     CHECK(datatype.code == kDLFloat);
-    CHECK((datatype.bits == 32) || (datatype.bits == 16));
+    CHECK((datatype.bits == 32)) << "LANS only takes FP32 inputs";
 
     beta1_ = args->beta1;
     beta2_ = args->beta2;
@@ -64,11 +63,7 @@ class LansImpl : public raf::op::OpEnv {
       tensor_elements += numel;
     }
     max_chunks_per_tensor_ = -1;
-    if (datatype.bits == 32) {
-      RequestWorkspace(&q_tensor_buf_, cv->device, FLOAT_BYTES * tensor_elements);
-    } else {
-      RequestWorkspace(&q_tensor_buf_, cv->device, HALF_BYTES * tensor_elements);
-    }
+    RequestWorkspace(&q_tensor_buf_, cv->device, FLOAT_BYTES * tensor_elements);
     for (int t = 0; t < param_group_n_; t++) {
       int max_chunks_this_tensor = (numels_[t] + CHUNK_SIZE - 1) / CHUNK_SIZE;
       if (max_chunks_this_tensor > max_chunks_per_tensor_) {
@@ -96,9 +91,6 @@ class LansImpl : public raf::op::OpEnv {
 
   void Execute(const std::vector<Value>& inputs, Value output) override {
     TupleValue tuple = ir::Downcast<TupleValue>(inputs[0]);
-    DLTensor* t0 = ir::Downcast<TensorValue>(tuple->fields[0]);
-    CHECK(t0->dtype.code == kDLFloat);
-    CHECK((t0->dtype.bits == 32) || (t0->dtype.bits == 16));
     auto* tstep = inputs[1].as<value::TensorValueObj>();
     tensor::Tensor step_tensor = tstep->tensor;
     CHECK(step_tensor->ndim == 0);

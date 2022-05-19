@@ -258,6 +258,12 @@ def with_lans(
                         v_list.append(v)
                         ntensor += 1
 
+                if self.dtype != "float32":
+                    fp32_g = _op.group_cast(g_list, "float32")
+                    g_list = []
+                    for i in range(ntensor):
+                        g_list.append(fp32_g[i])
+
                 tensor_list = g_list + x_list + m_list + v_list
                 output_list = _op.lans(
                     tensor_list,
