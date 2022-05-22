@@ -9,7 +9,7 @@ The programming model of implementing a deep learning mode in RAF is basically t
 
 ```python
 import raf
-from raf.model import Conv2D, BatchNorm
+from raf.model import Conv2d, BatchNorm, Sequential, Linear
 from raf.testing import randn_torch, get_vm_executor, run_vm_executor
 
 class RAFBottleneck(raf.Model):
