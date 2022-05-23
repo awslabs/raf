@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, missing-function-docstring, too-many-instance-attributes, too-many-locals, too-many-statements, protected-access, too-many-arguments
+# pylint: disable=invalid-name, missing-function-docstring, too-many-instance-attributes, too-many-locals, too-many-statements, protected-access, too-many-arguments, too-many-branches
 """LANS optimizer."""
 import numpy as np
 
@@ -257,6 +257,12 @@ def with_lans(
                         m_list.append(m)
                         v_list.append(v)
                         ntensor += 1
+
+                if self.dtype != "float32":
+                    fp32_g = _op.group_cast(g_list, "float32")
+                    g_list = []
+                    for i in range(ntensor):
+                        g_list.append(fp32_g[i])
 
                 tensor_list = g_list + x_list + m_list + v_list
                 output_list = _op.lans(
