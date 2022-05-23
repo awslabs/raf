@@ -337,7 +337,7 @@ inline T GetOpAttrOrDefault(const ir::Op& op, const std::string attr_name, T def
   static constexpr const char* _type_key = type_key; \
   RAF_FINAL_OBJECT(class_name, ::tvm::BaseAttrsNode) \
   template <typename FVisit>                         \
-  void __VisitAttrs__(FVisit& __fvisit__) {          \
+  void _tvm_VisitAttrs(FVisit& _tvm_fvisit) {        \
   }
 
 #define RAF_OP_GRAD(op_name, body) \

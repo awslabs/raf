@@ -126,11 +126,11 @@ std::string AsText(const ObjectRef& node, bool show_meta_data) {
   std::string ret = tvm::AsText(node, show_meta_data, annotate);
   size_t index = 0;
   while (true) {
-    index = ret.find("-114514", index);
+    index = ret.find("-114514i64", index);
     if (index == std::string::npos) {
       break;
     }
-    ret.replace(index, 7, "");
+    ret.replace(index, 10, "");
   }
   return ret;
 }

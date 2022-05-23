@@ -119,12 +119,14 @@ Array<Expr> PowGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   Call dx = Call(op_multiply, {a, x_pow_minus_one});
 
   // da = x^a * log(x)
-  Call x_pow = Call(op_power, {x, a});
-  Call x_log = Call(op_log, {x});
-  Call da = Call(op_multiply, {x_pow, x_log});
+  // FIXME: PyTorch defines d(x^a)/da at x = 0 and a < 0 to be -inf. This is due to
+  // d(x^a)/da -> -inf for fixed a as x -> +0. However, this requires either an if-branch
+  // or special handling at the kernel level, so we disable the gradient of "a" for a now.
+  // Call x_pow = Call(op_power, {x, a});
+  // Call x_log = Call(op_log, {x});
+  // Call da = Call(op_multiply, {x_pow, x_log});
 
-  return {GetCollapseSumLike(Call(op_multiply, {dy, dx}), x),
-          GetCollapseSumLike(Call(op_multiply, {dy, da}), a)};
+  return {GetCollapseSumLike(Call(op_multiply, {dy, dx}), x), ir::NullValue<ir::Expr>()};
 }
 
 RAF_OP_GRAD("raf.op.power", PowGrad);
