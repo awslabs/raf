@@ -126,8 +126,7 @@ Array<Expr> PowGrad(const Expr& orig_call, const Array<Expr> orig_args, const Va
   // Call x_log = Call(op_log, {x});
   // Call da = Call(op_multiply, {x_pow, x_log});
 
-  return {GetCollapseSumLike(Call(op_multiply, {dy, dx}), x),
-          ir::NullValue<ir::Expr>()};
+  return {GetCollapseSumLike(Call(op_multiply, {dy, dx}), x), ir::NullValue<ir::Expr>()};
 }
 
 RAF_OP_GRAD("raf.op.power", PowGrad);
