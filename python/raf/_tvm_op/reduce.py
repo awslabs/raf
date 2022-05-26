@@ -283,7 +283,7 @@ def schedule_cuda_short_reduce(outs, **kwargs):
                             if remain_total_size % max_size == 0
                             else find_nearest_small_factor(remain_total_size, max_size)
                         )
-                        remain_total_size //= cand_sizes[-1]
+                        remain_total_size //= cand_sizes[idx]
 
                     # If the product of candidate dividable (block * thread) is too small,
                     # then the performance may be worse even half2 is enabled. Note that 0.7
