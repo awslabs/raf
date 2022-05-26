@@ -6,6 +6,8 @@
 from operator import mul
 from functools import reduce
 
+import numpy as np
+
 from raf._tvm_op.nn import schedule_generic
 from .._lib import register_compute
 from .._lib import generic_func
@@ -16,7 +18,7 @@ from .utils import profile_schedule
 _topi = _tvm.topi  # pylint: disable=invalid-name, no-member
 
 
-def _schedule_cuda_reduce(op, sch, is_idx_reduce=False, **kwargs):
+def _schedule_cuda_sum_long_reduce(op, sch, is_idx_reduce=False, **kwargs):
     # Setup the tunable parameter value.
     num_thread = kwargs.get("num_thread", 32)
 
@@ -103,8 +105,8 @@ def _enable_auto_inline(sch):
     return True
 
 
-@profile_schedule(num_thread=[8, 16, 32, 64], tt=[False, True])
-def schedule_cuda_reduce(outs, **kwargs):
+@profile_schedule(num_thread=[8, 16, 32, 64])
+def schedule_cuda_sum_long_reduce(outs, **kwargs):
     """Schedule for inject->reduce->bcast ops.
 
     Parameters
@@ -151,13 +153,13 @@ def schedule_cuda_reduce(outs, **kwargs):
                         traverse_after_reduce(inp_tensor)
         elif operator.tag == "comm_reduce":
             if operator not in scheduled_ops:
-                _schedule_cuda_reduce(operator, sch, is_idx_reduce=False, **kwargs)
+                _schedule_cuda_sum_long_reduce(operator, sch, is_idx_reduce=False, **kwargs)
             for inp_tensor in operator.input_tensors:
                 if inp_tensor.op not in scheduled_ops:
                     traverse_before_reduce(inp_tensor)
         elif operator.tag == "comm_reduce_idx":
             if operator not in scheduled_ops:
-                _schedule_cuda_reduce(operator, sch, is_idx_reduce=True, **kwargs)
+                _schedule_cuda_sum_long_reduce(operator, sch, is_idx_reduce=True, **kwargs)
             input_tensors = operator.input_tensors[0].op.input_tensors
             for inp_tensor in input_tensors:
                 if inp_tensor.op not in scheduled_ops:
@@ -172,6 +174,96 @@ def schedule_cuda_reduce(outs, **kwargs):
     for out in outs:
         traverse_after_reduce(out)
 
+    return sch
+
+
+@profile_schedule(num_thread=[16, 32, 64], max_block=[64, 128, 256, 512])
+def schedule_cuda_short_reduce(outs, **kwargs):
+    """Schedule sum as an injective op.
+
+    Parameters
+    ----------
+    outs: Array of Tensor
+          The computation graph description of injective in the format
+          of an array of tensors.
+
+    Returns
+    -------
+    sch: Schedule
+        The computation schedule for the op.
+    """
+    num_thread = kwargs.get(
+        "num_thread", _tvm.target.Target.current(allow_none=False).max_num_threads
+    )
+    max_block = kwargs.get("max_block", 256)
+
+    def find_nearest_small_factor(num, target):
+        """Find the nearest factor of the given number that is smaller than the target."""
+        for i in range(target, 0, -1):
+            if num % i == 0:
+                return i
+        # Unreachable because i=1 must hold.
+        return -1
+
+    outs = [outs] if isinstance(outs, _tvm.te.tensor.Tensor) else outs
+    sch = _tvm.te.create_schedule([x.op for x in outs])
+
+    _tvm.te.schedule.AutoInlineInjective(sch)
+    for out in outs:
+        if not _topi.utils.is_empty_shape(out.shape):
+            fused = sch[out].fuse(*sch[out].op.axis)
+
+            # Vectorize on fp16 data type to enable half2 for better memory bandwidth utilization.
+            vector_width = 2 if out.dtype == "float16" else 1
+
+            out_len = _topi.utils.prod(out.shape)
+
+            try:
+                const_size = _topi.utils.get_const_int(out_len)
+
+                # Adjust block and thread to make sure they are dividable so that vectorize can be
+                # correctly applied.
+                if vector_width > 1 and const_size % vector_width == 0:
+                    remain_total_size = const_size // vector_width
+                    cand_sizes = []
+                    for max_size in [num_thread, max_block]:
+                        cand_sizes.append(
+                            max_size
+                            if remain_total_size % max_size == 0
+                            else find_nearest_small_factor(remain_total_size, max_size)
+                        )
+                        remain_total_size //= cand_sizes[-1]
+
+                    # If the product of candidate dividable (block * thread) is too small,
+                    # then the performance may be worse even half2 is enabled. Note that 0.7
+                    # is just a heuristic ratio and may not be optimal for all workloads.
+                    if np.prod(cand_sizes) / (max_block * num_thread) >= 0.7:
+                        num_thread, max_block = cand_sizes
+
+                need_block_split = const_size > max_block * num_thread * vector_width
+            except ValueError:
+                need_block_split = False
+                const_size = 0
+
+            if vector_width > 1:
+                fused, v = sch[out].split(fused, vector_width)
+                sch[out].vectorize(v)
+
+            print(need_block_split, num_thread, max_block)
+            if need_block_split:
+                xo, xi = sch[out].split(fused, factor=num_thread * max_block)
+                bx, tx = sch[out].split(xi, factor=num_thread)
+                sch[out].reorder(bx, tx, xo)
+                sch[out].bind(bx, _tvm.te.thread_axis("blockIdx.x"))
+                sch[out].bind(tx, _tvm.te.thread_axis("threadIdx.x"))
+            else:
+                print("const", const_size)
+                if const_size != 0 and const_size < num_thread:
+                    bx, tx = sch[out].split(fused, factor=const_size)
+                else:
+                    bx, tx = sch[out].split(fused, factor=num_thread)
+                sch[out].bind(tx, _tvm.te.thread_axis("threadIdx.x"))
+                sch[out].bind(bx, _tvm.te.thread_axis("blockIdx.x"))
     return sch
 
 
@@ -226,6 +318,7 @@ def schedule_sum(attrs, outs, target):
 
 @schedule_sum.register(["cuda", "gpu"])
 def schedule_sum_cuda(attrs, outs, target):
+    # pylint: disable=unused-argument
     def get_num_elements(axes):
         extents = [int(iv.dom.extent) for iv in axes]
         n_elems = 1
@@ -237,17 +330,16 @@ def schedule_sum_cuda(attrs, outs, target):
         out = outs[0]
         num_out_elements = get_num_elements(out.op.axis)
         num_reduce_elements = get_num_elements(out.op.reduce_axis)
-        sum_last_dim = len(attrs.axis) == 1 and attrs.axis[0] == len(out.shape) - 1
 
         # We want to saturate the GPU cores by parallelization. There are 2 scenarios
         # 1) Reduce dimension is small - In this case, each thread is responsible for reduction.
         # The parallelization is across the output elements.
         # 2) Reduce dimension is large - We want to parallelize the reduction to keep the GPU busy.
         # Here we fall back to TVM schedule.
-        if num_out_elements > num_reduce_elements and sum_last_dim:
-            return _topi.cuda.schedule_injective(outs)
+        if num_out_elements > num_reduce_elements:
+            return schedule_cuda_short_reduce(outs)
 
-        return schedule_cuda_reduce(outs)
+        return schedule_cuda_sum_long_reduce(outs)
 
 
 _reg.register_schedule("raf.op.tvm.sum", schedule_sum)
