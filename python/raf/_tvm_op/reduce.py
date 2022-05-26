@@ -177,7 +177,7 @@ def schedule_cuda_sum_long_reduce(outs, **kwargs):
     return sch
 
 
-@profile_schedule(num_thread=[16, 32, 64], max_block=[64, 128, 256, 512])
+@profile_schedule(num_thread=[16, 32, 64], max_block=[128, 256, 512])
 def schedule_cuda_short_reduce(outs, **kwargs):
     """Schedule sum as an injective op.
 
@@ -249,7 +249,6 @@ def schedule_cuda_short_reduce(outs, **kwargs):
                 fused, v = sch[out].split(fused, vector_width)
                 sch[out].vectorize(v)
 
-            print(need_block_split, num_thread, max_block)
             if need_block_split:
                 xo, xi = sch[out].split(fused, factor=num_thread * max_block)
                 bx, tx = sch[out].split(xi, factor=num_thread)
@@ -257,7 +256,6 @@ def schedule_cuda_short_reduce(outs, **kwargs):
                 sch[out].bind(bx, _tvm.te.thread_axis("blockIdx.x"))
                 sch[out].bind(tx, _tvm.te.thread_axis("threadIdx.x"))
             else:
-                print("const", const_size)
                 if const_size != 0 and const_size < num_thread:
                     bx, tx = sch[out].split(fused, factor=const_size)
                 else:
