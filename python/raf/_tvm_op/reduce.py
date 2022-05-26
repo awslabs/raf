@@ -131,16 +131,23 @@ def _schedule_cuda_sum_long_reduce(op, sch, **kwargs):
     return sch
 
 
-@profile_schedule(num_thread=[8, 16, 32, 64])
-def schedule_cuda_sum_long_reduce(outs, **kwargs):
+@profile_schedule(
+    num_thread=[16, 32, 64], validator=lambda _, reduce_last_axis: not reduce_last_axis
+)
+def schedule_cuda_sum_long_reduce(outs, reduce_last_axis, **kwargs):
     """Schedule sum for CUDA. This schedule targets to the sum with long reduction length.
     In this case, we want to parallelize the reduction to keep the GPU busy. This is modified
     from TOPI reduce schedule for CUDA.
+
+    In addition, this schedule is tunable if the last axis is not reduced.
 
     Parameters
     ----------
     outs: Array of Tensor
         The computation graph description of reduce in the format of an array of tensors.
+
+    reduce_last_axis: bool
+        A hint indicating whether the last axis is reduced.
 
     **kwargs: Dict[str, List[Any]]
         Tunable parameters. If not presents, the default values will be used.
@@ -150,6 +157,7 @@ def schedule_cuda_sum_long_reduce(outs, **kwargs):
     sch: Schedule
         The computation schedule for the op.
     """
+    # pylint: disable=unused-argument
     outs = [outs] if isinstance(outs, _tvm.te.tensor.Tensor) else outs
     sch = _tvm.te.create_schedule([x.op for x in outs])
     scheduled_ops = []
@@ -326,17 +334,41 @@ def schedule_sum_cuda(attrs, outs, target):
             n_elems *= extent
         return n_elems
 
+    def get_sum_input(tensor):
+        operator = tensor.op
+        if operator.tag == "comm_reduce":
+            assert len(operator.input_tensors) == 1
+            return operator.input_tensors[0]
+        if isinstance(operator, _tvm.te.PlaceholderOp):
+            pass
+        else:
+            for inp_tensor in operator.input_tensors:
+                ret = get_sum_input(inp_tensor)
+                if ret is not None:
+                    return ret
+        return None
+
     with target:
         out = outs[0]
         num_out_elements = get_num_elements(out.op.axis)
         num_reduce_elements = get_num_elements(out.op.reduce_axis)
+
+        # Whether the last axis is reduced. Note that axis=-1 should already be proceed in advance.
+        input_tensor = get_sum_input(out).shape
+        assert input_tensor is not None, "Cannot find the input tensor of the sum op"
+        reduce_axis = [False for _ in range(len(input_tensor))]
+        for axis in attrs.axis:
+            reduce_axis[axis.value] = True
+        if attrs.exclude == 1:
+            reduce_axis = [not axis for axis in reduce_axis]
+        reduce_last_axis = reduce_axis[-1]
 
         # We attempt to saturate the GPU cores by parallelization, so we dispatch
         # the sum workloads to two schedules based on their reduction length.
         if num_out_elements > num_reduce_elements:
             return schedule_cuda_short_reduce(outs)
 
-        return schedule_cuda_sum_long_reduce(outs)
+        return schedule_cuda_sum_long_reduce(outs, reduce_last_axis=reduce_last_axis)
 
 
 _reg.register_schedule("raf.op.tvm.sum", schedule_sum)

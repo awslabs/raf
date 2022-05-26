@@ -56,7 +56,7 @@ def profile_schedule(**params):
     It can be used as follows:
 
     ```python
-    @profile_schedule(num_thread=[8, 16, 32, 64])
+    @profile_schedule(num_thread=[8, 16, 32, 64], validator=should_tune_this_workload)
     def _schedule_cuda(outs, **kwargs):
         num_thread = kwargs.get("num_thread", 32) # Get tuned value or default.
         ...
@@ -69,22 +69,29 @@ def profile_schedule(**params):
     ```
 
     The above code snippet profiles 4 schedules with different num_thread and returns
-    the best one. Since we directly use tvm.build to compile and evaluate the schedule
+    the best one. Note that "validator" is a reserved keyword, which optionally specifies
+    a function to check whether the workload should be tuned or not.
+
+    Since we directly use tvm.build to compile and evaluate the schedule
     without heavy RFC mechanism and reuse the random data inputs, this is lightwieght
     compared to AutoTVM and auto-schedule and can be used for JIT compilation. However,
     develoeprs should control the tuning space to avoid long JIT time. It is recommended
     to have <10 tuning space when using this function.
     """
+    validator = lambda _, **kwargs: True
+    if "validator" in params:
+        validator = params["validator"]
+        del params["validator"]
     enable = os.environ.get("RAF_JIT_TUNE", False)
     comm = dist.get_communicator()
     local_rank = comm.local_rank
 
     def _wrapper(sch_func):
-        def _profile(outs):
+        def _profile(outs, **kwargs):
             # If not enabled, do not pass any tunable parameters so that the schedule
             # function will use the built-in default values.
-            if not enable:
-                return sch_func(outs)
+            if not enable or not validator(outs, **kwargs):
+                return sch_func(outs, **kwargs)
 
             outs = [outs] if isinstance(outs, tvm.te.tensor.Tensor) else outs
 
@@ -129,7 +136,9 @@ def profile_schedule(**params):
                     return best_sch_n_latency
 
                 # All parameter values are determined and in param_dict, evaluate the schedule.
-                sch = sch_func(outs, **param_dict)
+                sch_kwargs = kwargs.copy()
+                sch_kwargs.update(param_dict)
+                sch = sch_func(outs, **sch_kwargs)
                 try:
                     func = tvm.build(sch, args, tvm_target)
                     # Run 5 times and take the median value to avoid outliers.
