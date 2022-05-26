@@ -115,26 +115,29 @@ def profile_schedule(**params):
 
             # Profiling
             def profile_param(param_list, param_dict):
-                if not param_list:
-                    sch = sch_func(outs, **param_dict)
-                    try:
-                        func = tvm.build(sch, args, tvm_target)
-                        # Run 5 times and take the median value to avoid outliers.
-                        evaluator = func.time_evaluator(func.entry_name, tvm_device, number=5)
-                        latency = evaluator(*args_data).median
-                    except Exception:  # pylint: disable=broad-except
-                        latency = float("inf")
-                    return sch, latency
-                else:
-                    best_sch_n_latency = None
+                if param_list:
+                    # One or more parameter values are not visited yet, iterating
+                    # the values of the first undetermined parameter recursively.
+                    best_sch_n_latency = (None, float("inf"))
                     key, vals = param_list[0]
                     for val in vals:
                         param_dict[key] = val
                         sch, latency = profile_param(param_list[1:], param_dict)
-                        if best_sch_n_latency is None or latency < best_sch_n_latency[1]:
+                        if best_sch_n_latency[0] is None or latency < best_sch_n_latency[1]:
                             best_sch_n_latency = (sch, latency)
                     assert best_sch_n_latency is not None
                     return best_sch_n_latency
+
+                # All parameter values are determined and in param_dict, evaluate the schedule.
+                sch = sch_func(outs, **param_dict)
+                try:
+                    func = tvm.build(sch, args, tvm_target)
+                    # Run 5 times and take the median value to avoid outliers.
+                    evaluator = func.time_evaluator(func.entry_name, tvm_device, number=5)
+                    latency = evaluator(*args_data).median
+                except Exception:  # pylint: disable=broad-except
+                    latency = float("inf")
+                return sch, latency
 
             sch, _ = profile_param(list(params.items()), {})
             del args_data
