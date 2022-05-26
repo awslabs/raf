@@ -239,13 +239,14 @@ def schedule_sum_cuda(attrs, outs, target):
         out = outs[0]
         num_out_elements = get_num_elements(out.op.axis)
         num_reduce_elements = get_num_elements(out.op.reduce_axis)
+        sum_last_dim = len(attrs.axis) == 1 and attrs.axis[0] == len(out.shape) - 1
 
         # We want to saturate the GPU cores by parallelization. There are 2 scenarios
         # 1) Reduce dimension is small - In this case, each thread is responsible for reduction.
         # The parallelization is across the output elements.
         # 2) Reduce dimension is large - We want to parallelize the reduction to keep the GPU busy.
         # Here we fall back to TVM schedule.
-        if num_out_elements > num_reduce_elements:
+        if num_out_elements > num_reduce_elements and sum_last_dim:
             return _topi.cuda.schedule_injective(outs)
 
         return schedule_cuda_reduce(outs)
