@@ -73,9 +73,13 @@ def profile_schedule(**params):
     develoeprs should control the tuning space to avoid long JIT time. It is recommended
     to have <10 tuning space when using this function.
     """
+    enable = os.environ.get("RAF_JIT_TUNE", False)
 
     def _wrapper(sch_func):
         def _profile(outs):
+            if not enable:
+                return sch_func(outs)
+
             outs = [outs] if isinstance(outs, tvm.te.tensor.Tensor) else outs
 
             # Collect arguments.

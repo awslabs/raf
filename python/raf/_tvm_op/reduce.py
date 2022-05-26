@@ -226,8 +226,6 @@ def schedule_sum(attrs, outs, target):
 
 @schedule_sum.register(["cuda", "gpu"])
 def schedule_sum_cuda(attrs, outs, target):
-    # pylint: disable=unused-argument
-    # pylint: disable=invalid-name
     def get_num_elements(axes):
         extents = [int(iv.dom.extent) for iv in axes]
         n_elems = 1
