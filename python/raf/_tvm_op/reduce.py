@@ -3,13 +3,176 @@
 
 # pylint: disable=missing-function-docstring, too-many-locals, unused-argument
 """Reduction compute definition and schedules."""
+from operator import mul
+from functools import reduce
+
 from raf._tvm_op.nn import schedule_generic
 from .._lib import register_compute
 from .._lib import generic_func
 from .._lib import tvm as _tvm
 from .._lib import _reg
+from .utils import profile_schedule
 
 _topi = _tvm.topi  # pylint: disable=invalid-name, no-member
+
+
+def _schedule_cuda_reduce(op, sch, is_idx_reduce=False, **kwargs):
+    # Setup the tunable parameter value.
+    num_thread = kwargs.get("num_thread", 32)
+
+    if is_idx_reduce:
+        data_out = op.input_tensors[0]
+    else:
+        data_out = op.output(0)
+
+    if not sch[data_out].op.reduce_axis:
+        return _topi.cuda.schedule_injective_from_existing(sch, op.output(0))
+
+    if len(sch[data_out].op.axis) > 0:
+        all_reduce = False
+        block_x = _tvm.te.thread_axis("blockIdx.x")
+        thread_x = _tvm.te.thread_axis((0, num_thread), "threadIdx.x")
+        thread_y = _tvm.te.thread_axis((0, num_thread), "threadIdx.y")
+    else:
+        all_reduce = True
+        num_thread = _tvm.target.Target.current(allow_none=False).max_num_threads
+        thread_x = _tvm.te.thread_axis((0, num_thread), "threadIdx.x")
+
+    # Fuse and refactor the reduce axis
+    fused_reduce = sch[data_out].fuse(
+        *[sch[data_out].op.reduce_axis[i] for i in range(len(sch[data_out].op.reduce_axis))]
+    )
+    ko, ki = sch[data_out].split(fused_reduce, factor=num_thread)
+    if is_idx_reduce:
+        data_out_rf, _ = sch.rfactor(data_out, ki)
+    else:
+        data_out_rf = sch.rfactor(data_out, ki)
+    tx = sch[data_out].op.reduce_axis[0]
+    sch[data_out].bind(tx, thread_x)
+    sch[data_out_rf].compute_at(sch[data_out], tx)
+    if is_idx_reduce:
+        real_output = op.output(0)
+        temp_idx_input = data_out.op.output(0)
+        temp_val_input = data_out.op.output(1)
+    else:
+        real_output = data_out
+    if not all_reduce:
+        # Fuse and split the axis
+        fused_outer = sch[real_output].fuse(
+            *[sch[real_output].op.axis[i] for i in range(len(sch[real_output].op.axis))]
+        )
+        bx, outer_in = sch[real_output].split(fused_outer, factor=num_thread)
+
+        # Bind the axes to threads and blocks
+        sch[real_output].bind(outer_in, thread_y)
+        sch[real_output].bind(bx, block_x)
+        if is_idx_reduce:
+            sch[temp_idx_input].compute_at(sch[real_output], outer_in)
+            sch[temp_val_input].compute_at(sch[real_output], outer_in)
+        sch[real_output].set_store_predicate(
+            _tvm.tir.all(
+                thread_x.equal(0), block_x * num_thread + thread_y < reduce(mul, real_output.shape)
+            )
+        )
+    else:
+        if is_idx_reduce:
+            spatial_axis = sch[real_output].fuse(*(sch[real_output].op.axis))
+            sch[real_output].bind(spatial_axis, _tvm.te.thread_axis("blockIdx.x"))
+            sch[temp_idx_input].compute_at(sch[real_output], spatial_axis)
+            sch[temp_val_input].compute_at(sch[real_output], spatial_axis)
+        sch[real_output].set_store_predicate(thread_x.equal(0))
+    return sch
+
+
+def _enable_auto_inline(sch):
+    def is_scheduled(stage):
+        # auto inline requires the attach type is AttachType.kGroupRoot
+        conds = [
+            len(stage.relations) == 0,
+            stage.attach_type == 1,
+            stage.all_iter_vars == stage.leaf_iter_vars,
+        ]
+        if not all(conds):
+            return True
+        return False
+
+    for s in sch.stages:
+        if not s.is_output and isinstance(s.op, _tvm.te.ComputeOp):
+            if is_scheduled(s) or len(s.op.reduce_axis) != 0:
+                return False
+    return True
+
+
+@profile_schedule(num_thread=[8, 16, 32, 64], tt=[False, True])
+def schedule_cuda_reduce(outs, **kwargs):
+    """Schedule for inject->reduce->bcast ops.
+
+    Parameters
+    ----------
+    outs: Array of Tensor
+        The computation graph description of reduce in the format of an array of tensors.
+
+    Returns
+    -------
+    sch: Schedule
+        The computation schedule for the op.
+    """
+    outs = [outs] if isinstance(outs, _tvm.te.tensor.Tensor) else outs
+    sch = _tvm.te.create_schedule([x.op for x in outs])
+    scheduled_ops = []
+    enable_auto_inline = _enable_auto_inline(sch)
+
+    def traverse_before_reduce(tensor):
+        """Internal traverse function"""
+        operator = tensor.op
+        if isinstance(operator, _tvm.te.PlaceholderOp):
+            return
+        if _topi.tag.is_injective(operator.tag):
+            sch[operator].compute_inline()
+            for inp_tensor in operator.input_tensors:
+                if inp_tensor.op not in scheduled_ops:
+                    traverse_before_reduce(inp_tensor)
+        else:
+            raise RuntimeError("Unsupported operator: %s" % operator.tag)
+
+        scheduled_ops.append(operator)
+
+    def traverse_after_reduce(tensor):
+        """Internal traverse function"""
+        operator = tensor.op
+        if _topi.tag.is_broadcast(operator.tag):
+            if operator not in scheduled_ops:
+                _topi.schedule_injective_from_existing(sch, operator.output(0))
+            for inp_tensor in operator.input_tensors:
+                if inp_tensor.op not in scheduled_ops:
+                    if enable_auto_inline:
+                        traverse_before_reduce(inp_tensor)
+                    else:
+                        traverse_after_reduce(inp_tensor)
+        elif operator.tag == "comm_reduce":
+            if operator not in scheduled_ops:
+                _schedule_cuda_reduce(operator, sch, is_idx_reduce=False, **kwargs)
+            for inp_tensor in operator.input_tensors:
+                if inp_tensor.op not in scheduled_ops:
+                    traverse_before_reduce(inp_tensor)
+        elif operator.tag == "comm_reduce_idx":
+            if operator not in scheduled_ops:
+                _schedule_cuda_reduce(operator, sch, is_idx_reduce=True, **kwargs)
+            input_tensors = operator.input_tensors[0].op.input_tensors
+            for inp_tensor in input_tensors:
+                if inp_tensor.op not in scheduled_ops:
+                    traverse_before_reduce(inp_tensor)
+        elif isinstance(operator, _tvm.te.PlaceholderOp):
+            pass
+        else:
+            raise RuntimeError("Unsupported operator: %s" % operator.tag)
+
+        scheduled_ops.append(operator)
+
+    for out in outs:
+        traverse_after_reduce(out)
+
+    return sch
 
 
 @register_compute("raf.op.tvm.sum")
@@ -85,7 +248,7 @@ def schedule_sum_cuda(attrs, outs, target):
         if num_out_elements > num_reduce_elements:
             return _topi.cuda.schedule_injective(outs)
 
-        return _topi.cuda.schedule_reduce(outs)
+        return schedule_cuda_reduce(outs)
 
 
 _reg.register_schedule("raf.op.tvm.sum", schedule_sum)
