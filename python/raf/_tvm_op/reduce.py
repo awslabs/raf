@@ -336,16 +336,12 @@ def schedule_sum_cuda(attrs, outs, target):
 
     def get_sum_input(tensor):
         operator = tensor.op
-        if operator.tag == "comm_reduce":
-            assert len(operator.input_tensors) == 1
-            return operator.input_tensors[0]
-        if isinstance(operator, _tvm.te.PlaceholderOp):
-            pass
-        else:
-            for inp_tensor in operator.input_tensors:
-                ret = get_sum_input(inp_tensor)
-                if ret is not None:
-                    return ret
+        if len(operator.input_tensors) != 1:
+            return None
+
+        input_tensor = operator.input_tensors[0]
+        if isinstance(input_tensor.op, _tvm.te.PlaceholderOp):
+            return input_tensor
         return None
 
     with target:
@@ -354,14 +350,16 @@ def schedule_sum_cuda(attrs, outs, target):
         num_reduce_elements = get_num_elements(out.op.reduce_axis)
 
         # Whether the last axis is reduced. Note that axis=-1 should already be proceed in advance.
-        input_tensor = get_sum_input(out).shape
-        assert input_tensor is not None, "Cannot find the input tensor of the sum op"
-        reduce_axis = [False for _ in range(len(input_tensor))]
-        for axis in attrs.axis:
-            reduce_axis[axis.value] = True
-        if attrs.exclude == 1:
-            reduce_axis = [not axis for axis in reduce_axis]
-        reduce_last_axis = reduce_axis[-1]
+        reduce_last_axis = False
+        input_tensor = get_sum_input(out)
+        if input_tensor is not None:
+            # Only try to analyze the workload with sum as the last op.
+            reduce_axis = [False for _ in range(len(input_tensor.shape))]
+            for axis in attrs.axis:
+                reduce_axis[axis.value] = True
+            if attrs.exclude == 1:
+                reduce_axis = [not axis for axis in reduce_axis]
+            reduce_last_axis = reduce_axis[-1]
 
         # We attempt to saturate the GPU cores by parallelization, so we dispatch
         # the sum workloads to two schedules based on their reduction length.
