@@ -112,8 +112,8 @@ Pass SwitchTrainOp(bool to_train_op) {
                                                                              PassContext pc) {
     return switch_train::OpReplacer(f, to_train_op).Replace();
   };
-  auto switch_train = CreateRAFFunctionPass(pass_func, 0, "SwithTrainOp", {});
-  return RAFSequential({switch_train}, "SwithTrainOp");
+  auto switch_train = CreateRAFFunctionPass(pass_func, 0, "SwitchTrainOp", {});
+  return RAFSequential({switch_train}, "SwitchTrainOp");
 }
 
 RAF_REGISTER_GLOBAL("raf.pass_.SwitchTrainOp").set_body_typed(SwitchTrainOp);
