@@ -126,7 +126,7 @@ def reduce(x, root, computation="sum"):
     return sym._reduce(x, root, computation)
 
 
-def reduce_scatter(x, computation="sum"):
+def reduce_scatter(x, computation="sum", rank_list=None):
     """Performs reduction then scatter
 
     Parameters
@@ -136,6 +136,14 @@ def reduce_scatter(x, computation="sum"):
         replica i receives reduction of x[i] over all replicas
     computation: string
         The reduction operation, default is sum
+    rank_list: [[int]]
+        The list of ranks to communicate. This parameter will split the ranks
+        (MPI / NCCL processes) into multiple groups as specified by the user,
+        and each rank will only communicate within the group. If the rank list
+        leaves empty, the ranks won't get split. Note that this operator is
+        collective, which means ranks, whether they are in the rank_list or not,
+        must invoke this along with other ranks. The rank not in the rank_list
+        will run in standalone mode.
 
     Returns
     -------
@@ -143,7 +151,7 @@ def reduce_scatter(x, computation="sum"):
         reduction result of x[rank] over all replicas,
         where rank represents rank number of the current process
     """
-    return sym._reduce_scatter(x, computation)
+    return sym._reduce_scatter(x, computation, rank_list=None)
 
 
 def group_reduce_scatter(tensor_list, computation="sum"):

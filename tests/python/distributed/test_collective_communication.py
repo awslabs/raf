@@ -280,9 +280,10 @@ def test_allgather_with_subcomm(axis, rank_list):
             check(y, target_y)
 
 
-@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
+@pytest.mark.skipif(skip_dist_test(min_rank_num=4, require_exact_rank=True), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
-def test_reduce_scatter(computation):
+@pytest.mark.parametrize("rank_list", [[[0, 1], [2, 3]]]) # invalid rank_list [[1, 2, 3]]
+def test_reduce_scatter(computation, rank_list):
     class TestModel(raf.Model):
         def build(self):
             pass
@@ -290,7 +291,7 @@ def test_reduce_scatter(computation):
         @raf.model.trace
         def forward(self, x, y):
             z = Symbol.make_tuple([x, y])
-            out = raf.reduce_scatter(z, computation=computation)
+            out = raf.reduce_scatter(z, computation=computation, rank_list=rank_list)
             return out
 
     if computation == "avg" and raf.build.with_nccl() < 21000:
@@ -305,6 +306,15 @@ def test_reduce_scatter(computation):
     m_x, m_y = raf.array(n_x, device=device), raf.array(n_y, device=device)
     model.to(device=device)
     m_out = run_model(model, [m_x, m_y], device)
+    for group in rank_list:
+        if rank in group:
+            ones = np.ones(shape=(4, 4), dtype="float32")
+            n_out = ones * sum(np.array(group) + 1)
+            if rank % 2 == 0:
+                check(m_out, target_x)
+            else:
+                check(m_out, -target_x)
+    """
     if rank == 0:
         if computation == "sum":
             n_out = n_ones * sum(range(1, total_rank + 1))
@@ -333,6 +343,7 @@ def test_reduce_scatter(computation):
             n_out = -n_ones * sum(range(1, total_rank + 1))
             n_out = n_out / total_rank
         check(m_out, n_out)
+    """
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
