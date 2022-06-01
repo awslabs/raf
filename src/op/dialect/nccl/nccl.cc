@@ -262,7 +262,6 @@ class NCCLReduceScatter : public NCCLOpEnv {
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator, "nccl", args->rank_list);
-    // RequestDistributed(&communicator, "nccl", NullValue<Value>());
     auto args = cv->args.as<raf::op::schema::ReduceScatterArgs>();
     if (args->computation.compare("sum") == 0) {
       compute = ncclSum;
