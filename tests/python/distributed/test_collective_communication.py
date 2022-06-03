@@ -342,16 +342,16 @@ def test_reduce_scatter_with_rank_list(computation, rank_list):
     class TestModel(raf.Model):
         def build(self):
             pass
-        
+
         @raf.model.trace
         def forward(self, x, y):
             z = Symbol.make_tuple([x, y])
             out = raf.reduce_scatter(z, computation=computation, rank_list=rank_list)
             return out
-    
+
     if computation == "avg" and raf.build.with_nccl() < 21000:
         pytest.skip("avg is not supported in NCCL < 2.10")
-    
+
     model = TestModel()
     total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
