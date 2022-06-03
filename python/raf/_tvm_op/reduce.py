@@ -13,7 +13,7 @@ from .._lib import register_compute
 from .._lib import generic_func
 from .._lib import tvm as _tvm
 from .._lib import _reg
-from .utils import profile_schedule
+from .utils import get_cuda_max_thread, profile_schedule
 
 _topi = _tvm.topi  # pylint: disable=invalid-name, no-member
 
@@ -89,11 +89,14 @@ def _schedule_cuda_sum_long_reduce(op, sch, **kwargs):
         The computation schedule for the op.
     """
     # pylint: disable=invalid-name
-    # Setup the tunable parameter value.
-    num_thread = kwargs.get("num_thread", 32)
-    thread_x = _tvm.te.thread_axis((0, num_thread), "threadIdx.x")
 
+    # Whether this workload is reducing all axes.
     data_out = op.output(0)
+    all_reduce = len(sch[data_out].op.axis) == 0
+
+    # Setup the tunable parameter value.
+    num_thread = kwargs.get("num_thread", get_cuda_max_thread() if all_reduce else 32)
+    thread_x = _tvm.te.thread_axis((0, num_thread), "threadIdx.x")
 
     # Fuse and rfactor the reduce axis
     fused_reduce = sch[data_out].fuse(
@@ -105,7 +108,7 @@ def _schedule_cuda_sum_long_reduce(op, sch, **kwargs):
     sch[data_out].bind(tx, thread_x)
     sch[data_out_rf].compute_at(sch[data_out], tx)
 
-    if len(sch[data_out].op.axis) > 0:
+    if not all_reduce:
         # There are one or more axes to not reduced. Here we bind them to threads and blocks
         # for parallelism.
         block_x = _tvm.te.thread_axis("blockIdx.x")
@@ -132,7 +135,8 @@ def _schedule_cuda_sum_long_reduce(op, sch, **kwargs):
 
 
 @profile_schedule(
-    num_thread=[16, 32, 64], validator=lambda _, reduce_last_axis: not reduce_last_axis
+    num_thread=[32, 64, get_cuda_max_thread()],
+    validator=lambda _, reduce_last_axis: not reduce_last_axis,
 )
 def schedule_cuda_sum_long_reduce(outs, reduce_last_axis, **kwargs):
     """Schedule sum for CUDA. This schedule targets to the sum with long reduction length.
@@ -230,7 +234,7 @@ def schedule_cuda_sum_long_reduce(outs, reduce_last_axis, **kwargs):
     return sch
 
 
-@profile_schedule(num_thread=[16, 32, 64], max_block=[128, 256, 512])
+@profile_schedule(num_thread=[32, 64, get_cuda_max_thread()], max_block=[256, 512])
 def schedule_cuda_short_reduce(outs, **kwargs):
     """Schedule sum for CUDA. This schedule targets to the sum with short reduction length.
     In this case, each thread is responsible for reduction. The parallelization is across
