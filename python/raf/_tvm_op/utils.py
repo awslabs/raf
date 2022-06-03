@@ -51,6 +51,11 @@ def load_module(path):
     return tvm.runtime.module.load_module(path)
 
 
+def get_cuda_max_thread():
+    """A helper function to obtain the maximum number of threads per block."""
+    return tvm.target.Target("cuda").max_num_threads
+
+
 def profile_schedule(**params):
     """A lightwight tuner for TOPI schedules. It is similar to AutoTVM but very lightweight.
     It can be used as follows:
