@@ -149,7 +149,6 @@ def profile_schedule(**params):
                         sch, latency = profile_param(param_list[1:], param_dict)
                         if best_sch_n_latency[0] is None or latency < best_sch_n_latency[1]:
                             best_sch_n_latency = (sch, latency)
-                    assert best_sch_n_latency is not None
                     return best_sch_n_latency
 
                 # All parameter values are determined and in param_dict, evaluate the schedule.
