@@ -116,7 +116,7 @@ def profile_schedule(**params):
                 collect_args(out)
 
             # Generate random input data for profiling.
-            tvm_target = tvm.target.Target.current()
+            tvm_target = tvm.target.Target.current(allow_none=False)
             tvm_device = tvm.device(str(tvm_target), local_rank)
             args = list(args_set)
             args_data = []
