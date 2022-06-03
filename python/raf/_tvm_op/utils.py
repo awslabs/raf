@@ -87,7 +87,7 @@ def profile_schedule(**params):
     if "validator" in params:
         validator = params["validator"]
         del params["validator"]
-    enable = os.environ.get("RAF_JIT_TUNE", True)
+    enable = bool(int(os.environ.get("RAF_JIT_TUNE", 1)))
     comm = dist.get_communicator()
     local_rank = comm.local_rank
 
