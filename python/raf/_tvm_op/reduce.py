@@ -89,115 +89,54 @@ def _schedule_cuda_sum_long_reduce(op, sch, **kwargs):
         The computation schedule for the op.
     """
     # pylint: disable=invalid-name
+
+    # Whether this workload is reducing all axes.
+    data_out = op.output(0)
+    all_reduce = len(sch[data_out].op.axis) == 0
+
     # Setup the tunable parameter value.
-    num_thread = kwargs.get("num_thread", 32)
+    num_thread = kwargs.get("num_thread", get_cuda_max_thread() if all_reduce else 32)
     thread_x = _tvm.te.thread_axis((0, num_thread), "threadIdx.x")
-    is_idx_reduce = False
 
-    if is_idx_reduce:
-        data_out = op.input_tensors[0]
-    else:
-        data_in = op.input_tensors[0]
-        data_out = op.output(0)
-
-    if not sch[data_out].op.reduce_axis:
-        raise RuntimeError("No reduction axis is found in schedule")
-
-    if len(sch[data_out].op.axis) > 0:
-        all_reduce = False
-        num_thread = 32
-        block_x = _tvm.te.thread_axis("blockIdx.x")
-        thread_y = _tvm.te.thread_axis((0, num_thread), "threadIdx.x")
-    else:
-        all_reduce = True
-
-    # Fuse and refactor the reduce axis
+    # Fuse and rfactor the reduce axis
     fused_reduce = sch[data_out].fuse(
         *[sch[data_out].op.reduce_axis[i] for i in range(len(sch[data_out].op.reduce_axis))]
     )
-    ko, ki = sch[data_out].split(fused_reduce, factor=num_thread)
-    if is_idx_reduce:
-        data_out_rf, _ = sch.rfactor(data_out, ki)
-    else:
-        data_out_rf = sch.rfactor(data_out, ki)
+    _, ki = sch[data_out].split(fused_reduce, factor=num_thread)
+    data_out_rf = sch.rfactor(data_out, ki)
     tx = sch[data_out].op.reduce_axis[0]
     sch[data_out].bind(tx, thread_x)
     sch[data_out_rf].compute_at(sch[data_out], tx)
 
-    if is_idx_reduce:
-        real_output = op.output(0)
-        temp_idx_input = data_out.op.output(0)
-        temp_val_input = data_out.op.output(1)
-    else:
-        real_output = data_out
-
     if not all_reduce:
-        # Fuse and split the axis
-        fused_outer = sch[real_output].fuse(
-            *[sch[real_output].op.axis[i] for i in range(len(sch[real_output].op.axis))]
-        )
-        bx, outer_in = sch[real_output].split(fused_outer, factor=num_thread)
+        # There are one or more axes to not reduced. Here we bind them to threads and blocks
+        # for parallelism.
+        block_x = _tvm.te.thread_axis("blockIdx.x")
+        thread_y = _tvm.te.thread_axis((0, num_thread), "threadIdx.y")
 
-        # Bind the axes to threads and blocks
-        sch[real_output].bind(outer_in, thread_y)
-        sch[real_output].bind(bx, block_x)
-        if is_idx_reduce:
-            sch[temp_idx_input].compute_at(sch[real_output], outer_in)
-            sch[temp_val_input].compute_at(sch[real_output], outer_in)
-        sch[real_output].set_store_predicate(
+        # Fuse and split the axis
+        fused_outer = sch[data_out].fuse(
+            *[sch[data_out].op.axis[i] for i in range(len(sch[data_out].op.axis))]
+        )
+        bx, outer_in = sch[data_out].split(fused_outer, factor=num_thread)
+
+        # Bind non-reduced axes to threads and blocks
+        sch[data_out].bind(outer_in, thread_y)
+        sch[data_out].bind(bx, block_x)
+        sch[data_out].set_store_predicate(
             _tvm.tir.all(
-                thread_x.equal(0), block_x * num_thread + thread_y < reduce(mul, real_output.shape)
+                thread_x.equal(0), block_x * num_thread + thread_y < reduce(mul, data_out.shape)
             )
         )
     else:
-        if is_idx_reduce:
-            spatial_axis = sch[real_output].fuse(*(sch[real_output].op.axis))
-            sch[real_output].bind(spatial_axis, _tvm.te.thread_axis("blockIdx.x"))
-            sch[temp_idx_input].compute_at(sch[real_output], spatial_axis)
-            sch[temp_val_input].compute_at(sch[real_output], spatial_axis)
-        sch[real_output].set_store_predicate(thread_x.equal(0))
+        # All axes are reduced.
+        sch[data_out].set_store_predicate(thread_x.equal(0))
     return sch
-
-    # data_out = op.output(0)
-
-    # # Fuse and rfactor the reduce axis
-    # fused_reduce = sch[data_out].fuse(
-    #     *[sch[data_out].op.reduce_axis[i] for i in range(len(sch[data_out].op.reduce_axis))]
-    # )
-    # _, ki = sch[data_out].split(fused_reduce, factor=num_thread)
-    # data_out_rf = sch.rfactor(data_out, ki)
-    # tx = sch[data_out].op.reduce_axis[0]
-    # sch[data_out].bind(tx, thread_x)
-    # sch[data_out_rf].compute_at(sch[data_out], tx)
-
-    # if len(sch[data_out].op.axis) > 0:
-    #     # There are one or more axes to not reduced. Here we bind them to threads and blocks
-    #     # for parallelism.
-    #     block_x = _tvm.te.thread_axis("blockIdx.x")
-    #     thread_y = _tvm.te.thread_axis((0, num_thread), "threadIdx.y")
-
-    #     # Fuse and split the axis
-    #     fused_outer = sch[data_out].fuse(
-    #         *[sch[data_out].op.axis[i] for i in range(len(sch[data_out].op.axis))]
-    #     )
-    #     bx, outer_in = sch[data_out].split(fused_outer, factor=num_thread)
-
-    #     # Bind non-reduced axes to threads and blocks
-    #     sch[data_out].bind(outer_in, thread_y)
-    #     sch[data_out].bind(bx, block_x)
-    #     sch[data_out].set_store_predicate(
-    #         _tvm.tir.all(
-    #             thread_x.equal(0), block_x * num_thread + thread_y < reduce(mul, data_out.shape)
-    #         )
-    #     )
-    # else:
-    #     # All axes are reduced.
-    #     sch[data_out].set_store_predicate(thread_x.equal(0))
-    # return sch
 
 
 @profile_schedule(
-    num_thread=[16, 32, 64], validator=lambda _, reduce_last_axis: not reduce_last_axis
+    num_thread=[32, 64, get_cuda_max_thread()],
+    validator=lambda _, reduce_last_axis: not reduce_last_axis,
 )
 def schedule_cuda_sum_long_reduce(outs, reduce_last_axis, **kwargs):
     """Schedule sum for CUDA. This schedule targets to the sum with long reduction length.
