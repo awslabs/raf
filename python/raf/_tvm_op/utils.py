@@ -4,6 +4,7 @@
 """Utilities for processing TVM ops."""
 # pylint: disable=protected-access
 import os
+from threading import Thread
 
 import numpy as np
 
@@ -125,6 +126,17 @@ def profile_schedule(**params):
                     tvm.nd.array(np.random.uniform(size=shape).astype(arg.dtype), tvm_device)
                 )
 
+            def _build_n_profile(sch, args, tvm_target, ret):
+                """Build and profile a schedule. This is supposed to be used in an isolated env."""
+                try:
+                    func = tvm.build(sch, args, tvm_target)
+                    # Run 5 times and take the median value to avoid outliers.
+                    evaluator = func.time_evaluator(func.entry_name, tvm_device, number=5)
+                    ret["latency"] = evaluator(*args_data).median
+                except Exception as err:  # pylint: disable=broad-except
+                    ret["latency"] = float("inf")
+                    ret["error"] = str(err)
+
             # Profiling
             def profile_param(param_list, param_dict):
                 if param_list:
@@ -144,13 +156,11 @@ def profile_schedule(**params):
                 sch_kwargs = kwargs.copy()
                 sch_kwargs.update(param_dict)
                 sch = sch_func(outs, **sch_kwargs)
-                try:
-                    func = tvm.build(sch, args, tvm_target)
-                    # Run 5 times and take the median value to avoid outliers.
-                    evaluator = func.time_evaluator(func.entry_name, tvm_device, number=5)
-                    latency = evaluator(*args_data).median
-                except Exception:  # pylint: disable=broad-except
-                    latency = float("inf")
+                ret = {}
+                thd = Thread(target=_build_n_profile, args=(sch, args, tvm_target, ret))
+                thd.start()
+                thd.join()
+                latency = ret["latency"]
                 return sch, latency
 
             sch, _ = profile_param(list(params.items()), {})
