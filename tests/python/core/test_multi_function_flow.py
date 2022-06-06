@@ -6,19 +6,21 @@
 import pytest
 import numpy as np
 import raf
+from raf._core.ndarray import get_ndarray_handle
 from raf.ir import ScopeBuilder
 from raf.model.trace import _get_func_inputs
-from raf.testing import get_testable_devices
 from raf._core.device import Device
 from raf._core.executor import VMExecutor
+from raf._ffi.model import RunModel
 from raf._ffi.memory_pool import InitPool
-from raf.testing import run_infer_type, randn
+from raf.testing import check, randn
+from raf.model.trace import _unwrap
 
 import tvm
 from tvm import relay
 
 # Run a module through the VM, return the result in numpy
-def run_vm(model_or_mod, args):
+def run_vm(model_or_mod, args, use_multi_func=False):
 
     if not isinstance(model_or_mod, tvm.IRModule):
         record = model_or_mod._internal(*args)
@@ -30,12 +32,16 @@ def run_vm(model_or_mod, args):
     # Use CPU to avoid workspace memory.
     device = "cpu"
     InitPool(Device(device), "page_unit_pool")
+    pass_config = {
+        "raf.memory_schedule": True,
+        "raf.memory_budget": int(13e9)
+    }
+    if use_multi_func:
+        pass_config["raf.use_multi_func"] = True
+
     with tvm.transform.PassContext(
         opt_level=3,
-        config={
-            "raf.memory_schedule": True,
-            "raf.memory_budget": int(13e9)
-        },
+        config=pass_config,
         disabled_pass=["FuseTVM", "FuseDialect"]
     ):
         res = VMExecutor(mod, device).make_executor()(*args)
@@ -87,8 +93,8 @@ def test_simple_convnet():
     def get_mod_multi_func():
         """
             Create a simple convnet model with two types of layers. These two
-            layers have different input shapes. We will run autodiff so we only
-            define the inference part of the model. 
+            layers have different input shapes. This test is without autodiff. 
+            More comprehensive testing with autodiff is postponed. 
 
             fn(input, wgt0, wgt1, wgt2, wgt3, wgt4) {
 
@@ -171,7 +177,6 @@ def test_simple_convnet():
         outp = sb.let("outp", raf.ir.op.dense(a3_pooled_reshaped, wgt4))
         sb.ret(outp)
         func = relay.Function([data, wgt0, wgt1, wgt2, wgt3, wgt4], sb.get())
-        print("Multi-func IR: ", raf.ir.AsText(func))
         return tvm.IRModule.from_expr(func)
 
     def get_mod_flat():
@@ -224,7 +229,6 @@ def test_simple_convnet():
         outp = sb.let("outp", raf.ir.op.dense(relu_out3_pooled_reshaped, wgt4))
         sb.ret(outp)
         func = relay.Function([data, wgt0, wgt1, wgt2, wgt3, wgt4], sb.get())
-        print("Flat IR: ", raf.ir.AsText(func))
         return tvm.IRModule.from_expr(func)
 
     m_x, _ = randn(ishape, device=device)
@@ -233,10 +237,16 @@ def test_simple_convnet():
     m_wgt2, _ = randn(wgtshape, device=device)
     m_wgt3, _ = randn(wgtshape, device=device)
     m_wgt4, _ = randn(dense_wgt_shape, device=device)
+    all_inputs = [m_x, m_wgt0, m_wgt1, m_wgt2, m_wgt3, m_wgt4]
 
-    multi_func_res = run_vm(get_mod_multi_func(), 
-                            [m_x, m_wgt0, m_wgt1, m_wgt2, m_wgt3, m_wgt4])
-    flat_res = run_vm(get_mod_flat(), 
-                      [m_x, m_wgt0, m_wgt1, m_wgt2, m_wgt3, m_wgt4])
+    # Try the VM path
+    multi_func_res = run_vm(get_mod_multi_func(), all_inputs, use_multi_func=True)
+    flat_res = run_vm(get_mod_flat(), all_inputs)
     
-    assert np.allclose(multi_func_res, flat_res)
+    check(multi_func_res, flat_res)
+
+    # Try the interpreter path
+    interp_all_inputs = [get_ndarray_handle(inp) for inp in all_inputs]
+    multi_func_res = _unwrap(RunModel(get_mod_multi_func(), interp_all_inputs))
+    flat_res = _unwrap(RunModel(get_mod_flat(), interp_all_inputs))
+    check(multi_func_res, flat_res)

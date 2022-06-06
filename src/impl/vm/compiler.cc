@@ -915,10 +915,12 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::InplaceUpdate());
 
-  // Do a full inline here to make sure the rest of the passes work
-  pass_seqs.push_back(pass::LambdaLift());
-  pass_seqs.push_back(pass::FullInline());
-  pass_seqs.push_back(pass::DeadCodeElimination());
+  if (pass_ctx->GetConfig("raf.use_multi_func", Bool(false)).value()) {
+    // The memory-related passes below do not work well if we have multi-function
+    pass_seqs.push_back(pass::LambdaLift());
+    pass_seqs.push_back(pass::FullInline());
+    pass_seqs.push_back(pass::DeadCodeElimination());
+  }
 
   if (!enable_stream_schedule) {
     // TODO(@comaniac): Support rematerialization with multi-streaming.
@@ -997,6 +999,7 @@ PackedFunc VMCompiler::GetFunction(const std::string& name, const ObjectPtr<Obje
 }
 
 TVM_REGISTER_PASS_CONFIG_OPTION("raf.vm.optimize.anf_only", Bool);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.use_multi_func", Bool);
 
 RAF_REGISTER_GLOBAL("raf.vm.VMCompiler").set_body_typed(CreateVMCompiler);
 

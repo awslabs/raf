@@ -256,6 +256,9 @@ class FullInliner: public ExprMutator {
       curr_let_ = let_node->var;
       auto new_value = VisitExpr(let_node->value);
       // Proceed to the next node
+      // Notice that we will keep the let statement even if it is just assigning a global var
+      //   let x = %some_global_var
+      // This won't cause an issue in later passes because we will run DCE afterwards. 
       scope->Push(let_node->var, new_value);
       body = let_node->body;
       let_node = body.as<LetNode>();
@@ -329,7 +332,7 @@ class FullInliner: public ExprMutator {
  private: 
   /*! \brief Inline the called function into the current function body. */
   Var InlineFunc(const Function& f, const Array<Expr>& new_args, LetList* curr_scope) {
-    LOG(INFO) << "Inlining function " << ir::AsText(f);
+    // LOG(INFO) << "Inlining function " << ir::AsText(f);
     CHECK_EQ(new_args.size(), f->params.size()) 
       << "The function should have " << f->params.size() << " parameters, but the arg list has"
       << new_args.size() << " elements!";
@@ -339,7 +342,7 @@ class FullInliner: public ExprMutator {
     std::shared_ptr<VarMap> var_map_in_func = std::make_shared<VarMap>();
     for (size_t i = 0; i < new_args.size(); i ++) {
       var_map_in_func->insert(std::make_pair(f->params[i], new_args[i]));
-      LOG(INFO) << "Arg: " << f->params[i] << " -> " << new_args[i];
+      // LOG(INFO) << "Arg: " << f->params[i] << " -> " << new_args[i];
       // Delete the arguments from the internal memo to force revisiting nodes
       this->memo_.erase(f->params[i]);
     }
@@ -349,7 +352,7 @@ class FullInliner: public ExprMutator {
     // change it back when we exit this function
     std::shared_ptr<VarMap> tmp = var_map_;
     var_map_ = var_map_in_func;
-    DebugDumpVarMap();
+    // DebugDumpVarMap();
 
     // Assume the called function is in ANF
     std::unique_ptr<ExplicitLetList> ell = ExplicitLetList::make(f->body);
@@ -372,8 +375,6 @@ class FullInliner: public ExprMutator {
       } else {
         new_expr = VisitExpr(expr);
       }
-      // TODO: modify something here
-      // The new expr should already have the vars replaced
 
       auto new_let_var = curr_scope->Push(new_expr);
       var_map_->insert(std::make_pair(let_var, new_let_var));
@@ -390,7 +391,7 @@ class FullInliner: public ExprMutator {
     }
     // Change the var map back
     var_map_ = tmp;
-    DebugDumpVarMap();
+    // DebugDumpVarMap();
     return Downcast<Var>(ret);
   }
 
