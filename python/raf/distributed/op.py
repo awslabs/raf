@@ -151,7 +151,7 @@ def reduce_scatter(x, computation="sum", rank_list=None):
         reduction result of x[rank] over all replicas,
         where rank represents rank number of the current process
     """
-    return sym._reduce_scatter(x, computation, rank_list=None)
+    return sym._reduce_scatter(x, computation, rank_list=rank_list)
 
 
 def group_reduce_scatter(tensor_list, computation="sum"):
