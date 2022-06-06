@@ -329,6 +329,7 @@ class FullInliner: public ExprMutator {
  private: 
   /*! \brief Inline the called function into the current function body. */
   Var InlineFunc(const Function& f, const Array<Expr>& new_args, LetList* curr_scope) {
+    LOG(INFO) << "Inlining function " << ir::AsText(f);
     CHECK_EQ(new_args.size(), f->params.size()) 
       << "The function should have " << f->params.size() << " parameters, but the arg list has"
       << new_args.size() << " elements!";
@@ -338,6 +339,9 @@ class FullInliner: public ExprMutator {
     std::shared_ptr<VarMap> var_map_in_func = std::make_shared<VarMap>();
     for (size_t i = 0; i < new_args.size(); i ++) {
       var_map_in_func->insert(std::make_pair(f->params[i], new_args[i]));
+      LOG(INFO) << "Arg: " << f->params[i] << " -> " << new_args[i];
+      // Delete the arguments from the internal memo to force revisiting nodes
+      this->memo_.erase(f->params[i]);
     }
 
     // We want to leverage VisitExpr() to substitute the vars automatically
@@ -345,6 +349,7 @@ class FullInliner: public ExprMutator {
     // change it back when we exit this function
     std::shared_ptr<VarMap> tmp = var_map_;
     var_map_ = var_map_in_func;
+    DebugDumpVarMap();
 
     // Assume the called function is in ANF
     std::unique_ptr<ExplicitLetList> ell = ExplicitLetList::make(f->body);
@@ -355,6 +360,9 @@ class FullInliner: public ExprMutator {
     for (size_t i = 0; i < n; i ++) {
       Var let_var = vars[i];
       Expr expr = exprs[i];
+      // Same here, force revisiting nodes
+      this->memo_.erase(let_var);
+      this->memo_.erase(expr);
 
       // We only change the vars on the RHS here, so we don't want it to trigger our routine
       // of handling calls
@@ -382,9 +390,16 @@ class FullInliner: public ExprMutator {
     }
     // Change the var map back
     var_map_ = tmp;
+    DebugDumpVarMap();
     return Downcast<Var>(ret);
   }
 
+  void DebugDumpVarMap() {
+    LOG(INFO) << "Current var map: ";
+    for (auto pair : *(var_map_.get())) {
+      LOG(INFO) << pair.first << " -> " << pair.second;
+    }
+  }
   /*! \brief The function we are operating on. */
   const Function& func_;
   /*! \brief The map from global vars to functions. */
@@ -413,6 +428,7 @@ class FullInliner: public ExprMutator {
  * 2. Process functions according to reverse topological order and inline everything. 
  */
 IRModule Inline(const IRModule& mod) {
+  LOG(INFO) << "Inlining module: " << ir::AsText(mod);
   CallGraphConstructor cgc;
   CallGraph cg = cgc.ConstructCallGraph(mod);
   CallGraphNodeList funcs;
@@ -439,6 +455,7 @@ IRModule Inline(const IRModule& mod) {
     if (f->RefCount() > 0) 
       mod->Remove(f->gvar);
   }
+  LOG(INFO) << "After inlining: " << ir::AsText(mod);
   return mod;
 }
 
@@ -452,7 +469,7 @@ Pass FullInline() {
     0, "FullInline", {"LambdaLift"});
 }
 
-RAF_REGISTER_GLOBAL("raf.pass_.InlineClosure").set_body_typed(InlineClosure);
+RAF_REGISTER_GLOBAL("raf.pass_.FullInline").set_body_typed(FullInline);
 
 }  // namespace pass
 }  // namespace raf
