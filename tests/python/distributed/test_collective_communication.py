@@ -335,6 +335,57 @@ def test_reduce_scatter(computation):
         check(m_out, n_out)
 
 
+@pytest.mark.skipif(skip_dist_test(min_rank_num=4, require_exact_rank=True), reason=SKIP_REASON)
+@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
+@pytest.mark.parametrize("rank_list", [[[0, 1], [2, 3]]])
+def test_reduce_scatter_with_rank_list(computation, rank_list):
+    class TestModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x, y):
+            z = Symbol.make_tuple([x, y])
+            out = raf.reduce_scatter(z, computation=computation, rank_list=rank_list)
+            return out
+
+    if computation == "avg" and raf.build.with_nccl() < 21000:
+        pytest.skip("avg is not supported in NCCL < 2.10")
+
+    model = TestModel()
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
+    device = f"cuda({local_rank})"
+    n_ones = np.ones(shape=(4, 4), dtype="float32")
+    n_x = n_ones * (rank + 1)
+    n_y = -n_ones * (rank + 1)
+    m_x, m_y = raf.array(n_x, device=device), raf.array(n_y, device=device)
+    model.to(device=device)
+    m_out = run_model(model, [m_x, m_y], device)
+    for group in rank_list:
+        if rank in group:
+            ones = np.ones(shape=(4, 4), dtype="float32")
+            if computation == "sum":
+                even_out = ones * sum(np.array(group) + 1)
+                odd_out = -even_out
+            elif computation == "prod":
+                even_out = ones * np.prod([(temp_rank + 1) for temp_rank in np.array(group)])
+                odd_out = even_out
+            elif computation == "min":
+                even_out = ones * min(np.array(group) + 1)
+                odd_out = -ones * max(np.array(group) + 1)
+            elif computation == "max":
+                even_out = ones * max(np.array(group) + 1)
+                odd_out = -ones * min(np.array(group) + 1)
+            elif computation == "avg":
+                even_out = ones * sum(np.array(group) + 1)
+                even_out = even_out / total_rank
+                odd_out = -even_out
+            if rank % 2 == 0:
+                check(m_out, even_out)
+            else:
+                check(m_out, odd_out)
+
+
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
 def test_send_recv():
     shape = [2, 2]
