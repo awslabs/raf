@@ -71,7 +71,7 @@ def test_dynamic_model():
 fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_0 = raf.op.vm.alloc_storage(int64(32), int64(128), int32(1), int32(0), str"int32");
   let %x_1 = raf.op.vm.alloc_tensor(%x_0, [4, 2], str"int32", [4, 2]);
-  let %x_2 = raf.op.vm.alloc_storage(int64(16), int64(64), int32(1), int32(0), str"int64");
+  let %x_2 = raf.op.vm.alloc_storage(int64(16), int64(128), int32(1), int32(0), str"int64");
   let %x_3 = raf.op.vm.alloc_tensor(%x_2, [2], str"int64", [2]);
   let %x_4 = raf.op.upper_bound.argwhere;
   let %x_5 = (%x,);
