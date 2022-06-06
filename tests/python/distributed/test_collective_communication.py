@@ -364,11 +364,26 @@ def test_reduce_scatter_with_rank_list(computation, rank_list):
     for group in rank_list:
         if rank in group:
             ones = np.ones(shape=(4, 4), dtype="float32")
-            n_out = ones * sum(np.array(group) + 1)
+            if computation == "sum":
+                even_out = ones * sum(np.array(group) + 1)
+                odd_out = -even_out
+            elif computation == "prod":
+                even_out = ones * np.prod([(temp_rank + 1) for temp_rank in np.array(group)])
+                odd_out = even_out
+            elif computation == "min":
+                even_out = ones * min(np.array(group) + 1)
+                odd_out = -ones * max(np.array(group) + 1)
+            elif computation == "max":
+                even_out = ones * max(np.array(group) + 1)
+                odd_out = -ones * min(np.array(group) + 1)
+            elif computation == "avg":
+                even_out = ones * sum(np.array(group) + 1)
+                even_out = even_out / total_rank
+                odd_out = -even_out
             if rank % 2 == 0:
-                check(m_out, target_x)
+                check(m_out, even_out)
             else:
-                check(m_out, -target_x)
+                check(m_out, odd_out)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
