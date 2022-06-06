@@ -217,8 +217,8 @@ class ManifestAllocMutator : public ExprMutator {
  private:
   Expr ComputeAlignment(DataType dtype) {
     int64_t align = dtype.bits() / 8 * dtype.lanes();
-    if (align < 64) {
-      align = 64;
+    if (align < kDefaultMemoryAlignment) {
+      align = kDefaultMemoryAlignment;
     }
     return MakeConstant(ScalarValue::make(align));
   }
