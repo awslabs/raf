@@ -37,8 +37,6 @@ class CUDADeviceAPI final : public DeviceAPI {
   void* AllocMemory(int64_t nbytes, int64_t alignment) override {
     CUDA_CALL(cudaSetDevice(device_id_));
     void* ptr = nullptr;
-    // TODO(@junrushao1994): make sure it is correct
-    CHECK_EQ(512 % alignment, 0);
     CUDA_CALL(cudaMalloc(&ptr, nbytes));
     return ptr;
   }
@@ -77,9 +75,6 @@ class CUDADeviceAPI final : public DeviceAPI {
                          int64_t alignment = kDefaultMemoryAlignment) {
     static auto cuda_pool = GetCUDAMemoryPool(device_id_);
     void* ptr = nullptr;
-
-    // TODO(@junrushao1994): make sure it is correct
-    CHECK_EQ(512 % alignment, 0);
 
     try {
       CUDA_CALL(
