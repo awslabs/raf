@@ -82,10 +82,10 @@ Pass FoldConstant();
  */
 Pass LambdaLift();
 
-/*! 
+/*!
  * \brief A pass that inlines global functions and erases the inlined functions
- * from the module. 
- * \return The created pass. 
+ * from the module.
+ * \return The created pass.
  */
 Pass FullInline();
 
