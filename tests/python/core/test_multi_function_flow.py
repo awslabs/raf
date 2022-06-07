@@ -32,17 +32,12 @@ def run_vm(model_or_mod, args, use_multi_func=False):
     # Use CPU to avoid workspace memory.
     device = "cpu"
     InitPool(Device(device), "page_unit_pool")
-    pass_config = {
-        "raf.memory_schedule": True,
-        "raf.memory_budget": int(13e9)
-    }
+    pass_config = {"raf.memory_schedule": True, "raf.memory_budget": int(13e9)}
     if use_multi_func:
         pass_config["raf.use_multi_func"] = True
 
     with tvm.transform.PassContext(
-        opt_level=3,
-        config=pass_config,
-        disabled_pass=["FuseTVM", "FuseDialect"]
+        opt_level=3, config=pass_config, disabled_pass=["FuseTVM", "FuseDialect"]
     ):
         res = VMExecutor(mod, device).make_executor()(*args)
 
@@ -80,10 +75,10 @@ def test_simple_convnet():
         max_pool2d_op,
         [
             x,
-            raf.ir.const(winsize), # kernel size
-            raf.ir.const(winsize), # stride
-            raf.ir.const([0]),     # padding
-            raf.ir.const([1]),     # dilation
+            raf.ir.const(winsize),  # kernel size
+            raf.ir.const(winsize),  # stride
+            raf.ir.const([0]),  # padding
+            raf.ir.const([1]),  # dilation
             raf.ir.const(False),
             raf.ir.const(True),
             raf.ir.const("NCHW"),
@@ -92,45 +87,45 @@ def test_simple_convnet():
 
     def get_mod_multi_func():
         """
-            Create a simple convnet model with two types of layers. These two
-            layers have different input shapes. This test is without autodiff. 
-            More comprehensive testing with autodiff is postponed. 
+        Create a simple convnet model with two types of layers. These two
+        layers have different input shapes. This test is without autodiff.
+        More comprehensive testing with autodiff is postponed.
 
-            fn(input, wgt0, wgt1, wgt2, wgt3, wgt4) {
+        fn(input, wgt0, wgt1, wgt2, wgt3, wgt4) {
 
-                // Layer 0
-                let foo0 = layer0(inp0, wgt0) {
-                    let conv_out0 = conv2d(inp0, wgt0)
-                    let relu_out0 = relu(conv_out0)
-                    relu_out0
-                }
-
-                // Layer 1
-                let foo1 = layer1(inp1, wgt1) {
-                    let conv_out1 = conv2d(inp1, wgt1)
-                    let relu_out1 = relu(conv_out1)
-                    relu_out1
-                }
-
-                // First two layers
-                let a0 = foo0(input, wgt0)
-                let a1 = foo0(a0, wgt1)
-
-                // Go through a pooling layer
-                let a1_pooled = maxpool_2d(a1, [2, 2])
-
-                // Next two layers
-                let a2 = foo1(a1_pooled, wgt2)
-                let a3 = foo2(a2, wgt3)
-
-                // Pool again and go through a dense layer
-                let a3_pooled = maxpool_2d(a3, [32, 32]) // Pool each channel to 1 pixel
-                let a3_pooled_reshaped = reshape(a3_pooled, [16, 16])
-                let out = linear(a3_pooled_reshaped, wgt4)
-                out
+            // Layer 0
+            let foo0 = layer0(inp0, wgt0) {
+                let conv_out0 = conv2d(inp0, wgt0)
+                let relu_out0 = relu(conv_out0)
+                relu_out0
             }
 
-        """    
+            // Layer 1
+            let foo1 = layer1(inp1, wgt1) {
+                let conv_out1 = conv2d(inp1, wgt1)
+                let relu_out1 = relu(conv_out1)
+                relu_out1
+            }
+
+            // First two layers
+            let a0 = foo0(input, wgt0)
+            let a1 = foo0(a0, wgt1)
+
+            // Go through a pooling layer
+            let a1_pooled = maxpool_2d(a1, [2, 2])
+
+            // Next two layers
+            let a2 = foo1(a1_pooled, wgt2)
+            let a3 = foo2(a2, wgt3)
+
+            // Pool again and go through a dense layer
+            let a3_pooled = maxpool_2d(a3, [32, 32]) // Pool each channel to 1 pixel
+            let a3_pooled_reshaped = reshape(a3_pooled, [16, 16])
+            let out = linear(a3_pooled_reshaped, wgt4)
+            out
+        }
+
+        """
         data = raf.ir.var("data", shape=ishape)
         wgt0 = raf.ir.var("wgt0", shape=wgtshape)
         wgt1 = raf.ir.var("wgt1", shape=wgtshape)
@@ -147,7 +142,7 @@ def test_simple_convnet():
         relu_out0 = sb_l0.let("relu_out0", raf.ir.op.relu(conv_out0))
         sb_l0.ret(relu_out0)
         func_l0 = relay.Function([inp_l0, wgt_l0], sb_l0.get())
-        layer0 = sb.let('layer0', func_l0)
+        layer0 = sb.let("layer0", func_l0)
 
         # Layer 1
         inp_l1 = raf.ir.var("inp1", shape=pooled_ishape)
@@ -157,7 +152,7 @@ def test_simple_convnet():
         relu_out1 = sb_l1.let("relu_out1", raf.ir.op.relu(conv_out1))
         sb_l1.ret(relu_out1)
         func_l1 = relay.Function([inp_l1, wgt_l1], sb_l1.get())
-        layer1 = sb.let('layer1', func_l1)
+        layer1 = sb.let("layer1", func_l1)
 
         # Call layer0 twice
         a0 = sb.let("a0", relay.Call(layer0, [data, wgt0]))
@@ -171,9 +166,10 @@ def test_simple_convnet():
         a3 = sb.let("a3", relay.Call(layer1, [a2, wgt3]))
 
         # Finish
-        a3_pooled = sb.let("a3_pooled", max_pool2d_call(a3, (32, 32))) # shape=(16, 16, 1, 1)
-        a3_pooled_reshaped = sb.let("a3_pooled_reshaped", 
-                                    raf.ir.op.reshape(a3_pooled, dense_ishape))
+        a3_pooled = sb.let("a3_pooled", max_pool2d_call(a3, (32, 32)))  # shape=(16, 16, 1, 1)
+        a3_pooled_reshaped = sb.let(
+            "a3_pooled_reshaped", raf.ir.op.reshape(a3_pooled, dense_ishape)
+        )
         outp = sb.let("outp", raf.ir.op.dense(a3_pooled_reshaped, wgt4))
         sb.ret(outp)
         func = relay.Function([data, wgt0, wgt1, wgt2, wgt3, wgt4], sb.get())
@@ -181,30 +177,30 @@ def test_simple_convnet():
 
     def get_mod_flat():
         """
-            The flat version of the module above. 
+        The flat version of the module above.
 
-            fn(input, wgt0, wgt1, wgt2, wgt3, wgt4) {
-                // First two layers
-                let conv_out0 = conv2d(input, wgt0)
-                let relu_out0 = relu(conv_out0)
-                let conv_out1 = conv2d(relu_out0, wgt1)
-                let relu_out1 = relu(conv_out1)
+        fn(input, wgt0, wgt1, wgt2, wgt3, wgt4) {
+            // First two layers
+            let conv_out0 = conv2d(input, wgt0)
+            let relu_out0 = relu(conv_out0)
+            let conv_out1 = conv2d(relu_out0, wgt1)
+            let relu_out1 = relu(conv_out1)
 
-                // Go through a pooling layer
-                let relu_out1_pooled = maxpool_2d(relu_out1, [2, 2])
+            // Go through a pooling layer
+            let relu_out1_pooled = maxpool_2d(relu_out1, [2, 2])
 
-                // Next two layers
-                let conv_out2 = conv2d(relu_out1_pooled, wgt2)
-                let relu_out2 = relu(conv_out2)
-                let conv_out3 = conv2d(relu_out2, wgt3)
-                let relu_out3 = relu(conv_out3)
+            // Next two layers
+            let conv_out2 = conv2d(relu_out1_pooled, wgt2)
+            let relu_out2 = relu(conv_out2)
+            let conv_out3 = conv2d(relu_out2, wgt3)
+            let relu_out3 = relu(conv_out3)
 
-                // Pool again and go through a dense layer
-                let relu_out3_pooled = maxpool_2d(relu_out3, [32, 32]) // Pool each channel to 1 pixel
-                let relu_out3_pooled_reshaped = reshape(relu_out3_pooled, [16, 16])
-                let out = linear(relu_out3_pooled_reshaped, wgt4)
-                out
-            }
+            // Pool again and go through a dense layer
+            let relu_out3_pooled = maxpool_2d(relu_out3, [32, 32]) // Pool each channel to 1 pixel
+            let relu_out3_pooled_reshaped = reshape(relu_out3_pooled, [16, 16])
+            let out = linear(relu_out3_pooled_reshaped, wgt4)
+            out
+        }
         """
         data = raf.ir.var("data", shape=ishape)
         wgt0 = raf.ir.var("wgt0", shape=wgtshape)
@@ -223,9 +219,12 @@ def test_simple_convnet():
         relu_out2 = sb.let("relu_out2", raf.ir.op.relu(conv_out2))
         conv_out3 = sb.let("conv_out3", conv2d_call(relu_out2, wgt3))
         relu_out3 = sb.let("relu_out3", raf.ir.op.relu(conv_out3))
-        relu_out3_pooled = sb.let("relu_out3_pooled", max_pool2d_call(relu_out3, (32, 32))) # shape=(16, 16, 1, 1)
-        relu_out3_pooled_reshaped = sb.let("relu_out3_pooled_reshaped", 
-                                    raf.ir.op.reshape(relu_out3_pooled, dense_ishape))
+        relu_out3_pooled = sb.let(
+            "relu_out3_pooled", max_pool2d_call(relu_out3, (32, 32))
+        )  # shape=(16, 16, 1, 1)
+        relu_out3_pooled_reshaped = sb.let(
+            "relu_out3_pooled_reshaped", raf.ir.op.reshape(relu_out3_pooled, dense_ishape)
+        )
         outp = sb.let("outp", raf.ir.op.dense(relu_out3_pooled_reshaped, wgt4))
         sb.ret(outp)
         func = relay.Function([data, wgt0, wgt1, wgt2, wgt3, wgt4], sb.get())
@@ -242,7 +241,7 @@ def test_simple_convnet():
     # Try the VM path
     multi_func_res = run_vm(get_mod_multi_func(), all_inputs, use_multi_func=True)
     flat_res = run_vm(get_mod_flat(), all_inputs)
-    
+
     check(multi_func_res, flat_res)
 
     # Try the interpreter path

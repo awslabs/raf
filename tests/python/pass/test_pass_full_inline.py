@@ -21,10 +21,11 @@ import tvm
 from tvm import relay
 from tvm.ir.type import Type
 
+
 def check_inlined_ir(orig, golden, run_lambda_lift=True, use_structural_equal=True):
     """
-        Check if inlining actually does what we want. Only checks if the two IRs
-        are structurally equal. 
+    Check if inlining actually does what we want. Only checks if the two IRs
+    are structurally equal.
     """
     passes = [InferType()]
     if run_lambda_lift:
@@ -36,13 +37,14 @@ def check_inlined_ir(orig, golden, run_lambda_lift=True, use_structural_equal=Tr
     if use_structural_equal:
         assert tvm.ir.structural_equal(inlined, golden), "\nExpected:\n%s\nGot\n%s" % (
             raf.ir.AsText(golden),
-            raf.ir.AsText(inlined)
+            raf.ir.AsText(inlined),
         )
     else:
         assert raf.ir.AsText(golden) == raf.ir.AsText(inlined), "\nExpected:\n%s\nGot\n%s" % (
             raf.ir.AsText(golden),
-            raf.ir.AsText(inlined)
+            raf.ir.AsText(inlined),
         )
+
 
 # Simple test to see if inlining works as desired
 def test_simple_inline():
@@ -52,24 +54,24 @@ def test_simple_inline():
 
     def get_mod_multi_func():
         """
-            Toy example with additions inside function bodies. 
+        Toy example with additions inside function bodies.
 
-            fn(inp0, inp1, inp2, inp3) {
+        fn(inp0, inp1, inp2, inp3) {
 
-                // Function to be inlined
-                let foo = fn(x, y) {
-                    let x_1 = add(x, y)
-                    let x_2 = add(x_1, y)
-                    x_2
-                }
-
-                // Call it three times
-                let a0 = foo(inp0, inp1)
-                let a1 = foo(inp2, inp3)
-                let a2 = foo(a0, a1)
-                a2
+            // Function to be inlined
+            let foo = fn(x, y) {
+                let x_1 = add(x, y)
+                let x_2 = add(x_1, y)
+                x_2
             }
-        """    
+
+            // Call it three times
+            let a0 = foo(inp0, inp1)
+            let a1 = foo(inp2, inp3)
+            let a2 = foo(a0, a1)
+            a2
+        }
+        """
         inp0 = raf.ir.var("inp0", shape=shape)
         inp1 = raf.ir.var("inp1", shape=shape)
         inp2 = raf.ir.var("inp2", shape=shape)
@@ -84,7 +86,7 @@ def test_simple_inline():
         x_2 = sb_foo.let("x_2", relay.Call(add_op, [x_1, y, null, null]))
         sb_foo.ret(x_2)
         func_foo = relay.Function([x, y], sb_foo.get())
-        foo = sb.let('foo', func_foo)
+        foo = sb.let("foo", func_foo)
 
         # Call the function
         a0 = sb.let("a0", relay.Call(foo, [inp0, inp1]))
@@ -93,22 +95,22 @@ def test_simple_inline():
         sb.ret(a2)
         func = relay.Function([inp0, inp1, inp2, inp3], sb.get())
         return tvm.IRModule.from_expr(func)
-    
+
     def get_mod_inlined():
         """
-            The inlined version of the toy example above. Notice that we don't eliminate the
-            let vars for the calls. We just assign them with different RHS, which will result in
-            a direct assign. However, DCE will remove it afterwards. 
+        The inlined version of the toy example above. Notice that we don't eliminate the
+        let vars for the calls. We just assign them with different RHS, which will result in
+        a direct assign. However, DCE will remove it afterwards.
 
-            fn(inp0, inp1, inp2, inp3) {
-                let x_1_0 = add(inp0, inp1)
-                let x_2_0 = add(x_1_0, inp1)
-                let x_1_1 = add(inp2, inp3)
-                let x_2_1 = add(x_1_1, inp3)
-                let x_1_2 = add(x_2_0, x_2_1)
-                let x_2_2 = add(x_1_2, x_2_1)
-                x_2_2
-            }
+        fn(inp0, inp1, inp2, inp3) {
+            let x_1_0 = add(inp0, inp1)
+            let x_2_0 = add(x_1_0, inp1)
+            let x_1_1 = add(inp2, inp3)
+            let x_2_1 = add(x_1_1, inp3)
+            let x_1_2 = add(x_2_0, x_2_1)
+            let x_2_2 = add(x_1_2, x_2_1)
+            x_2_2
+        }
 
         """
         inp0 = raf.ir.var("inp0", shape=shape)
@@ -129,6 +131,7 @@ def test_simple_inline():
 
     check_inlined_ir(get_mod_multi_func(), get_mod_inlined())
 
+
 # See if inlining can handle more than one level of function calls
 def test_multi_level():
     shape = (16, 16)
@@ -137,30 +140,30 @@ def test_multi_level():
 
     def get_mod_multi_func():
         """
-            Nested function calls. 
+        Nested function calls.
 
-            // Inner-level function
-            foo_inner(x, y) {
-                let x_1 = add(x, y)
-                let x_2 = add(x_1, y)
-                x_2
-            }
+        // Inner-level function
+        foo_inner(x, y) {
+            let x_1 = add(x, y)
+            let x_2 = add(x_1, y)
+            x_2
+        }
 
-            // Outer-level function
-            foo_outer(a, b) {
-                let a_1 = foo_inner(a, b)
-                let a_2 = add(a_1, b)
-                a_2
-            }
-           
-            main(inp0, inp1, inp2, inp3) {
-                // Call the functions
-                let a0 = foo_inner(inp0, inp1)
-                let a1 = foo_outer(inp2, inp3)
-                let a2 = add(a0, a1)
-                a2
-            }
-        """    
+        // Outer-level function
+        foo_outer(a, b) {
+            let a_1 = foo_inner(a, b)
+            let a_2 = add(a_1, b)
+            a_2
+        }
+
+        main(inp0, inp1, inp2, inp3) {
+            // Call the functions
+            let a0 = foo_inner(inp0, inp1)
+            let a1 = foo_outer(inp2, inp3)
+            let a2 = add(a0, a1)
+            a2
+        }
+        """
         inp0 = raf.ir.var("inp0", shape=shape)
         inp1 = raf.ir.var("inp1", shape=shape)
         inp2 = raf.ir.var("inp2", shape=shape)
@@ -188,7 +191,7 @@ def test_multi_level():
         func_foo_outer = relay.Function([a, b], sb_outer.get())
         foo_outer = tvm.ir.GlobalVar("foo_outer")
         mod.update_func(foo_outer, func_foo_outer)
-        
+
         # Call the functions
         sb = ScopeBuilder()
         a0 = sb.let("a0", relay.Call(foo_inner, [inp0, inp1]))
@@ -199,18 +202,18 @@ def test_multi_level():
         main = tvm.ir.GlobalVar("main")
         mod.update_func(main, func)
         return mod
- 
+
     def get_mod_inlined():
         """
-            fn(inp0, inp1, inp2, inp3) {
-                let x_1_inner_0 = add(inp0, inp1)
-                let x_2_inner_0 = add(x_1_inner_0, inp1)
-                let x_1_inner_1 = add(inp2, inp3)
-                let x_2_inner_1 = add(x_1_inner_1, inp3)
-                let a_2_outer = add(x_2_inner_1, inp3)
-                let a2 = add(x_2_inner_0, a_2_outer)
-                a2
-            }
+        fn(inp0, inp1, inp2, inp3) {
+            let x_1_inner_0 = add(inp0, inp1)
+            let x_2_inner_0 = add(x_1_inner_0, inp1)
+            let x_1_inner_1 = add(inp2, inp3)
+            let x_2_inner_1 = add(x_1_inner_1, inp3)
+            let a_2_outer = add(x_2_inner_1, inp3)
+            let a2 = add(x_2_inner_0, a_2_outer)
+            a2
+        }
 
         """
         inp0 = raf.ir.var("inp0", shape=shape)
@@ -231,6 +234,7 @@ def test_multi_level():
 
     check_inlined_ir(get_mod_multi_func(), get_mod_inlined(), run_lambda_lift=False)
 
+
 # See if the inlining pass can detect cycles in the call graph. We skip the entire pass
 # in this case
 def test_recursion():
@@ -240,26 +244,26 @@ def test_recursion():
 
     def get_mod_multi_func():
         """
-            Call graph with a cycle
+        Call graph with a cycle
 
-            foo0(x, y) {
-                let x_1 = foo1(x, y)
-                let x_2 = add(x_1, y)
-                x_2
-            }
+        foo0(x, y) {
+            let x_1 = foo1(x, y)
+            let x_2 = add(x_1, y)
+            x_2
+        }
 
-            foo1(a, b) {
-                let a_1 = foo0(a, b)
-                let a_2 = add(a_1, b)
-                a_2
-            }
-           
-            main(inp0, inp1, inp2) {
-                let a0 = foo1(inp0, inp1)
-                let a1 = add(a0, inp2)
-                a1
-            }
-        """    
+        foo1(a, b) {
+            let a_1 = foo0(a, b)
+            let a_2 = add(a_1, b)
+            a_2
+        }
+
+        main(inp0, inp1, inp2) {
+            let a0 = foo1(inp0, inp1)
+            let a1 = add(a0, inp2)
+            a1
+        }
+        """
         inp0 = raf.ir.var("inp0", shape=shape)
         inp1 = raf.ir.var("inp1", shape=shape)
         inp2 = raf.ir.var("inp2", shape=shape)
@@ -287,7 +291,7 @@ def test_recursion():
         sb1.ret(a_2)
         func_foo1 = relay.Function([a, b], sb1.get(), ret_type=relay.TensorType(shape))
         mod.update_func(foo1, func_foo1)
-        
+
         # Main function
         sb = ScopeBuilder()
         a0 = sb.let("a0", relay.Call(foo1, [inp0, inp1]))
@@ -299,6 +303,10 @@ def test_recursion():
         return mod
 
     # The IR should not change, but structural_equal does not seem to work on
-    # recursive functions. So we check the text version instead. 
-    check_inlined_ir(get_mod_multi_func(), get_mod_multi_func(), 
-                     run_lambda_lift=False, use_structural_equal=False)
+    # recursive functions. So we check the text version instead.
+    check_inlined_ir(
+        get_mod_multi_func(),
+        get_mod_multi_func(),
+        run_lambda_lift=False,
+        use_structural_equal=False,
+    )
