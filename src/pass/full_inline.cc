@@ -332,7 +332,6 @@ class FullInliner: public ExprMutator {
  private: 
   /*! \brief Inline the called function into the current function body. */
   Var InlineFunc(const Function& f, const Array<Expr>& new_args, LetList* curr_scope) {
-    // LOG(INFO) << "Inlining function " << ir::AsText(f);
     CHECK_EQ(new_args.size(), f->params.size()) 
       << "The function should have " << f->params.size() << " parameters, but the arg list has"
       << new_args.size() << " elements!";
@@ -342,7 +341,6 @@ class FullInliner: public ExprMutator {
     std::shared_ptr<VarMap> var_map_in_func = std::make_shared<VarMap>();
     for (size_t i = 0; i < new_args.size(); i ++) {
       var_map_in_func->insert(std::make_pair(f->params[i], new_args[i]));
-      // LOG(INFO) << "Arg: " << f->params[i] << " -> " << new_args[i];
       // Delete the arguments from the internal memo to force revisiting nodes
       this->memo_.erase(f->params[i]);
     }
@@ -352,7 +350,6 @@ class FullInliner: public ExprMutator {
     // change it back when we exit this function
     std::shared_ptr<VarMap> tmp = var_map_;
     var_map_ = var_map_in_func;
-    // DebugDumpVarMap();
 
     // Assume the called function is in ANF
     std::unique_ptr<ExplicitLetList> ell = ExplicitLetList::make(f->body);
@@ -391,7 +388,6 @@ class FullInliner: public ExprMutator {
     }
     // Change the var map back
     var_map_ = tmp;
-    // DebugDumpVarMap();
     return Downcast<Var>(ret);
   }
 
@@ -429,7 +425,6 @@ class FullInliner: public ExprMutator {
  * 2. Process functions according to reverse topological order and inline everything. 
  */
 IRModule Inline(const IRModule& mod) {
-  LOG(INFO) << "Inlining module: " << ir::AsText(mod);
   CallGraphConstructor cgc;
   CallGraph cg = cgc.ConstructCallGraph(mod);
   CallGraphNodeList funcs;
@@ -456,7 +451,6 @@ IRModule Inline(const IRModule& mod) {
     if (f->RefCount() > 0) 
       mod->Remove(f->gvar);
   }
-  LOG(INFO) << "After inlining: " << ir::AsText(mod);
   return mod;
 }
 
