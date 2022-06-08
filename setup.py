@@ -20,49 +20,6 @@ else:
 
 SCRIPT_DIR = os.path.dirname(__file__)
 
-
-def get_env_flag(name, default=""):
-    """Get environment bololean flag by all means."""
-    return os.getenv(name, default).upper() in ["ON", "1", "YES", "TRUE", "Y"]
-
-
-def get_lib_path():
-    """Get library path, name and version"""
-    # We can not import `libinfo.py` in setup.py directly since __init__.py
-    # Will be invoked which introduces dependences
-    libinfo_py = os.path.join(SCRIPT_DIR, "./raf/_lib.py")
-    libinfo = {"__file__": libinfo_py}
-    with open(libinfo_py, "rb") as f:
-        ss = f.read()
-    exec(compile(ss, libinfo_py, "exec"), libinfo, libinfo)
-    if not os.getenv("CONDA_BUILD"):
-        lib_path = libinfo["find_lib_path"]()
-        libs = [lib_path[0]]
-        if libs[0].find("runtime") == -1:
-            for name in lib_path[1:]:
-                if name.find("runtime") != -1:
-                    libs.append(name)
-                    break
-    else:
-        libs = None
-    return libs
-
-
-def get_build_version():
-    """Generate the build version."""
-    cwd = os.path.abspath(SCRIPT_DIR)
-    git_sha = (
-        subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=cwd)
-        .decode("ascii")
-        .strip()
-    )
-    version = os.getenv("RAF_VERSION", default="0.1")
-    if not get_env_flag("RELEASE_VERSION", default="0"):
-        version += "+git" + git_sha
-    return version
-
-
-
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
         return True
@@ -92,8 +49,6 @@ if wheel_include_libs:
             _, libname = os.path.split(path)
             fo.write("include raf/%s\n" % libname)
     setup_kwargs = {"include_package_data": True}
-
-
 
 
 setup(
