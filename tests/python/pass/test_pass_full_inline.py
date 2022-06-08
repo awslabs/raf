@@ -10,7 +10,6 @@ from raf._ffi.pass_ import InferType, LambdaLift, DeadCodeElimination, FullInlin
 
 import tvm
 from tvm import relay
-from tvm.ir.type import Type
 
 
 def check_inlined_ir(orig, golden, run_lambda_lift=True, use_structural_equal=True):
