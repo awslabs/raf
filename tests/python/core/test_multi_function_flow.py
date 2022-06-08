@@ -3,8 +3,6 @@
 
 # pylint: disable=protected-access, attribute-defined-outside-init, too-many-locals
 # pylint: disable=too-many-statements, no-self-use, too-many-arguments
-import pytest
-import numpy as np
 import raf
 from raf._core.ndarray import get_ndarray_handle
 from raf.ir import ScopeBuilder
@@ -155,18 +153,18 @@ def test_simple_convnet():
         layer1 = sb.let("layer1", func_l1)
 
         # Call layer0 twice
-        a0 = sb.let("a0", relay.Call(layer0, [data, wgt0]))
-        a1 = sb.let("a1", relay.Call(layer0, [a0, wgt1]))
+        a_0 = sb.let("a0", relay.Call(layer0, [data, wgt0]))
+        a_1 = sb.let("a1", relay.Call(layer0, [a_0, wgt1]))
 
         # Max-pool
-        a1_pooled = sb.let("a1_pooled", max_pool2d_call(a1, (2, 2)))
+        a1_pooled = sb.let("a1_pooled", max_pool2d_call(a_1, (2, 2)))
 
         # Call layer1 twice
-        a2 = sb.let("a2", relay.Call(layer1, [a1_pooled, wgt2]))
-        a3 = sb.let("a3", relay.Call(layer1, [a2, wgt3]))
+        a_2 = sb.let("a2", relay.Call(layer1, [a1_pooled, wgt2]))
+        a_3 = sb.let("a3", relay.Call(layer1, [a_2, wgt3]))
 
         # Finish
-        a3_pooled = sb.let("a3_pooled", max_pool2d_call(a3, (32, 32)))  # shape=(16, 16, 1, 1)
+        a3_pooled = sb.let("a3_pooled", max_pool2d_call(a_3, (32, 32)))  # shape=(16, 16, 1, 1)
         a3_pooled_reshaped = sb.let(
             "a3_pooled_reshaped", raf.ir.op.reshape(a3_pooled, dense_ishape)
         )

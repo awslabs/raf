@@ -3,18 +3,9 @@
 
 # pylint: disable=protected-access, attribute-defined-outside-init, too-many-locals
 # pylint: disable=too-many-statements, no-self-use, too-many-arguments
-import pytest
-import numpy as np
 import raf
-from raf._core.ndarray import get_ndarray_handle
 from raf.ir import RAFSequential, ScopeBuilder
-from raf.model.trace import _get_func_inputs
-from raf._core.device import Device
-from raf._core.executor import VMExecutor
-from raf._ffi.model import RunModel
-from raf._ffi.memory_pool import InitPool
-from raf.testing import check, randn, run_infer_type
-from raf.model.trace import _unwrap
+from raf.testing import run_infer_type
 from raf._ffi.pass_ import InferType, LambdaLift, DeadCodeElimination, FullInline
 
 import tvm
@@ -86,13 +77,13 @@ def test_simple_inline():
         x_2 = sb_foo.let("x_2", relay.Call(add_op, [x_1, y, null, null]))
         sb_foo.ret(x_2)
         func_foo = relay.Function([x, y], sb_foo.get())
-        foo = sb.let("foo", func_foo)
+        foo_var = sb.let("foo", func_foo)
 
         # Call the function
-        a0 = sb.let("a0", relay.Call(foo, [inp0, inp1]))
-        a1 = sb.let("a1", relay.Call(foo, [inp2, inp3]))
-        a2 = sb.let("a2", relay.Call(foo, [a0, a1]))
-        sb.ret(a2)
+        a_0 = sb.let("a0", relay.Call(foo_var, [inp0, inp1]))
+        a_1 = sb.let("a1", relay.Call(foo_var, [inp2, inp3]))
+        a_2 = sb.let("a2", relay.Call(foo_var, [a_0, a_1]))
+        sb.ret(a_2)
         func = relay.Function([inp0, inp1, inp2, inp3], sb.get())
         return tvm.IRModule.from_expr(func)
 
@@ -158,10 +149,10 @@ def test_multi_level():
 
         main(inp0, inp1, inp2, inp3) {
             // Call the functions
-            let a0 = foo_inner(inp0, inp1)
-            let a1 = foo_outer(inp2, inp3)
-            let a2 = add(a0, a1)
-            a2
+            let v0 = foo_inner(inp0, inp1)
+            let v1 = foo_outer(inp2, inp3)
+            let v2 = add(v0, v1)
+            v2
         }
         """
         inp0 = raf.ir.var("inp0", shape=shape)
@@ -194,10 +185,10 @@ def test_multi_level():
 
         # Call the functions
         sb = ScopeBuilder()
-        a0 = sb.let("a0", relay.Call(foo_inner, [inp0, inp1]))
-        a1 = sb.let("a1", relay.Call(foo_outer, [inp2, inp3]))
-        a2 = sb.let("a2", relay.Call(add_op, [a0, a1, null, null]))
-        sb.ret(a2)
+        v_0 = sb.let("v0", relay.Call(foo_inner, [inp0, inp1]))
+        v_1 = sb.let("v1", relay.Call(foo_outer, [inp2, inp3]))
+        v_2 = sb.let("v2", relay.Call(add_op, [v_0, v_1, null, null]))
+        sb.ret(v_2)
         func = relay.Function([inp0, inp1, inp2, inp3], sb.get())
         main = tvm.ir.GlobalVar("main")
         mod.update_func(main, func)
@@ -227,8 +218,8 @@ def test_multi_level():
         x_1_inner_1 = sb.let("x_1_inner_1", relay.Call(add_op, [inp2, inp3, null, null]))
         x_2_inner_1 = sb.let("x_2_inner_1", relay.Call(add_op, [x_1_inner_1, inp3, null, null]))
         a_2_outer = sb.let("a_2_outer", relay.Call(add_op, [x_2_inner_1, inp3, null, null]))
-        a2 = sb.let("a2", relay.Call(add_op, [x_2_inner_0, a_2_outer, null, null]))
-        sb.ret(a2)
+        a_2 = sb.let("a2", relay.Call(add_op, [x_2_inner_0, a_2_outer, null, null]))
+        sb.ret(a_2)
         func = relay.Function([inp0, inp1, inp2, inp3], sb.get())
         return tvm.IRModule.from_expr(func)
 
@@ -259,9 +250,9 @@ def test_recursion():
         }
 
         main(inp0, inp1, inp2) {
-            let a0 = foo1(inp0, inp1)
-            let a1 = add(a0, inp2)
-            a1
+            let v0 = foo1(inp0, inp1)
+            let v1 = add(v0, inp2)
+            v1
         }
         """
         inp0 = raf.ir.var("inp0", shape=shape)
@@ -294,9 +285,9 @@ def test_recursion():
 
         # Main function
         sb = ScopeBuilder()
-        a0 = sb.let("a0", relay.Call(foo1, [inp0, inp1]))
-        a1 = sb.let("a1", relay.Call(add_op, [a0, inp2, null, null]))
-        sb.ret(a1)
+        v_0 = sb.let("a0", relay.Call(foo1, [inp0, inp1]))
+        v_1 = sb.let("a1", relay.Call(add_op, [v_0, inp2, null, null]))
+        sb.ret(v_1)
         func = relay.Function([inp0, inp1, inp2], sb.get())
         main = tvm.ir.GlobalVar("main")
         mod.update_func(main, func)
