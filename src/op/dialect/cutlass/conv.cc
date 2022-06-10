@@ -96,24 +96,24 @@ void CutlassConv2dOpEnv::Init(const CallValues& cv) {
 }
 
 OpEnv* CutlassConv2dOpEnv::make(const CallValues& cv) {
-  std::unique_ptr<CutlassConv2dOpEnv> op_env(std::make_unique<CutlassConv2dOpEnv>(cv));
+  CutlassConv2dOpEnv* op_env = new CutlassConv2dOpEnv(cv);
   auto matched_pattern = op_env->Pattern(cv);
   auto valid = op_env->IsValid(cv);
   if (!matched_pattern || !valid) {
     std::stringstream ss;
     ss << "[CUTLASS] Cannot JIT: matched pattern? " << matched_pattern << ", valid? " << valid;
-    dispatch_error_msgs.push_back(ss.str());
-    return nullptr;
+    op_env->error_msgs.push_back(ss.str());
+    return op_env;
   }
   try {
     op_env->Init(cv);
   } catch (const dmlc::Error& e) {
     std::stringstream ss;
     ss << "[CUTLASS] Failed to JIT: " << e.what();
-    dispatch_error_msgs.push_back(ss.str());
-    return nullptr;
+    op_env->error_msgs.push_back(ss.str());
+    return op_env;
   }
-  return op_env.release();
+  return op_env;
 }
 
 void CutlassConv2dOpEnv::Execute(const std::vector<Value>& inputs, Value output) {

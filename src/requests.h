@@ -43,6 +43,8 @@ class Requests {
 
   struct DistributedRequest {
     void** dest;
+    std::string name;
+    value::Value rank_list;
   };
 
  public:

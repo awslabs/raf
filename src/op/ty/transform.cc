@@ -479,6 +479,20 @@ Type CastLikeInfer(const CallValues& value) {
 
 RAF_OP_TYPE("raf.op.cast_like", "CastLike", CastLikeInfer);
 
+Type GroupCastInfer(const CallValues& value) {
+  const auto* args = value->args.as<GroupCastArgs>();
+  CHECK(args != nullptr);
+  Array<Type> ret;
+  DataType dtype = DataType(ir::String2DLDataType(args->dtype));
+  for (int i = 0; i < args->tensor_list.size(); ++i) {
+    TensorType data = Downcast<TensorType>(GetType(args->tensor_list[i]));
+    ret.push_back(TensorType(data->shape, dtype));
+  }
+  return TupleType(ret);
+}
+
+RAF_OP_TYPE("raf.op.group_cast", "GroupCast", GroupCastInfer);
+
 Type ExpandDimsInfer(const CallValues& value) {
   const auto* args = value->args.as<ExpandDimsArgs>();
   CHECK(args);
@@ -689,7 +703,6 @@ Type StridedSliceInfer(const CallValues& value) {
 
   auto dshape = data->shape;
   int64_t num_axis = dshape.size();
-
   Array<PrimExpr> begin = GetShapeExprFromValue(args->begin);
   Array<PrimExpr> end = GetShapeExprFromValue(args->end);
   auto is_any = [](PrimExpr expr) { return expr->IsInstance<tvm::tir::AnyNode>(); };
@@ -789,6 +802,7 @@ Type StridedSliceInfer(const CallValues& value) {
       slice_range = end_v - begin_v;
       step = stride_v;
     }
+    CHECK_NE(step, 0) << "step can not be zero ";
     oshape[i] = Integer((slice_range + step - 1) / step);
   }
 
@@ -805,6 +819,15 @@ Type StridedSliceDxInfer(const CallValues& value) {
 
 RAF_OP_TYPE("raf.op.strided_slice", "StridedSlice", StridedSliceInfer);
 RAF_OP_TYPE("raf.op.strided_slice_dx", "StridedSliceDx", StridedSliceDxInfer);
+
+Type StridedSetInfer(const CallValues& value) {
+  const auto* args = value->args.as<StridedSetArgs>();
+  CHECK(args != nullptr);
+  TensorType data = Downcast<TensorType>(GetType(args->data));
+  return data;
+}
+
+RAF_OP_TYPE("raf.op.strided_set", "StridedSet", StridedSetInfer);
 
 Type SqueezeInfer(const CallValues& value) {
   const auto* args = value->args.as<SqueezeArgs>();

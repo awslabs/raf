@@ -75,6 +75,12 @@ class MemoryPoolManager {
   PerDeviceStore<MemoryPool, false> reg;
 };
 
+inline void CheckAlignment(int64_t alignment) {
+  CHECK_EQ(alignment % kDefaultMemoryAlignment, 0U)
+      << "Requested memory with alignment " << alignment << " is not aligned to "
+      << kDefaultMemoryAlignment;
+}
+
 int64_t Memory::GetAllocBytes(const Device& dev, int64_t nbytes) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
   return mgr->GetPool(dev, "")->GetAllocBytes(nbytes);
@@ -82,12 +88,14 @@ int64_t Memory::GetAllocBytes(const Device& dev, int64_t nbytes) {
 
 std::shared_ptr<Memory> Memory::Alloc(const Device& dev, int64_t nbytes, int64_t alignment) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
+  CheckAlignment(alignment);
   return mgr->GetPool(dev, "")->Alloc(nbytes, alignment);
 }
 
 std::shared_ptr<Memory> Memory::AllocAsync(const Device& dev, int64_t nbytes, void* stream,
                                            int64_t alignment) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
+  CheckAlignment(alignment);
   return mgr->GetPool(dev, "")->AllocAsync(nbytes, stream, alignment);
 }
 
@@ -95,6 +103,7 @@ std::vector<std::shared_ptr<Memory> > Memory::AllocBatch(const Device& dev,
                                                          const std::vector<int64_t>& nbytes,
                                                          int64_t alignment) {
   MemoryPoolManager* mgr = MemoryPoolManager::Get();
+  CheckAlignment(alignment);
   return mgr->GetPool(dev, "")->AllocBatch(nbytes, alignment);
 }
 

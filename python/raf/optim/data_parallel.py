@@ -40,20 +40,25 @@ def with_data_parallel(model):
         @trace
         def forward(self, *args, **kwargs):
             # pylint: disable=protected-access, missing-function-docstring
-            passes = []
-            dctx = dist.get_context()
-            # TODO: Refactor AutoDataParallel to let it work on the IR after InlineBackward
-            # so that it can be applied here.
-            # if dctx.enable_data_parallel:
-            #     passes.append(AutoDataParallel())
-            if dctx.zero_opt_level > 0:
-                passes.append(InferType())
-                passes.append(PartitionGradient(dctx.zero_opt_level, dctx.size, dctx.rank))
-
+            dcfg = dist.get_config()
+            comm = dist.get_communicator()
             record = self.model._internal(*args, **kwargs)
             mod = record.mod
-            seq = RAFSequential(passes)
-            mod = seq(mod)
+
+            # TODO: Refactor AutoDataParallel to let it work on the IR after InlineBackward
+            # so that it can be applied here.
+            # if dcfg.enable_data_parallel:
+            #     passes.append(AutoDataParallel())
+            if dcfg.zero_opt_level > 0:
+                passes = []
+                passes.append(InferType())
+                passes.append(
+                    PartitionGradient(
+                        dcfg.zero_opt_level, comm.size, comm.rank, dcfg.group_bucket_size
+                    )
+                )
+                seq = RAFSequential(passes, name="with_data_parallel")
+                mod = seq(mod)
             inputs = _get_func_inputs(record, args, kwargs)
             out = inline(mod["main"], inputs)
             y = out[0]

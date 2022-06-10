@@ -53,10 +53,10 @@ class CutlassOpEnv : public raf::op::OpEnv {
   void RequestWorkspace(void** dest, const Device& device, int64_t nbytes);
 
   /*! \brief Set tunable configuration */
-  virtual void SetTunableConfig(const std::unique_ptr<TunableConfig>& tunable) = 0;
+  virtual void SetTunableConfig(const std::shared_ptr<TunableConfig>& tunable) = 0;
 
   /*! \brief List all possible configs */
-  virtual std::vector<std::unique_ptr<TunableConfig>> ListTunableConfigs() = 0;
+  virtual std::vector<std::shared_ptr<TunableConfig>> ListTunableConfigs() = 0;
 
   /*! \brief Initialize with default configuration */
   virtual void Init(const CallValues& call) = 0;
@@ -111,7 +111,7 @@ struct TunableConfig {
   std::string kernel_name;
 };
 
-std::ostream& operator<<(std::ostream& stream, const std::unique_ptr<TunableConfig>& config);
+std::ostream& operator<<(std::ostream& stream, const std::shared_ptr<TunableConfig>& config);
 
 std::ostream& operator<<(std::ostream& stream, const SplitKMode& mode);
 

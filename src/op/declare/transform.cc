@@ -437,6 +437,24 @@ RAF_OP_DECLARE("raf.op.strided_slice_dx", [](const CallValues& call) {
   throw;
 });
 
+RAF_OP_DECLARE("raf.op.strided_set", [](const CallValues& call) {
+  const auto* args = call->args.as<StridedSetArgs>();
+  CHECK(args != nullptr);
+  DLTensor* data = args->data;
+  DLTensor* v = args->v;
+
+  CHECK(!args->begin.empty()) << "strided_set received invalid begin";
+  CHECK(!args->end.empty()) << "strided_set received invalid end";
+  CHECK_EQ(args->begin.size(), args->end.size()) << "begin.size() != end.size()";
+  CHECK_EQ(data->ndim, v->ndim);
+
+  std::vector<int64_t> shape(data->shape, data->shape + data->ndim);
+  call->device = data->device;
+  call->out = TensorValue::Assemble(/*dev=*/data->device,
+                                    /*dtype=*/data->dtype,
+                                    /*shape=*/shape);
+});
+
 RAF_OP_DECLARE("raf.op.sequence_mask", [](const CallValues& call) {
   const auto* args = call->args.as<SequenceMaskArgs>();
   CHECK(args != nullptr);
@@ -869,6 +887,29 @@ RAF_OP_DECLARE("raf.op.cast_like", [](const CallValues& call) {
                                     /*dtype=*/like_type->dtype,
                                     /*shape=*/shape);
   call->device = x->device;
+});
+
+RAF_OP_DECLARE("raf.op.group_cast", [](const CallValues& call) {
+  const auto* args = call->args.as<GroupCastArgs>();
+  CHECK(args != nullptr);
+
+  std::vector<TensorValue> ret;
+  std::string dtype = args->dtype;
+  for (int i = 0; i < args->tensor_list.size(); ++i) {
+    DLTensor* x = args->tensor_list[i];
+    std::vector<int64_t> oshape(x->shape, x->shape + x->ndim);
+    ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
+                                        /*dtype=*/String2DLDataType(dtype),
+                                        /*shape=*/oshape));
+    if (i == 0) {
+      call->device = x->device;
+    } else {
+      raf::Device device = x->device;
+      CHECK_EQ(call->device.device_type(), device.device_type()) << "Device type mismatch";
+      CHECK_EQ(call->device.device_id(), device.device_id()) << "Device id mismatch";
+    }
+  }
+  call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
 });
 
 RAF_OP_DECLARE("raf.op.gather", [](const CallValues& call) {

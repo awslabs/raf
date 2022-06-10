@@ -526,6 +526,14 @@ SCHEMAS = {
         Arg(name="data", cxx_type="value::BaseTensorValue"),
         Arg(name="dtype", cxx_type="std::string"),
     ],
+    "transform.h::group_cast": [
+        Arg(
+            name="tensor_list",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple",
+        ),
+        Arg(name="dtype", cxx_type="std::string"),
+    ],
     "transform.h::strided_slice": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="begin", cxx_type="value::Value"),
@@ -538,6 +546,19 @@ SCHEMAS = {
             py_default="None",
         ),
         Arg(name="slice_mode", cxx_type="std::string", cxx_default='"end"', py_default='"end"'),
+    ],
+    "transform.h::strided_set": [
+        Arg(name="data", cxx_type="value::BaseTensorValue"),
+        Arg(name="v", cxx_type="value::BaseTensorValue"),
+        Arg(name="begin", cxx_type="std::vector<int64_t>", cxx_normalizer="IntTuple"),
+        Arg(name="end", cxx_type="std::vector<int64_t>", cxx_normalizer="IntTuple"),
+        Arg(
+            name="strides",
+            cxx_type="std::vector<int64_t>",
+            cxx_normalizer="IntTuple",
+            cxx_default="{}",
+            py_default="None",
+        ),
     ],
     "likes.h::sum_dx": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
@@ -690,8 +711,28 @@ SCHEMAS = {
         Arg(name="axis", cxx_type="int"),
         Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
+    "communication.h::group_allgather": [
+        Arg(
+            name="tensor_list",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple",
+        ),
+        Arg(name="axis", cxx_type="int"),
+        Arg(
+            name="out", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"
+        ),
+    ],
     "communication.h::reduce_scatter": [
         Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+        Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
+        Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
+    ],
+    "communication.h::group_reduce_scatter": [
+        Arg(
+            name="tensor_list",
+            cxx_type="std::vector<value::BaseTensorValue>",
+            cxx_normalizer="TensorTuple",
+        ),
         Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
     ],
     "communication.h::broadcast": [
@@ -826,6 +867,7 @@ SCHEMAS = {
         Arg(name="device_type", cxx_type="int"),
         Arg(name="device_id", cxx_type="int"),
         Arg(name="dtype", cxx_type="std::string", cxx_default='"float32"', py_default='"float32"'),
+        Arg(name="alloc_async", cxx_type="bool", cxx_default=True),
     ],
     "vm.h::alloc_tensor": [
         Arg(name="storage", cxx_type="value::BaseTensorValue"),

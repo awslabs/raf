@@ -86,7 +86,6 @@ set_property(
   RAF_USE_CUDNN="${RAF_USE_CUDNN}"
   RAF_CUDNN_VERSION="${RAF_CUDNN_VERSION}"
   RAF_CMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
-  RAF_USE_MPI="${RAF_USE_MPI}"
   RAF_USE_CUTLASS="${RAF_USE_CUTLASS}"
 )
 
@@ -107,6 +106,7 @@ file(GLOB_RECURSE RAF_CXX_SOURCE_FILES
   ${CMAKE_CURRENT_LIST_DIR}/src/impl/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/profiler/memory_profiler.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/profiler/op_profiler.cc
+  ${CMAKE_CURRENT_LIST_DIR}/src/profiler/scope_timer.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/profiler/base/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/src/distributed/common/*.cc
 )
@@ -138,6 +138,7 @@ endif()
 if (${RAF_USE_CUDNN} STREQUAL "OFF")
   set(RAF_CUDNN_SOURCE_FILES "")
 else()
+  set(RAF_CXX_FLAGS ${RAF_CXX_FLAGS} -DRAF_CXX_USE_CUDNN)
   file(GLOB_RECURSE RAF_CUDNN_SOURCE_FILES
     ${CMAKE_CURRENT_LIST_DIR}/src/op/dialect/cudnn/*.cc
   )
@@ -160,17 +161,22 @@ else()
 endif()
 
 if (${RAF_USE_NCCL} STREQUAL "OFF")
-  set(RAF_DISTRIBUTED_SOURCE_FILES "")
+  set(RAF_NCCL_SOURCE_FILES "")
 else ()
   set(RAF_CXX_FLAGS ${RAF_CXX_FLAGS} -DRAF_USE_NCCL)
-  file(GLOB_RECURSE RAF_DISTRIBUTED_SOURCE_FILES
-    ${CMAKE_CURRENT_LIST_DIR}/src/distributed/cuda/*.cc
+  file(GLOB_RECURSE RAF_NCCL_SOURCE_FILES
+    ${CMAKE_CURRENT_LIST_DIR}/src/distributed/cuda/nccl*.cc
     ${CMAKE_CURRENT_LIST_DIR}/src/op/dialect/nccl/*.cc
   )
 endif()
 
-if (${RAF_USE_MPI} STREQUAL "ON")
+if (${RAF_USE_MPI} STREQUAL "OFF")
+  set(RAF_MPI_SOURCE_FILES "")
+else ()
   set(RAF_CXX_FLAGS ${RAF_CXX_FLAGS} -DRAF_USE_MPI)
+  file(GLOB_RECURSE RAF_MPI_SOURCE_FILES
+    ${CMAKE_CURRENT_LIST_DIR}/src/distributed/cuda/mpi*.cc
+  )
 endif()
 
 set(RAF_SOURCE_FILES
@@ -179,7 +185,8 @@ set(RAF_SOURCE_FILES
   ${RAF_CUDNN_SOURCE_FILES}
   ${RAF_CUBLAS_SOURCE_FILES}
   ${RAF_CUTLASS_SOURCE_FILES}
-  ${RAF_DISTRIBUTED_SOURCE_FILES}
+  ${RAF_MPI_SOURCE_FILES}
+  ${RAF_NCCL_SOURCE_FILES}
 )
 
 add_library(raf_objs OBJECT ${RAF_SOURCE_FILES})

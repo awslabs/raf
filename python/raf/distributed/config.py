@@ -2,18 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=missing-class-docstring,missing-function-docstring,too-few-public-methods
-"""Distributed Context"""
+"""Distributed Config"""
 import raf._ffi.distributed as ffi
 from raf._core.core_utils import register_node
-from raf._ffi.distributed import _make
 from raf._lib import Object
 
 
-@register_node("raf.distributed.DistContext")
-class DistContext(Object):
-    def __init__(self):
-        self.__init_handle_by_constructor__(_make.DistContext)
-
+@register_node("raf.distributed.DistConfig")
+class DistConfig(Object):
     @property
     def enable_data_parallel(self):
         return self.enable_data_parallel_
@@ -22,24 +18,6 @@ class DistContext(Object):
     def enable_data_parallel(self, value):
         self.enable_data_parallel_ = value
         ffi.EnableDataParallel(value)
-
-    @property
-    def size(self):
-        return self.size_
-
-    @size.setter
-    def size(self, value):
-        self.size_ = value
-        ffi.SetGlobalSize(value)
-
-    @property
-    def rank(self):
-        return self.rank_
-
-    @rank.setter
-    def rank(self, value):
-        self.rank_ = value
-        ffi.SetGlobalRank(value)
 
     @property
     def zero_opt_level(self):
@@ -71,18 +49,16 @@ class DistContext(Object):
     def dumps(self):
         attr_keys = [
             "enable_data_parallel",
-            "size",
-            "rank",
             "zero_opt_level",
             "auto_dp_profiling_start_iter",
             "auto_dp_profiling_end_iter",
         ]
         return {attr: getattr(self, attr) for attr in attr_keys}
 
-    def loads(self, context_dict):
-        for attr in context_dict:
-            setattr(self, attr, context_dict[attr])
+    def loads(self, config_dict):
+        for attr in config_dict:
+            setattr(self, attr, config_dict[attr])
 
 
-def get_context():
-    return ffi.Global()
+def get_config():
+    return ffi.GlobalDistConfig()

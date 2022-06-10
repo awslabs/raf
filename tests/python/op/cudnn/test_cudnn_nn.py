@@ -3,7 +3,6 @@
 
 # pylint: disable=too-many-locals,too-many-arguments,protected-access,attribute-defined-outside-init
 # pylint: disable=no-self-use,no-member
-import random
 import pytest
 import torch
 import torch.nn.functional as F
@@ -267,7 +266,7 @@ def test_raf_batch_norm_train(shape, momentum, eps, dtype):
     check(m_b.grad, t_b.grad, rtol=rtol, atol=atol)
 
 
-@with_dialect(["cudnn", "tvm"])
+@with_dialect(["cudnn"])
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("dropout", [0.4, 0.6])
 def test_raf_dropout(dropout):
@@ -286,39 +285,47 @@ def test_raf_dropout(dropout):
     class TestModel(raf.Model):
         def build(self):
             self.dropout = dropout
-            self.dropout_state = ndarray.from_tensor_value(
-                raf._ffi.backend.cudnn.GetDropoutState(dropout, random.getrandbits(63))
-            ).to(device="cuda")
 
         @raf.model.trace
         def forward(self, x):
-            return raf._contrib_dropout(x, dropout, self.dropout_state)
+            return raf._contrib_dropout(x, dropout)
 
     shape, dtype = [1024, 1024], "float32"
     x, _ = randint(shape, low=10, high=20, dtype=dtype, device="cuda")
     x.requires_grad = True
-    model = TestModel()
-    state_0 = model.dropout_state.to(device="cuda")
-    m_y = model(x)[0]
-    state_1 = model.dropout_state.to(device="cuda")
-    check_dropout(x, m_y)
-    v_y = run_vm_model(model, "cuda", [x])[0]
-    state_2 = model.dropout_state.to(device="cuda")
-    check_dropout(x, v_y)
-    # state updates (cudnn enforce state inplace updates)
-    n_y = model(x)[0]
-    assert not np.array_equal(numpy(state_0), numpy(state_1))
-    assert not np.array_equal(numpy(state_1), numpy(state_2))
-    assert not np.array_equal(numpy(m_y), numpy(v_y))
-    assert not np.array_equal(numpy(m_y), numpy(n_y))
+
+    # get the random state. Note that its values will be modified after each dropout call
+    state = ndarray.from_tensor_value(
+        raf._ffi.backend.cudnn.GetDropoutState(raf.Device("cuda"), dropout)
+    )
+    state_0 = numpy(state)
+
+    # forward
+    m_y0 = raf._contrib_dropout(x, dropout)[0]
+    check_dropout(x, m_y0)
+
+    # check whether the state is updated
+    m_y1 = raf._contrib_dropout(x, dropout)[0]
+    state_1 = numpy(state)
+    assert not np.array_equal(state_0, state_1)
+    assert not np.array_equal(numpy(m_y0), numpy(m_y1))
+
     # reproducible
-    model.dropout_state = state_0
-    r_y = model(x)[0]
-    check(m_y, r_y)
+    r_y = raf._contrib_dropout(x, dropout, raf.array(state_0, device="cuda"))[0]
+    check(m_y0, r_y)
+
     # backward
     dy, _ = randn_torch(shape, dtype=dtype, device="cuda")
-    m_y.backward(dy)
-    check_dropout(x, m_y, x.grad, dy)
+    m_y0.backward(dy)
+    check_dropout(x, m_y0, x.grad, dy)
+
+    # VM
+    model = TestModel()
+    v_y = run_vm_model(model, "cuda", [x])[0]
+    state_2 = numpy(state)
+    assert not np.array_equal(state_1, state_2)
+    check_dropout(x, v_y)
+    assert not np.array_equal(numpy(m_y1), numpy(v_y))
 
 
 if __name__ == "__main__":

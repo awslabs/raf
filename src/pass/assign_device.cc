@@ -16,6 +16,9 @@
 #include "../op/schema/init.h"
 #include "../op/schema/transform.h"
 #include "../op/schema/nn.h"
+#ifdef RAF_CXX_USE_CUDNN
+#include "../op/dialect/cudnn/cudnn_utils.h"
+#endif
 
 namespace raf {
 namespace pass {

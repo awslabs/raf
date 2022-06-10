@@ -5,7 +5,7 @@
 import pytest
 import numpy as np
 import raf
-from raf.testing import check_type, run_infer_type, get_dist_info, with_dialect
+from raf.testing import check_type, run_infer_type, get_dist_comm_info, with_dialect
 from tvm.relay import TensorType, FuncType, TupleType
 
 
@@ -25,7 +25,7 @@ def test_fuse_tensor_type(shape, dtype, n):
             return y
 
     model = Model()
-    _, _, local_rank = get_dist_info()
+    _, _, local_rank = get_dist_comm_info()
     device = f"cuda({local_rank})"
     x = np.ones(shape=shape, dtype=dtype)
     x = raf.array(x, device=device)
@@ -78,7 +78,7 @@ def test_defuse_tensor_type(shapes, shape_indices, dtype):
             return y
 
     model = Model()
-    _, _, local_rank = get_dist_info()
+    _, _, local_rank = get_dist_comm_info()
     device = f"cuda({local_rank})"
     x = np.ones(shape=(total_size,), dtype=dtype)
     x = raf.array(x, device=device)

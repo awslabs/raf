@@ -15,7 +15,7 @@ from .._ffi.pass_ import FromRelay, SwitchTrainOp, validate_relay_param_name
 from ..frontend.model import FrameworkModel
 
 
-def trace_model(model, input_type, input_shape):
+def trace_model(model, shape_dict):
     """Trace PyTorch model.
 
     Parameters
@@ -23,11 +23,10 @@ def trace_model(model, input_type, input_shape):
     model: torch.nn.Module
         The PyTorch module to be converted.
 
-    input_type: str
-        Input type.
-
-    input_shape: Tuple[int, ...]
-        Input shape
+    shape_dict: Dict[str,
+                     Union[Tuple[Tuple[int, ...], str],
+                           Tuple[Tuple[int, ...], str, int]]
+        A map from input name to its shape, type, and maximal value (optional).
 
     Returns
     -------
@@ -49,8 +48,8 @@ def trace_model(model, input_type, input_shape):
             super().__init__()
             self.model = model
 
-        def forward(self, inp):
-            out = self.model(inp)
+        def forward(self, *inputs):
+            out = self.model(*inputs)
             if isinstance(out, list):
                 ordered_outs = [out[0][key] for key in self.od_model_output_keys if key in out[0]]
                 return tuple(ordered_outs)
@@ -65,7 +64,7 @@ def trace_model(model, input_type, input_shape):
                     return param.dtype
             return torch.float32
 
-    def inner(model, input_type, input_shape):
+    def inner(model, shape_dict):
         """Wrap the tracing process so that we could empty PyTorch CUDA cache afterward."""
         model = TraceWrapper(model)
         model.eval()
@@ -77,19 +76,27 @@ def trace_model(model, input_type, input_shape):
         if model.dtype != torch.float32:
             if not torch.cuda.is_available():
                 raise RuntimeError("Trace PyTorch model with dtype %s requires GPU" % model.dtype)
-            dctx = dist.get_context()
-            device = "cuda:" + str(dctx.local_rank)
+            comm = dist.get_communicator()
+            device = "cuda:" + str(comm.local_rank)
 
-        if input_type.startswith("float"):
-            input_data = torch.randn(input_shape, dtype=getattr(torch, input_type), device=device)
-        else:
-            assert input_type.startswith("int64"), "Unsupported input type %s" % input_type
-            input_data = torch.randint(10000, input_shape, device=device)
+        example_inputs = []
+        for _, input_info in shape_dict.items():
+            input_shape = input_info[0]
+            input_type = input_info[1]
+            if input_type.startswith("int64"):
+                max_val = 10000 if len(input_info) == 2 else input_info[2]
+                input_data = torch.randint(max_val + 1, input_shape, device=device)
+            elif input_type.startswith("float"):
+                input_data = torch.randn(
+                    input_shape, dtype=getattr(torch, input_type), device=device
+                )
+            else:
+                raise ValueError("Unsupported input type %s" % input_type)
+            example_inputs.append(input_data)
 
         with torch.no_grad():
             model.to(device=device)
-            model(input_data)
-            scripted_model = torch.jit.trace(model, input_data).eval()
+            scripted_model = torch.jit.trace(model, tuple(example_inputs)).eval()
 
         if device.startswith("cuda"):
             model.to(device="cpu")
@@ -97,7 +104,7 @@ def trace_model(model, input_type, input_shape):
 
         return scripted_model
 
-    scripted_model = inner(model, input_type, input_shape)
+    scripted_model = inner(model, shape_dict)
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
         torch.cuda.reset_peak_memory_stats()
@@ -113,9 +120,10 @@ def from_pytorch(model, shape_dict, model_file=None, hash_file=None):
     model: torch.nn.Module
         The PyTorch module to be converted.
 
-    shape_dict: Dict[str, Tuple[Tuple[int, ...], str]]
-        A map from input name to its shape and type. Note that we currently only support
-        the model with a single input.
+    shape_dict: Dict[str,
+                     Union[Tuple[Tuple[int, ...], str],
+                           Tuple[Tuple[int, ...], str, int]]
+        A map from input name to its shape, type, and maximal value (optional).
 
     model_file: str
         The file that stores the scripted model
@@ -127,11 +135,6 @@ def from_pytorch(model, shape_dict, model_file=None, hash_file=None):
     model: FrameworkModel
         The converted FrameworkModel.
     """
-    if len(shape_dict) > 1:
-        raise RuntimeError(
-            "Do not support PyTorch model with multiple inputs (%d) yet" % len(shape_dict)
-        )
-    input_name, (input_shape, input_type) = list(shape_dict.items())[0]
     if model_file is not None and hash_file is not None:
         model_hash = hashlib.md5(str(model).encode(encoding="UTF-8")).hexdigest()
         if os.path.exists(model_file) and os.path.exists(hash_file):
@@ -144,14 +147,18 @@ def from_pytorch(model, shape_dict, model_file=None, hash_file=None):
             except:
                 raise RuntimeError("Loading scripted model failed")
         else:
-            scripted_model = trace_model(model, input_type, input_shape)
+            scripted_model = trace_model(model, shape_dict)
             scripted_model.eval()
             scripted_model.save(model_file)
             with open(hash_file, "w") as hashf:
                 hashf.write(model_hash)
     else:
-        scripted_model = trace_model(model, input_type, input_shape)
-    shape_list = [(input_name, (input_shape, input_type))]
+        scripted_model = trace_model(model, shape_dict)
+    shape_list = []
+    for input_name, input_info in list(shape_dict.items()):
+        input_shape = input_info[0]
+        input_type = input_info[1]
+        shape_list.append((input_name, (input_shape, input_type)))
     relay_mod, relay_params = relay.frontend.from_pytorch(scripted_model, shape_list)
     meta_mod = FromRelay()(relay_mod)
     meta_params = OrderedDict()

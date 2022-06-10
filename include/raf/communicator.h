@@ -83,7 +83,6 @@ class CommunicatorObj : public Object {
 class Communicator : public ObjectRef {
  public:
   static Communicator Get(const std::string& name, const Value rank_list = NullValue<Value>());
-  static Communicator Get(const Value rank_list = NullValue<Value>());
   static void InitSubCommunicator(CommunicatorObj* sub_comm, const Value rank_list,
                                   const Communicator global_comm);
   static uint64_t GetHostID();
@@ -109,8 +108,8 @@ class CommunicatorPool {
   }
 
   static CommunicatorPool* Get() {
-    static CommunicatorPool* instance = new CommunicatorPool();
-    return instance;
+    static CommunicatorPool instance;
+    return &instance;
   }
 
   Communicator GetCommunicator(const std::string& name, const Value rank_list) {
@@ -147,6 +146,8 @@ class CommunicatorPool {
  private:
   std::map<CommunicatorID, Communicator> comm_;
 };
+
+Communicator GetGlobalCommunicator();
 
 }  // namespace communicator
 }  // namespace distributed

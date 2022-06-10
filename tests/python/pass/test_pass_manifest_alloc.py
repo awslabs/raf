@@ -69,9 +69,9 @@ def test_dynamic_model():
         "\n".join(text.splitlines()[:-4])
         == """#[version = "0.0.5"]
 fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
-  let %x_0 = raf.op.vm.alloc_storage(int64(32), int64(64), int32(1), int32(0), str"int32");
+  let %x_0 = raf.op.vm.alloc_storage(int64(32), int64(128), int32(1), int32(0), str"int32");
   let %x_1 = raf.op.vm.alloc_tensor(%x_0, [4, 2], str"int32", [4, 2]);
-  let %x_2 = raf.op.vm.alloc_storage(int64(16), int64(64), int32(1), int32(0), str"int64");
+  let %x_2 = raf.op.vm.alloc_storage(int64(16), int64(128), int32(1), int32(0), str"int64");
   let %x_3 = raf.op.vm.alloc_tensor(%x_2, [2], str"int64", [2]);
   let %x_4 = raf.op.upper_bound.argwhere;
   let %x_5 = (%x,);
@@ -84,12 +84,12 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_11 = %x_10.1;
   let %x_12 = %x_11.0;
   let %x_13 = %x_11.1;
-  let %x_14 = raf.op.vm.alloc_storage(%x_13, int64(64), int32(1), int32(0), str"int32");
+  let %x_14 = raf.op.vm.alloc_storage(%x_13, int64(128), int32(1), int32(0), str"int32");
   let %x_15 = raf.op.vm.alloc_tensor(%x_14, %x_12, str"int32", %x_12);
   let %x_16 = %x_10.2;
   let %x_17 = %x_16.0;
   let %x_18 = %x_16.1;
-  let %x_19 = raf.op.vm.alloc_storage(%x_18, int64(64), int32(1), int32(0), str"int64");
+  let %x_19 = raf.op.vm.alloc_storage(%x_18, int64(128), int32(1), int32(0), str"int64");
   let %x_20 = raf.op.vm.alloc_tensor(%x_19, %x_17, str"int64", %x_17);
   let %x_21 = (%x_15, %x_20);
   let %x_22 = raf.op.vm.invoke_op(%x_9, %x_8, %x_21);
@@ -108,7 +108,7 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_28 = %x_27.1;
   let %x_29 = %x_28.0;
   let %x_30 = %x_28.1;
-  let %x_31 = raf.op.vm.alloc_storage(%x_30, int64(64), int32(1), int32(0), str"int32");
+  let %x_31 = raf.op.vm.alloc_storage(%x_30, int64(128), int32(1), int32(0), str"int32");
   let %x_32 = raf.op.vm.alloc_tensor(%x_31, %x_29, str"int32", %x_29);
   let %x_33 = %x_27.0;
   let %x_34 = (%x_32,);
@@ -171,7 +171,7 @@ def test_device():
     # ManifestAlloc should allocate the tensor on the specific device
     # for init ops and memory related ops. In this case, we expect int32(2) and int32(1),
     # which mean cuda(1).
-    assert 'raf.op.vm.alloc_storage(int64(100), int64(64), int32(2), int32(1), str"int32")' in text
+    assert 'raf.op.vm.alloc_storage(int64(100), int64(128), int32(2), int32(1), str"int32")' in text
 
 
 if __name__ == "__main__":

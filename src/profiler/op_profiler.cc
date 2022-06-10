@@ -91,7 +91,11 @@ OpWithData::~OpWithData() {
   }
 
   // Free the input and output buffers.
-  inputs.clear();
+  try {
+    inputs.clear();
+  } catch (dmlc::Error& e) {
+    return;
+  }
 }
 
 OpEnvPtr OpProfiler::GetOpEnv(const Expr& op) {

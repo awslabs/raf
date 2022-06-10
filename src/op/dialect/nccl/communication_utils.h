@@ -33,6 +33,7 @@ inline DType::operator ncclDataType_t() const {
   switch (code) {
     case kDLInt:
       if (bits == 8) return ncclInt8;
+      if (bits == 64) return ncclInt64;
       break;
     case kDLUInt:
       if (bits == 8) return ncclUint8;

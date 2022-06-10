@@ -144,8 +144,12 @@ struct Instruction {
       Index alignment;
       /*! \brief The hint of the dtype. */
       DLDataType dtype_hint;
+      /*! \brief The allocated device type. */
       DevType device_type;
+      /*! \brief The allocated device ID. */
       Index device_id;
+      /*! \brief Allocate storage alloc_async if available. */
+      bool alloc_async;
     } alloc_storage;
     struct /* AllocTensor Operands */ {
       /*! \brief The storage to allocate from. */
@@ -395,10 +399,12 @@ struct Instruction {
    * \param device_type The device type.
    * \param device_id The device ID.
    * \param dst The destination to place the storage.
+   * \param alloc_async Allocate storage async if available.
    * \return The alloc storage instruction.
    */
   static Instruction AllocStorage(RegName size, RegName alignment, DLDataType dtype_hint,
-                                  DevType device_type, Index device_id, RegName dst);
+                                  DevType device_type, Index device_id, RegName dst,
+                                  bool alloc_async = true);
 
   /*!
    * \brief Free a tensor or a storage.

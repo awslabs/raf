@@ -17,7 +17,7 @@ docker run --name work -it --gpus all metaprojdev/raf:ci_gpu-v0.20 /bin/bash
 <details>
 
 ```bash
-sudo apt-get install git ccache   # ccache is used to accelerate build                    
+sudo apt-get install git ccache   # ccache is used to accelerate build
 sudo snap install cmake --classic # hmm, cmake is required to run cmake
                                   # the cmake version installed by apt is too old
 ```
@@ -64,10 +64,10 @@ sudo apt-get install libllvm-8-ocaml-dev libllvm8 llvm-8 llvm-8-dev           \
 
 </details>
 
-**(Optional) CUDA.** RAF currently recommend to use CUDA 11.3. 
+**(Optional) CUDA.** RAF currently recommend to use CUDA 11.3.
 It is recommended to follow the instructions provided by NVIDIA, [link](https://developer.nvidia.com/cuda-11.3.0-download-archive) with CUDA driver 465+.
-The recommended setting is: Linux -> x86_64 -> Ubuntu -> 18.04 -> deb (network). 
-Then the CUDA paths need to be specified. 
+The recommended setting is: Linux -> x86_64 -> Ubuntu -> 18.04 -> deb (network).
+Then the CUDA paths need to be specified.
 The following lines can be inserted to the `.bashrc` file for auto loading (see bonus below).
 
 <details>
@@ -89,7 +89,7 @@ Like cuDNN, NVIDIA requires account registration to download NCCL. The detailed 
 A `.deb` file can be used for installation, specified by the CUDA version, the CPU architecture, and the OS.
 The local installer allows local installation after downloading, and the network installer is much smaller but requires network connection for installation.
 
-**(Optional) MPI** RAF uses MPI to do multi-process launch. 
+**(Optional) MPI** RAF uses MPI to do multi-process launch.
 Any MPI implementation (e.g., OpenMPI, MPICH) is OK to serve this purpose.
 The following command is used to install MPICH.
 
@@ -129,7 +129,16 @@ make -j$(nproc)
 
 **Customize build.** By editing the configuration file `config.cmake`, one can easily customize the process of RAF build. Instructions are directly put inside the configuration file for convenience. For example, one may switch the cuDNN version by setting the `RAF_USE_CUDNN` or even by passing environment variables.
 
-## Step 3. Run RAF
+## Step 3. Install Python Dependecies
+
+```
+pip install six numpy pytest cython decorator scipy tornado typed_ast mypy orderedset pydot \
+             antlr4-python3-runtime attrs requests Pillow packaging psutil dataclasses pycparser
+```
+
+Also, we recommend users to install PyTorch, see [Train PyTorch Modele](../2_user_guide/Train-PyTorch-Model.md).
+
+## Step 4. Run RAF
 
 Here we come to the not-that-good part: to run RAF, one should properly set the environment variables.
 Again, the `export` commands can be put in `.bashrc` for auto loading (see bonus below).

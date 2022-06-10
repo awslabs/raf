@@ -19,7 +19,7 @@
 #include "raf/binding.h"
 #include "raf/type.h"
 #include "raf/pass.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 #include "./compiler.h"
 
 namespace tvm {
@@ -39,7 +39,7 @@ using namespace raf::op;
 using namespace raf::value;
 using binding::LookupBinding;
 using binding::NDArrayBinding;
-using raf::distributed::DistContext;
+using raf::distributed::DistConfig;
 using tvm::relay::Shape;
 
 /*!
@@ -456,7 +456,7 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                  })
           .Match("raf.op.vm.alloc_storage",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
-                   CHECK_EQ(args.size(), 5);
+                   CHECK(args.size() == 5 || args.size() == 6);
                    // Compute the size of the allocation.
                    this->VisitExpr(args[0]);
                    auto size_register = last_register_;
@@ -486,8 +486,17 @@ class VMFunctionCompiler : ExprFunctor<void(const Expr& expr)> {
                    std::string dtype_s = dtype_val.as<StringValueObj>()->value;
                    DataType dtype(String2DLDataType(dtype_s));
 
+                   // alloc_async
+                   bool alloc_async = true;
+                   if (args.size() == 6) {
+                     CHECK(args[5]->IsInstance<ConstantNode>());
+                     auto async_val = args[5].as<ConstantNode>()->value;
+                     CHECK(async_val->IsInstance<BoolValueObj>());
+                     alloc_async = async_val.as<BoolValueObj>()->value;
+                   }
+
                    Emit(Instruction::AllocStorage(size_register, alignment, dtype, device_type,
-                                                  device_id, NewRegister()));
+                                                  device_id, NewRegister(), alloc_async));
                  })
           .Match("raf.op.vm.free",
                  [this](const Array<Expr>& args, const Attrs& attrs, const Array<Type>& type_arg) {
@@ -833,13 +842,18 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   tvm::With<Device> dctx((*it).second);
   pass::PassContext pass_ctx = pass::PassContext::Current();
   tvm::With<pass::PassContext> ctx(pass_ctx);
-
+  auto dcfg = DistConfig::Global();
+  auto device_t = (*it).second.device_type();
   Array<pass::Pass> pass_seqs;
 
   // optimization passes that work on ANF
   pass_seqs.push_back(pass::GradInputSelect());
   pass_seqs.push_back(pass::InlineLet());
   pass_seqs.push_back(pass::DeadCodeElimination());
+  // enable group all gather for ZeRO.
+  if (dcfg->zero_opt_level > 1 && dcfg->group_bucket_size > 1 && device_t == DevType::kCUDA()) {
+    pass_seqs.push_back(pass::GroupAllgather());
+  }
 
   bool enable_stream_schedule = true;
   if (!pass_ctx->GetConfig("raf.vm.optimize.anf_only", Bool(false)).value()) {
@@ -856,8 +870,8 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
     pass_seqs.push_back(pass::EraseType());
 
     // optimization passes that transform BBNF into ANF
-    if ((*it).second.device_type() == DevType::kCUDA()) {
-      if (DistContext::Global()->enable_data_parallel) {
+    if (device_t == DevType::kCUDA()) {
+      if (DistConfig::Global()->enable_data_parallel) {
         // The current design of EnforceSync assumes ops are executed on multiple CUDA streams:
         // all computation ops are executed on a computation stream, and all communication
         // collectives are executed on another communication stream. Memory copy ops added in
@@ -916,7 +930,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::ManifestAlloc());
   pass_seqs.push_back(pass::MemoryPlan());
 
-  pass::RAFSequential seq(pass_seqs);
+  pass::RAFSequential seq(pass_seqs, "vm_compiler_optimize");
   return seq(mod);
 }
 

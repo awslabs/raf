@@ -173,9 +173,9 @@ class Cast2TVMDialect : public ExprMutator {
  * \brief Converter from raf style (all inputs are arguments) to
  *        tvm style (inputs are explicitly marked as arguments or attrs)
  */
-class Meta2TVM : public ExprMutator {
+class RAF2TVM : public ExprMutator {
  public:
-  Meta2TVM(const CallValues& call, const DevType& dev_type)
+  RAF2TVM(const CallValues& call, const DevType& dev_type)
       : func_(Downcast<ClosureValue>(call->callee)->func),
         call_values_getter_(call),
         device_type_(dev_type) {
@@ -251,26 +251,56 @@ class Meta2TVM : public ExprMutator {
   DevType device_type_;
 };
 
+HashKey HashFusedFunc(const Function& func) {
+  HashKey key;
+  key << raf::ir::AsText(func, true);
+  return key;
+}
+
 OpEnv* FusedFuncBuild(const op::CallValues& call) {
   tvm::relay::tec::TECompiler te_compiler;
   auto env = std::make_unique<TVMOpEnv>();
   Device dev = call->device;
+
+  // Determine cache
+  MetaPersistCache<TVMModuleCacheEntry>* cache;
+  if (dev.device_type() == DevType::kCPU()) {
+    cache = &CacheBuildCpu;
+  } else if (dev.device_type() == DevType::kCUDA()) {
+    cache = &CacheBuildCuda;
+  } else {
+    LOG(FATAL) << "NotImplementedError: device is not supported " << dev.device_type().c_str();
+    throw;
+  }
+
   tvm::Target target = dev.tvm_target();
   CHECK(dev.device_type() == DevType::kCPU() || dev.device_type() == DevType::kCUDA())
       << "NotImplementedError: target is not supported " << dev.device_type().c_str();
-  Meta2TVM meta_to_tvm(call, dev.device_type());
-  Function func = Downcast<Function>(meta_to_tvm());
-  // TODO(@hzfan): add cache for raf
-  te_compiler->Clear();
-  env->env_name = TruncateName(GetUniqueName(meta_to_tvm.func_name));
-  try {
-    env->f = te_compiler->JIT(tvm::relay::tec::CCacheKey(func, target));
-  } catch (const dmlc::Error& e) {
-    if (!AllowJitFailure()) {
-      LOG(FATAL) << "Failed to build a fused op " << env->env_name << ": " << e.what();
+  RAF2TVM raf_to_tvm(call, dev.device_type());
+  Function func = Downcast<Function>(raf_to_tvm());
+  env->env_name = TruncateName(GetUniqueName(raf_to_tvm.func_name));
+
+  auto key = HashFusedFunc(Downcast<ClosureValue>(call->callee)->func);
+  TVMModuleCacheEntry entry;
+  if (const auto* compiled = cache->Get(key.byte_vector)) {
+    entry = *compiled;
+  } else {
+    te_compiler->Clear();
+    try {
+      auto cached_key = tvm::relay::tec::CCacheKey(func, target);
+      auto cached_func = te_compiler->Lower(cached_key, [](String name) { return name; });
+      auto mod = tvm::build(cached_func->funcs, cached_key->target, Target(nullptr));
+      entry = TVMModuleCacheEntry(mod, cached_func->prim_fn_var->name_hint);
+      cache->Set(key.byte_vector, entry);
+    } catch (const dmlc::Error& e) {
+      if (!AllowJitFailure()) {
+        LOG(FATAL) << "Failed to build a fused op " << env->env_name << ": " << e.what();
+      }
     }
   }
-  env->arg_indices = meta_to_tvm.arg_indices;
+
+  env->f = entry.GetFunction();
+  env->arg_indices = raf_to_tvm.arg_indices;
   Array<Value> args = GetListArgs(call->args);
   for (const int& i : env->arg_indices) {
     GetDLTensor(args[i], &env->inputs);
@@ -299,8 +329,8 @@ float CalcFuncGFLOPS(const op::CallValues& call, const Array<Type>& param_types,
   new_call->out = call->out;
   new_call->device = call->device;
 
-  Meta2TVM meta_to_tvm(new_call, device.device_type());
-  Function tvm_func = Downcast<Function>(meta_to_tvm());
+  RAF2TVM raf_to_tvm(new_call, device.device_type());
+  Function tvm_func = Downcast<Function>(raf_to_tvm());
   tvm::Target target = device.tvm_target();
 
   auto cache_key = tvm::relay::tec::CCacheKey(tvm_func, target);

@@ -8,6 +8,7 @@
  * \brief NN-related operators bridged from TVM.
  */
 #include <vector>
+#include <tvm/tir/expr.h>
 #include <raf/op_utils.h>
 #include <raf/cache.h>
 #include <raf/value.h>
@@ -17,6 +18,7 @@
 #include "../../schema/likes.h"
 #include "../../schema/nn.h"
 #include "../../../common/shape_utils.h"
+#include "../../ty/utils.h"
 
 namespace raf {
 namespace op {
@@ -642,6 +644,34 @@ RAF_TVM(cast, Cast, CastArgs, CastSchema2Args, CastSchemaArgNames, CastSchema2At
 RAF_TVM(cast_like, CastLike, BinaryLikeArgs, BinaryLikeSchema2Args, BinaryLikeSchemaArgNames,
         GenericAttrs, GenericHasher, kElemWise);
 
+std::vector<Value> GroupCastSchema2Args(const GroupCastArgs* args) {
+  std::vector<Value> ret;
+  for (auto i : args->tensor_list) {
+    ret.push_back(i);
+  }
+  return ret;
+}
+
+std::vector<std::string> GroupCastSchemaArgNames(const op::CallValues& call) {
+  return {"tensor_list"};
+}
+
+Attrs GroupCastSchema2Attrs(const GroupCastArgs* args) {
+  auto attrs = make_object<CastAttrs>();
+  attrs->dtype = DataType(ir::String2DLDataType(args->dtype));
+  return Attrs(attrs);
+}
+
+HashKey GroupCastHasher(const std::vector<Type>& param_types, const Type& y_type,
+                        const GroupCastArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << ir::String2DLDataType(args->dtype);
+  return key;
+}
+
+RAF_TVM(group_cast, GroupCast, GroupCastArgs, GroupCastSchema2Args, GroupCastSchemaArgNames,
+        GroupCastSchema2Attrs, GroupCastHasher, kElemWise);
+
 std::vector<Value> GatherSchema2Args(const GatherArgs* args) {
   return {args->data, args->indices};
 }
@@ -1045,6 +1075,49 @@ HashKey StridedSliceDxHasher(const std::vector<Type>& param_types, const Type& y
 
 RAF_TVM(strided_slice_dx, StridedSliceDx, StridedSliceDxArgs, StridedSliceDxSchema2Args,
         StridedSliceDxSchemaArgNames, StridedSliceDxSchema2Attrs, StridedSliceDxHasher, kInjective);
+
+std::vector<Value> StridedSetSchema2Args(const StridedSetArgs* args) {
+  return {args->data, args->v};
+}
+
+std::vector<std::string> StridedSetSchemaArgNames(const op::CallValues& call) {
+  return {"data", "v"};
+}
+
+Attrs StridedSetSchema2Attrs(const StridedSetArgs* args) {
+  auto attrs = make_object<StridedSliceAttrs>();
+  CHECK_EQ(args->begin.size(), args->end.size());
+  CHECK_EQ(args->begin.size(), args->strides.size());
+  std::vector<Integer> begin, end, strides;
+  TensorType data_type = Downcast<TensorType>(GetType(args->data));
+  int i;
+  for (i = 0; i < args->begin.size(); i++) {
+    begin.emplace_back(args->begin[i]);
+    end.emplace_back(args->end[i]);
+    strides.emplace_back(args->strides[i]);
+  }
+  for (; i < data_type->shape.size(); i++) {
+    begin.emplace_back(0);
+    end.emplace_back(data_type->shape[i].as<tvm::tir::IntImmNode>()->value);
+    strides.emplace_back(1);
+  }
+  attrs->begin = Array<Integer>(begin.begin(), begin.end());
+  attrs->end = Array<Integer>(end.begin(), end.end());
+  attrs->strides = Array<Integer>(strides.begin(), strides.end());
+  return Attrs(attrs);
+}
+
+HashKey StridedSetHasher(const std::vector<Type>& param_types, const Type& y_type,
+                         const StridedSetArgs* args) {
+  HashKey key = GenericHasher<nullptr_t>(param_types, y_type, nullptr);
+  key << args->begin;
+  key << args->end;
+  key << args->strides;
+  return key;
+}
+
+RAF_TVM(strided_set, StridedSet, StridedSetArgs, StridedSetSchema2Args, StridedSetSchemaArgNames,
+        StridedSetSchema2Attrs, StridedSetHasher, kInjective);
 
 std::vector<Value> WhereSchema2Args(const WhereArgs* args) {
   return {args->condition, args->x, args->y};

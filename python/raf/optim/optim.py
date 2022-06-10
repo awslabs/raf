@@ -76,11 +76,11 @@ def with_autodiff(model):
             dy = calc_dy(dy, record)
             mod = record.mod
             passes = [InferType(), AutoDiff(record.requires_grads)]
-            if dist.get_context().enable_data_parallel:
+            if dist.get_config().enable_data_parallel:
                 # TODO: Refactor AutoDataParallel to let it work on the IR after InlineBackward.
                 passes += [AutoDataParallel()]
             passes += [InferType(), FoldConstant(), DeadCodeElimination(), InlineBackward()]
-            seq = RAFSequential(passes)
+            seq = RAFSequential(passes, name="with_autodiff")
             mod = seq(mod)
             inputs = _get_func_inputs(record, args, kwargs)
             inputs = inputs + [get_symbol_handle(dy)]

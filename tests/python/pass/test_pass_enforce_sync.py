@@ -18,8 +18,8 @@ from raf.ir import PassContext, ANFBuilder
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_single_allreduce(shape, comp_stream, comm_stream):
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
 
     with Device("cuda(0)"):
 
@@ -74,14 +74,14 @@ def test_single_allreduce(shape, comp_stream, comm_stream):
             return tvm.relay.Function([x], builder.ret(x_3))
 
     assert tvm.ir.structural_equal(mod["main"], expected())
-    dctx.enable_data_parallel = False
+    dcfg.enable_data_parallel = False
 
 
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_parallel_allreduce(shape, comp_stream, comm_stream):
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
 
     with Device("cuda(0)"):
 
@@ -173,14 +173,14 @@ def test_parallel_allreduce(shape, comp_stream, comm_stream):
             return tvm.relay.Function([x], builder.ret(x_8))
 
     assert tvm.ir.structural_equal(mod["main"], expected())
-    dctx.enable_data_parallel = False
+    dcfg.enable_data_parallel = False
 
 
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_redundant_comm_to_comp_sync(shape, comp_stream, comm_stream):
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
 
     with Device("cuda(0)"):
 
@@ -258,14 +258,14 @@ def test_redundant_comm_to_comp_sync(shape, comp_stream, comm_stream):
             return tvm.relay.Function([x], builder.ret(x_6))
 
     assert tvm.ir.structural_equal(mod["main"], expected())
-    dctx.enable_data_parallel = False
+    dcfg.enable_data_parallel = False
 
 
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_redundant_comp_to_comm_sync(shape, comp_stream, comm_stream):
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
 
     with Device("cuda(0)"):
 
@@ -340,14 +340,14 @@ def test_redundant_comp_to_comm_sync(shape, comp_stream, comm_stream):
             return tvm.relay.Function([x], builder.ret(x_6))
 
     assert tvm.ir.structural_equal(mod["main"], expected())
-    dctx.enable_data_parallel = False
+    dcfg.enable_data_parallel = False
 
 
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_multi_input_allreduce(shape, comp_stream, comm_stream):
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
 
     with Device("cuda(0)"):
 
@@ -394,14 +394,14 @@ def test_multi_input_allreduce(shape, comp_stream, comm_stream):
             return tvm.relay.Function([x], builder.ret(x_5))
 
     assert tvm.ir.structural_equal(mod["main"], expected())
-    dctx.enable_data_parallel = False
+    dcfg.enable_data_parallel = False
 
 
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("shape,comp_stream,comm_stream", [[(64, 128), 1, 5]])
 def test_multi_user_allreduce(shape, comp_stream, comm_stream):
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
 
     with Device("cuda(0)"):
 
@@ -465,7 +465,7 @@ def test_multi_user_allreduce(shape, comp_stream, comm_stream):
             return tvm.relay.Function([x], builder.ret(x_5))
 
     assert tvm.ir.structural_equal(mod["main"], expected())
-    dctx.enable_data_parallel = False
+    dcfg.enable_data_parallel = False
 
 
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
@@ -473,8 +473,8 @@ def test_multi_user_allreduce(shape, comp_stream, comm_stream):
     "shape,comp_stream,fuse_tensor_stream,defuse_tensor_stream", [[(64, 128), 1, 5, 6]]
 )
 def test_memory_copy_ops(shape, comp_stream, fuse_tensor_stream, defuse_tensor_stream):
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
 
     size = 1
     for axis in shape:
@@ -535,7 +535,7 @@ def test_memory_copy_ops(shape, comp_stream, fuse_tensor_stream, defuse_tensor_s
         mod = RAFSequential([EnforceSync()])(mod)
 
     assert tvm.ir.structural_equal(mod["main"], expected())
-    dctx.enable_data_parallel = False
+    dcfg.enable_data_parallel = False
 
 
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
@@ -546,8 +546,8 @@ def test_memory_copy_ops(shape, comp_stream, fuse_tensor_stream, defuse_tensor_s
 def test_dependency_analysis(
     shape, comp_stream, comm_stream, fuse_tensor_stream, defuse_tensor_stream
 ):
-    dctx = dist.get_context()
-    dctx.enable_data_parallel = True
+    dcfg = dist.get_config()
+    dcfg.enable_data_parallel = True
 
     size = 1
     for axis in shape:
@@ -634,7 +634,7 @@ def test_dependency_analysis(
             mod = RAFSequential([AnnotateCollectiveOps(), EnforceSync()])(mod)
 
     assert tvm.ir.structural_equal(mod["main"], expected())
-    dctx.enable_data_parallel = False
+    dcfg.enable_data_parallel = False
 
 
 if __name__ == "__main__":

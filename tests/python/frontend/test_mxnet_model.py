@@ -36,7 +36,7 @@ def test_backward_check(device, mx_model):
         )
     mx_model[1].hybridize(static_alloc=True, static_shape=True)
     x, mx_x = randn_mxnet((5, 3, 224, 224), requires_grad=True, device=device)
-    m_ytrue, mx_ytrue = one_hot_mxnet(batch_size=5, num_classes=1000, device=device)
+    m_ytrue, mx_ytrue = one_hot_mxnet(size=5, num_classes=1000, device=device)
     raf_model = raf.frontend.from_mxnet(mx_model[1], ["x"])
 
     out = raf_model.record(x)
@@ -77,7 +77,7 @@ def test_forward_check(device, mx_model):
     mx_model[1].hybridize(static_alloc=True, static_shape=True)
 
     x, mx_x = randn_mxnet((5, 3, 224, 224), requires_grad=True, device=device)
-    m_ytrue, _ = one_hot_mxnet(batch_size=5, num_classes=1000, device=device)
+    m_ytrue, _ = one_hot_mxnet(size=5, num_classes=1000, device=device)
 
     raf_model = raf.frontend.from_mxnet(mx_model[1], ["x"])
     raf_model.train_mode()

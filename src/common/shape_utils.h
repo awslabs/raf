@@ -214,6 +214,28 @@ inline int64_t BytesCompactType(const Type& type) {
   throw;
 }
 
+inline int64_t GetElementNum(const Expr& var) {
+  int64_t n;
+  CHECK(var->checked_type_.defined());
+  if (var->checked_type().as<TupleTypeNode>()) {
+    n = 0;
+    for (auto field : Downcast<Tuple>(var)->fields) {
+      int64_t fn = GetElementNum(field);
+      n += fn;
+    }
+  } else {
+    n = 1;
+    auto var_type = var->checked_type().as<TensorTypeNode>();
+    CHECK(var_type != nullptr);
+    for (int i = 0; i < var_type->shape.size(); ++i) {
+      PrimExpr k = var_type->shape[i];
+      int64_t k_v = k.as<IntImmNode>()->value;
+      n *= k_v;
+    }
+  }
+  return n;
+}
+
 }  // namespace shape_utils
 }  // namespace common
 }  // namespace raf

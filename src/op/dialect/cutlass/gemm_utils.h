@@ -43,9 +43,9 @@ class CutlassGemmOpEnv : public CutlassOpEnv {
   explicit CutlassGemmOpEnv(const CallValues& call) : CutlassOpEnv(call) {
   }
 
-  std::vector<std::unique_ptr<TunableConfig>> ListTunableConfigs() override;
+  std::vector<std::shared_ptr<TunableConfig>> ListTunableConfigs() override;
 
-  void SetTunableConfig(const std::unique_ptr<TunableConfig>& tunable) override;
+  void SetTunableConfig(const std::shared_ptr<TunableConfig>& tunable) override;
 
   /*!
    * \brief Initialize a gemm operator
@@ -94,9 +94,9 @@ class CutlassGemmOpEnv : public CutlassOpEnv {
   /*! \brief Gemm operator arguments */
   GemmUniversalArguments arguments_;
   /*! \brief Gemm functional key */
-  std::unique_ptr<GemmFunctionalKeyExt> functional_key_;
+  std::shared_ptr<GemmFunctionalKeyExt> functional_key_;
   /*! \brief Gemm functional key */
-  std::unique_ptr<GemmPreferenceKey> preference_key_;
+  std::shared_ptr<GemmPreferenceKey> preference_key_;
   /*! \brief Tunable configuration for cutlass gemm */
   GemmTunableConfig tunable_;
 };

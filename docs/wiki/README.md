@@ -31,7 +31,7 @@
     - [Add Operator](3_dev_guide/Add-Operator.md)
     - [Add Pass](3_dev_guide/Add-Pass.md)
     - [Analyze Model](3_dev_guide/Analyze-Model.md)
-    - [Distributed Training](3_dev_guide/Distributed-Training.md)
+    - [Distribution Mechanism](3_dev_guide/Distribution-Mechanism.md)
     - [IR Format](3_dev_guide/IR-Format.md)
     - [Memory Pool](3_dev_guide/Memory-Pool.md)
     - [Op Dialect](3_dev_guide/Op-Dialect.md)

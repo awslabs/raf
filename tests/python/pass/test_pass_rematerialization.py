@@ -479,6 +479,47 @@ def test_tuple():
     verify_remat(model, args, peak_size - 1, expected(), (peak_size, peak_size - 1))
 
 
+def test_nested_tuple():
+    """
+    A simple test program to check whether the remat pass can handle nested
+    tuples without crashing. No actual rematerialization is taking place.
+    """
+    device = "cpu"
+    shape = (16, 16, 64, 64)  # 4 MBs
+
+    def get_mod():
+        add_op = raf._ffi.op.GetOp("raf.op.add")
+        relu_op = raf._ffi.op.GetOp("raf.op.relu")
+        null = raf.ir.const(None)
+
+        # param: 12 MBs
+        p_0 = raf.ir.var("p0", shape=shape)
+        p_1 = raf.ir.var("p1", shape=shape)
+        p_2 = raf.ir.var("p2", shape=shape)
+
+        sb = ScopeBuilder()
+        # a_1: 4 MBs, total 16 MBs
+        a_1 = sb.let("a1", relay.Call(add_op, [p_0, p_1, null, null]))
+        # a_2: 4 MBs, total 20 MBs
+        a_2 = sb.let("a2", relay.Call(relu_op, [a_1]))
+        # a_3: 4 MBs, total 24 MBs
+        a_3 = sb.let("a3", relay.Call(add_op, [a_1, p_2, null, null]))
+        # Package the three tensors into a nested tuple and return
+        a_4 = sb.let("a4", relay.Tuple([a_2, a_3]))
+        a_5 = sb.let("a5", relay.Tuple([a_4, a_1]))
+        sb.ret(a_5)
+        func = relay.Function([p_0, p_1, p_2], sb.get())
+        return tvm.IRModule.from_expr(func)
+
+    m_p0, _ = randn(shape, device=device)
+    m_p1, _ = randn(shape, device=device)
+    m_p2, _ = randn(shape, device=device)
+
+    # Set the memory budget to be higher than the peak
+    # The IR should remain unchanged after the remat pass
+    verify_remat(get_mod(), [m_p0, m_p1, m_p2], 28, get_mod()["main"], (24.00, 24.00))
+
+
 def test_reshape():
     device = "cpu"
     shape = (512, 512)  # 1 MB.
@@ -590,6 +631,39 @@ def test_not_call():
         return relay.Function([p_x, p_m, p_v, p_w, p_b], sb.get())
 
     verify_remat(model, args, 4.01172, expected(), (5.01172, 4.01172))
+
+
+def test_concat():
+    """
+    A simple test program to check whether the remat pass can handle concat.
+    No actual rematerialization is taking place.
+    """
+    device = "cpu"
+    shape = (16, 16, 64, 64)  # 4 MBs
+
+    def get_mod():
+        relu_op = raf._ffi.op.GetOp("raf.op.relu")
+        concat_op = raf._ffi.op.GetOp("raf.op.concatenate")
+
+        # param: 8 MBs
+        p_0 = raf.ir.var("p0", shape=shape)
+        p_1 = raf.ir.var("p1", shape=shape)
+
+        sb = ScopeBuilder()
+        a_1 = sb.let("a1", relay.Call(relu_op, [p_0]))
+        a_2 = sb.let("a2", relay.Call(relu_op, [p_1]))
+        a_3 = sb.let("a3", relay.Tuple([a_1, a_2]))
+        a_4 = sb.let("a4", relay.Call(concat_op, [a_3, raf.ir.const(1)]))
+        sb.ret(a_4)
+        func = relay.Function([p_0, p_1], sb.get())
+        return tvm.IRModule.from_expr(func)
+
+    m_p0, _ = randn(shape, device=device)
+    m_p1, _ = randn(shape, device=device)
+
+    # Set the memory budget to be higher than the peak
+    # The IR should remain unchanged after the remat pass
+    verify_remat(get_mod(), [m_p0, m_p1], 32, get_mod()["main"], (24.00, 24.00))
 
 
 if __name__ == "__main__":

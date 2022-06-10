@@ -510,7 +510,7 @@ def test_r50_v1_imagenet():  # pylint: disable=too-many-statements
     m_x, t_x = randn_torch(
         [1, 3, 224, 224], requires_grad=True, device="cuda"
     )  # pylint: disable=unused-variable
-    m_y, t_y = one_hot_torch(batch_size=1, num_classes=1000, device="cuda")
+    m_y, t_y = one_hot_torch(size=1, num_classes=1000, device="cuda")
     m_x.requires_grad = True
     m_model.train_mode()
     t_model.train()

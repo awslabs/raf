@@ -358,6 +358,71 @@ def test_closure_with_const_args2():
     mod = raf._ffi.pass_.InferType()(mod)
 
 
+@pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
+def test_closure_param_type_update():
+    shape = (10, 10)
+
+    class Model(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x):
+            # First closure
+            out = raf._contrib_dropout(x)  # pylint: disable=no-member
+            out = raf.reshape(out[0], [100])
+            out = raf.cast(out, "float16")
+
+            # Second closure
+            out = raf._contrib_dropout(out)  # pylint: disable=no-member
+            out = raf.cast(out[0], "float32")
+            out = raf.reshape(out, shape)
+
+            # Should reuse the first closure
+            out = raf._contrib_dropout(out)  # pylint: disable=no-member
+            out = raf.reshape(out[0], [100])
+            out = raf.cast(out, "float16")
+            return out
+
+    model = Model()
+    m_x, _ = randn(shape, dtype="float32")
+    mod = model._internal(m_x).mod
+    with raf.Device("cuda"):
+        mod = raf._ffi.pass_.ToGraphNormalForm()(mod)
+        mod = raf._ffi.pass_.ToBasicBlockNormalForm()(mod)
+        mod = raf._ffi.pass_.FuseTVM()(mod)
+        mod = raf._ffi.pass_.DispatchDialect()(mod)
+        mod = raf._ffi.pass_.EraseType()(mod)
+        mod = raf._ffi.pass_.ToANormalForm()(mod)
+        mod = raf._ffi.pass_.InlinePrimitives()(mod)
+        mod = raf._ffi.pass_.InferType()(mod)
+
+    class ResultChecker(relay.ExprVisitor):
+        def __init__(self):
+            super(ResultChecker, self).__init__()
+            self.cudnn_dropout_cnt = 0
+
+        def visit_let(self, let):
+            call_op = let.value.op
+            if (
+                not isinstance(call_op, relay.Function)
+                and call_op.name == "raf.op.cudnn._contrib_dropout"
+            ):
+                # Make sure 3 dropouts are dispatched to cudnn.
+                self.cudnn_dropout_cnt += 1
+            super().visit_let(let)
+
+        def visit_function(self, fn):
+            # The mask in CuDNN dropout has 0-dim so the closure param should be updated.
+            dropout_mask_type = fn.params[0].checked_type.fields[1]
+            assert len(dropout_mask_type.shape) == 0
+            super().visit_function(fn)
+
+    checker = ResultChecker()
+    checker.visit(mod["main"].body)
+    assert checker.cudnn_dropout_cnt == 3
+
+
 def test_multi_functions():
     # Create a symbolic model and run it
     class Add(raf.Model):

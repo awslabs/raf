@@ -12,7 +12,7 @@
 #include <algorithm>
 #include "raf/ir.h"
 #include "raf/ir_ext.h"
-#include "raf/dist_context.h"
+#include "raf/dist_config.h"
 #include "raf/pass.h"
 #include "raf/analysis.h"
 #include "raf/op.h"
@@ -35,7 +35,7 @@ using namespace raf::op::schema;
 using namespace raf::analysis;
 using namespace raf::common::shape_utils;
 using op::IsMemcpyOp;
-using raf::distributed::DistContext;
+using raf::distributed::DistConfig;
 
 enum class FuseOp { kFuse, kFuseReorder, kNone };
 enum class DefuseOp { kDefuse, kNone };

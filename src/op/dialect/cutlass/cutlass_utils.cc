@@ -46,7 +46,7 @@ void CutlassOpEnv::RequestWorkspace(void** dest, const Device& device, int64_t n
   *dest = workspace_mem_->data;
 }
 
-std::ostream& operator<<(std::ostream& stream, const std::unique_ptr<TunableConfig>& config) {
+std::ostream& operator<<(std::ostream& stream, const std::shared_ptr<TunableConfig>& config) {
   config->AsText(stream);
   return stream;
 }

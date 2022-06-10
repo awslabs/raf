@@ -12,7 +12,14 @@ import pytest
 import torch
 import mxnet as mx
 import raf
-from raf.testing import get_testable_devices, randn, randn_torch, randint, check, run_vm_model
+from raf.testing import (
+    get_testable_devices,
+    randn,
+    randn_torch,
+    randint,
+    check,
+    run_vm_model,
+)
 import tvm.topi.testing as npx  # pylint: disable=no-name-in-module
 
 
@@ -222,6 +229,34 @@ def test_scatter(shape, axis, device):
     t_y.backward(t_dy)
     m_y.backward(m_dy)
     check(m_x.grad, t_x.grad)
+
+
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize(
+    "params",
+    [
+        ((3, 4, 3), [0, 0, 0], [4, -5, 4], [1, -1, 2]),
+        ((3, 4, 3), [1, -1, 0], [2, -3, 3], [1, -1, 1]),
+        ((7, 4, 3), [1], [3], [1]),
+    ],
+)
+@pytest.mark.parametrize("dtype", ["float16", "float32"])
+def test_strided_set(device, params, dtype):
+    # Skip float16 tests on CPU since it may not be supported and not much performance benefit.
+    if dtype == "float16" and device == "cpu":
+        pytest.skip("float16 is not supported on CPU")
+    shape, begin, end, strides = params
+    m_x, n_x = randn(shape, device=device, dtype=dtype)
+    n_slice = npx.strided_slice_python(n_x, begin, end, strides)
+    m_src, n_src = randn(n_slice.shape, device=device, dtype=dtype)
+
+    model = TestModel(raf._op.sym.strided_set, begin=begin, end=end, strides=strides)
+    m_y = model(m_x, m_src)
+    n_y = npx.strided_set_python(n_x, n_src, begin, end, strides)
+    v_y = run_vm_model(model, device, [m_x, m_src])
+
+    check(m_y, n_y)
+    check(v_y, n_y)
 
 
 @pytest.mark.parametrize(
@@ -694,7 +729,7 @@ def test_expand_dims(device, shape, axis, num_newaxis):
 
 
 @pytest.mark.parametrize("device", get_testable_devices())
-@pytest.mark.parametrize("shape", [(1, 2), (3, 4, 2), (1, 5, 3), (2, 0)])
+@pytest.mark.parametrize("shape", [(3, 4, 2), (2, 0)])
 @pytest.mark.parametrize("itype", ["float16", "float32", "int32", "int64", "bool"])
 @pytest.mark.parametrize("otype", ["float16", "float32", "int32", "int64", "bool"])
 def test_cast(shape, device, itype, otype):
@@ -1071,6 +1106,48 @@ def test_cumsum(device, shape, axis, dtype, exclusive):
     else:
         check(m_res, t_res, rtol=tol, atol=tol)
         check(m_x.grad, t_x.grad, rtol=tol, atol=tol)
+
+
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize("shape", [(3, 4, 2)])
+@pytest.mark.parametrize("itype", ["float16", "float32", "int32", "int64", "bool"])
+@pytest.mark.parametrize("otype", ["float16", "float32", "int32", "int64", "bool"])
+def test_group_cast(shape, device, itype, otype):
+    # TODO(hgt312): The TVM JIT cast kernel in LLVM crashed for float16. See:
+    # https://discuss.tvm.apache.org/t/cast-from-float64-to-float16-cause-segmentation-fault
+    if (itype, otype, device) == ("float64", "float16", "cpu"):
+        pytest.skip("The TVM JIT cast kernel in LLVM crashed for float16.")
+
+    class GroupModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, tensors):  # pylint: disable=no-self-use
+            return raf.group_cast(tensors, otype)
+
+    class CastModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, in0, in1, in2):  # pylint: disable=no-self-use
+            out0 = raf.cast(in0, otype)
+            out1 = raf.cast(in1, otype)
+            out2 = raf.cast(in2, otype)
+            return out0, out1, out2
+
+    group_m = GroupModel()
+    cast_m = CastModel()
+    m1, _ = randn(shape, device=device)
+    m2, _ = randn(shape, device=device)
+    m3, _ = randn(shape, device=device)
+
+    group_out = run_vm_model(group_m, device, [[m1, m2, m3]])
+    out = run_vm_model(cast_m, device, [m1, m2, m3])
+    check(group_out[0], out[0])
+    check(group_out[1], out[1])
+    check(group_out[2], out[2])
 
 
 if __name__ == "__main__":

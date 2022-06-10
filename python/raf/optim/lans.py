@@ -1,7 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# pylint: disable=invalid-name, missing-function-docstring, too-many-instance-attributes, too-many-locals, too-many-statements, protected-access, too-many-arguments
+# pylint: disable=invalid-name, missing-function-docstring, too-many-instance-attributes, too-many-locals, too-many-statements, protected-access, too-many-arguments, too-many-branches
 """LANS optimizer."""
 import numpy as np
 
@@ -179,7 +179,8 @@ def with_lans(
                 self.one = array(1.0, dtype="float32")
                 # mutable params: global step, and running averages
                 device = None
-                dctx = dist.get_context()
+                dcfg = dist.get_config()
+                comm = dist.get_communicator()
                 self.params = {}
                 for name, param in self.model.state().items():
                     if param.requires_grad is True:
@@ -192,12 +193,12 @@ def with_lans(
                         # variant and weight is partitioned to 1/n. Accordingly, we have to
                         # also keep a param.w (size 1/n) locally.
                         part_shape = param.shape
-                        if dctx.zero_opt_level:
+                        if dcfg.zero_opt_level:
                             # Pad and copy a slice of weight.
                             param_nd = param.to(device="cpu")
                             if "float" in param.dtype and param.dtype != "float32":
                                 param_nd = param_nd.to(dtype="float32")
-                            slice_param = split_ndarray_with_padding(param_nd, dctx.size)[dctx.rank]
+                            slice_param = split_ndarray_with_padding(param_nd, comm.size)[comm.rank]
                             param_part = ndarray(
                                 slice_param,
                                 device=param.device,
@@ -228,7 +229,8 @@ def with_lans(
 
             @trace
             def forward(self, dy, *args, **kwargs):
-                dctx = dist.get_context()
+                dcfg = dist.get_config()
+                comm = dist.get_communicator()
                 y, dxs = self.ad_model(dy, *args, **kwargs)
                 record = self.ad_model._internal(dy, *args, **kwargs)
                 inputs = _get_func_inputs(record, [dy, *args], kwargs)
@@ -250,14 +252,17 @@ def with_lans(
                         if "float" not in w.dtype:
                             continue
 
-                        if self.dtype != "float32":
-                            dxi = _op.cast(dxi, "float32")
-
                         g_list.append(dxi)
                         x_list.append(w)
                         m_list.append(m)
                         v_list.append(v)
                         ntensor += 1
+
+                if self.dtype != "float32":
+                    fp32_g = _op.group_cast(g_list, "float32")
+                    g_list = []
+                    for i in range(ntensor):
+                        g_list.append(fp32_g[i])
 
                 tensor_list = g_list + x_list + m_list + v_list
                 output_list = _op.lans(
@@ -287,18 +292,21 @@ def with_lans(
                             next_m = output_list[out_idx + 2 * ntensor]
                             next_v = output_list[out_idx + 3 * ntensor]
                             param_model = get_chained_attr(self.model, name.split(".")[:-1])
-                            if dctx.zero_opt_level > 0:
+                            if dcfg.zero_opt_level > 0:
                                 new_weight = allgather(new_w, axis=0)
                                 # Slice to remove the zero-padding if needed.
-                                if w.shape[0] * dctx.size > p.shape[0]:
+                                if w.shape[0] * comm.size > p.shape[0]:
                                     new_weight = _op.strided_slice(
                                         new_weight, [0], [p.shape[0]], [1]
                                     )
                                 next_w = _op.add(new_weight, self.zero, out=p)
                             else:
-                                # LANS inplace upates the weight
-                                # So the new  weight is just the input weight
-                                next_w = new_w
+                                if self.dtype != "float32":
+                                    next_w = _op.add(new_w, self.zero, out=p)
+                                else:
+                                    # LANS inplace upates the weight
+                                    # So the new  weight is just the input weight
+                                    next_w = new_w
 
                             trace_mutate_attr(param_model, name.split(".")[-1], next_w)
                             trace_mutate_attr(self, f"{name}.m", next_m)

@@ -32,8 +32,6 @@ class Requests;
 namespace raf {
 namespace op {
 
-extern std::vector<std::string> dispatch_error_msgs;
-
 class CallValuesNode : public ir::Object {
  public:
   mutable value::Value callee;
@@ -79,9 +77,15 @@ class OpEnv {
    */
   virtual void Execute(const std::vector<value::Value>& inputs, value::Value output) = 0;
 
+  /*! \brief Whether this OpEnv is valid. */
+  std::vector<std::string> error_msgs;
+  bool HasError() {
+    return !error_msgs.empty();
+  }
+
   void RequestWorkspace(void** dest, const Device& device, int64_t nbytes);
   void RequestStream(void** dest, const Device& device, int tag_idx);
-  void RequestDistributed(void** dest);
+  void RequestDistributed(void** dest, const std::string& name, const value::Value rank_list);
 
   void BindExecutor(executor::Executor* executor);
   std::shared_ptr<requests::Requests> GetRequests() const;
@@ -333,7 +337,7 @@ inline T GetOpAttrOrDefault(const ir::Op& op, const std::string attr_name, T def
   static constexpr const char* _type_key = type_key; \
   RAF_FINAL_OBJECT(class_name, ::tvm::BaseAttrsNode) \
   template <typename FVisit>                         \
-  void __VisitAttrs__(FVisit& __fvisit__) {          \
+  void _tvm_VisitAttrs(FVisit& _tvm_fvisit) {        \
   }
 
 #define RAF_OP_GRAD(op_name, body) \

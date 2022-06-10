@@ -9,8 +9,8 @@ The programming model of implementing a deep learning mode in RAF is basically t
 
 ```python
 import raf
-from raf.model import Conv2D, BatchNorm
-from raf.testing import randn_torch, get_vm_executor, run_vm_executor
+from raf.model import Conv2d, BatchNorm, Sequential, Linear
+from raf.testing import randn_torch, get_vm_executor, run_vm_executor, one_hot_torch
 
 class RAFBottleneck(raf.Model):
     expansion = 4
@@ -125,16 +125,17 @@ RAF offers a virtual machine (VM) runtime to execute the model training process.
 
 ```python
 batch_size = 8
-
+input_shape = (batch_size, 3, 224, 224)
 dy, _ = randn_torch((), std=0.0, mean=1.0, requires_grad=False, device=device)  # dy = tensor(1.0)
 
 # Training loop
+num_epoch = 2
 record = None
 executor = None
 for _ in range(num_epoch):
     # Prepare input data, use random data as example here
     r_x, _ = randn_torch(input_shape, device=device, dtype="float32")
-    r_ytrue, _ = one_hot_torch(batch_size=batch_size, num_classes=10, device=device)
+    r_ytrue, _ = one_hot_torch(size=batch_size, num_classes=10, device=device)
     args = [dy, r_x, r_ytrue]
 
     # Initialize the VM at the first iteration.
@@ -143,8 +144,8 @@ for _ in range(num_epoch):
         executor = get_vm_executor(record.mod, device)
 
     ret = run_vm_executor(executor, record, args, device)
-    loss = ret[0]  # ret[0][0] for some models
-    print("Loss:", loss)
+    loss = ret[0][0]  # ret[0] for some models
+    print("Loss:", loss.numpy())
 ```
 
 One major different as PyTorch is RAF needs to initialize a virtual machine in the first iteration. The initialization involves graph level optimization and VM bytecode compilation. In addition, when running the VM executor in the first iteration, RAF performs just-in-time (JIT) compilation to code generate each kernel, so it may take a bit longer.
@@ -158,7 +159,7 @@ batch_size = 8
 
 dy, _ = randn_torch((), std=0.0, mean=1.0, requires_grad=False, device=device)  # dy = tensor(1.0)
 r_x, _ = randn_torch(input_shape, device=device, dtype="float32")
-r_ytrue, _ = one_hot_torch(batch_size=batch_size, num_classes=10, device=device)
+r_ytrue, _ = one_hot_torch(size=batch_size, num_classes=10, device=device)
 args = [dy, r_x, r_ytrue]
 
 ret = optimizer(*args)

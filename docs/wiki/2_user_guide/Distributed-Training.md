@@ -6,23 +6,22 @@
 This tutorial introduces how to train your model with multiple GPUs.
 To enable distributed training, you need to turn `RAF_USE_CUDA`, `RAF_USE_MPI`, and `RAF_USE_NCCL` on in `${RAF_HOME}/build/config.cmake` before cmake.
 
-For implementation details of collective communication operators, data parallel and ZeRO optimizations, please see []().
+For implementation details of collective communication operators, data parallel and ZeRO optimizations, please see [Distribution Mechanism](../3_dev_guide/Distribution-Mechanism.md).
 
 ## Enable Distributed Training Environment
 
-To enable distributed training, you need to set the corresponding flags in the distributed context. For example:
+To enable distributed training, you need to set the corresponding flags in the distributed config. For example:
 
 ```python
 import raf
 from raf import distributed as dist
-dctx = dist.get_context()
-dctx.enable_data_parallel = True
+dcfg = dist.get_config()
+dcfg.enable_data_parallel = True
 ```
 
-Note that if you are using the provided script (i.e., `dist_example.py`), you can simply change the values in `meta_dist_config`. We will introduce each configure in the following subsections along with the distribution methodologies.
+Note that if you are using the provided script (i.e., `dist_example.py`), you can simply change the values in `raf_dist_config`. We will introduce each configure in the following subsections along with the distribution methodologies.
 
-Since now we rely on MPI to manage multi-processing, we need to launch the script
-with `mpirun`:
+MPI is recommended to manage multi-processing, so we need to launch the script with `mpirun`:
 
 ```bash
 # Run training on a single machine with 4 GPUs.
@@ -49,6 +48,8 @@ node1:4
 node2:4
 ```
 
+To use other launchers, see [Distribution Mechanism](../3_dev_guide/Distribution-Mechanism.md).
+
 ### Data Parallelism
 
 Data parallelism distributes the input training data to each device, and performs
@@ -57,7 +58,7 @@ Data parallelism distributes the input training data to each device, and perform
 To enable data parallelism, set the corresponding configure to be `True` in the script:
 
 ```python
-meta_dist_config = {
+raf_dist_config = {
     "enable_data_parallel": True
 }
 ```
@@ -72,7 +73,7 @@ ZeRO optimizations are introduced in this paper https://arxiv.org/abs/1910.02054
 To enable ZeRO, again we just need to set the corresponding configure in the script:
 
 ```python
-meta_dist_config = {
+raf_dist_config = {
     "zero_opt_level": 1, # Use ZeRO-1
     ...
 }

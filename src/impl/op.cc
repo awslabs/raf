@@ -32,8 +32,6 @@ using namespace raf::value;
 using executor::Executor;
 using requests::Requests;
 
-std::vector<std::string> dispatch_error_msgs;
-
 CallValues CallValues::make(value::Value callee, ir::Attrs args) {
   ObjectPtr<CallValuesNode> n = make_object<CallValuesNode>();
   n->callee = std::move(callee);
@@ -73,9 +71,9 @@ void OpEnv::RequestStream(void** dest, const Device& dev, int tag_idx) {
   }
 }
 
-void OpEnv::RequestDistributed(void** dest) {
+void OpEnv::RequestDistributed(void** dest, const std::string& name, const value::Value rank_list) {
   int index = impl->distributed.size();
-  impl->distributed.push_back({dest});
+  impl->distributed.push_back({dest, name, rank_list});
   if (impl->executor != nullptr) {
     impl->executor->RequestDistributed(impl.get(), index);
   }
@@ -117,26 +115,31 @@ const OpEnvMaker* OpEnvMaker::Get(const std::string& op_name) {
   return TRegistry::Get()->Find(op_name);
 }
 
-std::shared_ptr<OpEnv> OpEnvMaker::Make(const std::string& op_name, const CallValues& call) {
+OpEnvPtr OpEnvMaker::Make(const std::string& op_name, const CallValues& call) {
   auto maker = OpEnvMaker::Get(op_name);
   CHECK(maker) << "Cannot find an OpEnvMaker registered to " << op_name;
   auto env = (*maker)(call);
-  return std::shared_ptr<OpEnv>(env);
+  return OpEnvPtr(env);
 }
 
 // Implementation : helper functions
 
-std::shared_ptr<OpEnv> DispatchSingleOp(const CallValues& call) {
-  dispatch_error_msgs.clear();
+OpEnvPtr DispatchSingleOp(const CallValues& call) {
+  std::vector<std::string> dispatch_error_msgs;
+
   Op op = Downcast<OpValue>(call->callee)->op;
   std::string skip_dialect = "";
   // Try dispatch directly
   auto maker = OpEnvMaker::Get(op->name);
   if (maker != nullptr) {
-    auto env = std::shared_ptr<OpEnv>((*maker)(call));
-    if (env != nullptr) {
+    auto env = OpEnvPtr((*maker)(call));
+    if (env && !env->HasError()) {
       DLOG(INFO) << "Dispatch to " << op->name;
       return env;
+    } else if (env) {
+      for (auto msg : env->error_msgs) {
+        dispatch_error_msgs.push_back(msg);
+      }
     }
   }
   if (IsDialectOp(op)) {
@@ -153,9 +156,17 @@ std::shared_ptr<OpEnv> DispatchSingleOp(const CallValues& call) {
     }
     auto dialect_op = Op::Get(entry.dialect_op);
     dialect_op->op_type = op->op_type;
-    if (auto env = OpEnvMaker::Make(dialect_op->name, call)) {
-      DLOG(INFO) << "Dispatch to " << dialect_op->name;
-      return env;
+    auto maker = OpEnvMaker::Get(dialect_op->name);
+    if (maker != nullptr) {
+      auto env = OpEnvPtr((*maker)(call));
+      if (env && !env->HasError()) {
+        DLOG(INFO) << "Dispatch to " << dialect_op->name;
+        return env;
+      } else if (env) {
+        for (auto msg : env->error_msgs) {
+          dispatch_error_msgs.push_back(msg);
+        }
+      }
     }
   }
 
@@ -165,12 +176,10 @@ std::shared_ptr<OpEnv> DispatchSingleOp(const CallValues& call) {
     ss << "\n" << msg;
   }
   LOG(FATAL) << ss.str();
-  dispatch_error_msgs.clear();
   return nullptr;
 }
 
-std::shared_ptr<OpEnv> DispatchFusedOp(const CallValues& call) {
-  dispatch_error_msgs.clear();
+OpEnvPtr DispatchFusedOp(const CallValues& call) {
   auto clo = Downcast<ClosureValue>(call->callee);
   auto func = clo->func;
   ICHECK(func->HasNonzeroAttr(attr::kPrimitive))
@@ -181,20 +190,21 @@ std::shared_ptr<OpEnv> DispatchFusedOp(const CallValues& call) {
   std::ostringstream os;
   os << "raf.op." << dialect.value() << "._fused_op";
   auto op_env = OpEnvMaker::Make(os.str(), call);
-  if (op_env == nullptr && !dispatch_error_msgs.empty()) {
+  if (!op_env || op_env->HasError()) {
     std::stringstream ss;
     ss << "Failed to dispatch fused op:";
-    for (auto msg : dispatch_error_msgs) {
-      ss << "\n\t" << msg;
+    if (op_env) {
+      for (auto msg : op_env->error_msgs) {
+        ss << "\n\t" << msg;
+      }
     }
     ss << "\nName: " << os.str() << "\n" << ir::AsText(func);
     LOG(FATAL) << ss.str();
-    dispatch_error_msgs.clear();
   }
   return op_env;
 }
 
-std::shared_ptr<OpEnv> Dispatch(const CallValues& call) {
+OpEnvPtr Dispatch(const CallValues& call) {
   if (call->callee.as<value::OpValueObj>()) {
     return DispatchSingleOp(call);
   } else if (call->callee.as<value::ClosureValueObj>()) {

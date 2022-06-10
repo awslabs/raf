@@ -349,8 +349,7 @@ def compute_contrib_dropout(attr, inputs, output_type):
             _tvm.tir.const(1 / (1 - p), "float32"),
         ),
     )
-    # states and reserve_space are valid in cudnn only
-    states = _topi.full((), dtype="uint8", fill_value=0.0)
+    # reserve_space is valid in cudnn only
     reserve_space_shape = ()
     if len(output_type.fields[-1].shape) > 0:
         # Reserve_space is not scalar type. It is dispatched from the base op
@@ -360,7 +359,7 @@ def compute_contrib_dropout(attr, inputs, output_type):
             x_ty = _tvm.relay.TensorType(x.shape, dtype=x.dtype)
             reserve_space_shape = (GetDropoutReserveSpaceSizeInBytes(x_ty),)
     reserve_space = _topi.full(reserve_space_shape, dtype="uint8", fill_value=0.0)
-    return [ret, mask, states, reserve_space]
+    return [ret, mask, reserve_space]
 
 
 _reg.register_injective_schedule("raf.op.tvm._contrib_dropout")

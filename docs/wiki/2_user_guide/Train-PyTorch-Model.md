@@ -75,7 +75,7 @@ from raf._op import sym
 
 # prepare random data, they just provides shape and dtype info
 r_x, _ = randn_torch(input_shape, device=device, dtype=dtype)
-r_ytrue, _ = one_hot_torch(batch_size=batch_size, num_classes=10, device=device)
+r_ytrue, _ = one_hot_torch(size=batch_size, num_classes=10, device=device)
 
 out = r_model.record(r_x)
 y_pred = sym.log_softmax(out)
@@ -130,7 +130,7 @@ executor = get_vm_executor(record.mod, device)
 for _ in range(num_epoch):
     # prepare input data, use random data as example here
     r_x, _ = randn_torch(input_shape, device=device, dtype=dtype)
-    r_ytrue, _ = one_hot_torch(batch_size=batch_size, num_classes=10, device=device)
+    r_ytrue, _ = one_hot_torch(size=batch_size, num_classes=10, device=device)
     args = [dy, r_x, r_ytrue]
     ret = run_vm_executor(executor, record, args, device)
     loss = ret[0]  # ret[0][0] for some models

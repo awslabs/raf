@@ -4,7 +4,7 @@
  */
 
 /*!
- * \file src/op/cache.h
+ * \file cache.h
  * \brief The RAF cache.
  */
 #pragma once
@@ -12,6 +12,7 @@
 #include <chrono>
 #include <dmlc/memory_io.h>
 #include <sys/stat.h>
+#include "./file.h"
 #include "./op.h"
 #include "./value.h"
 
@@ -317,22 +318,6 @@ class MetaPersistCache : public MetaCache<T>, public MetaCacheMetric {
   inline std::string GetPersistPath(const std::string& key) {
     const size_t hashed_key = std::hash<std::string>{}(key);
     return path_ + "/" + std::to_string(hashed_key);
-  }
-
-  inline void CreateDir(const std::string& path) {
-    if (mkdir(path.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1) {
-      if (errno != EEXIST) {
-        LOG(FATAL) << "Failed to create directory " << path << ": " << strerror(errno);
-        throw;
-      }
-    }
-  }
-
-  inline bool DirExists(const std::string& path) {
-    std::ifstream ifs(path);
-    auto ret = ifs.good();
-    ifs.close();
-    return ret;
   }
 
   inline void AddMetric(const std::string name, size_t val) {

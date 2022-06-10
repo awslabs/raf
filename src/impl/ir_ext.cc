@@ -71,7 +71,7 @@ ObjectRef ConstantExtractValue(RelayConstant _node) {
   return node->value;
 }
 
-Var MakeVar_(Id vid, Type type_annotation, Var may_share = Var()) {
+Var MakeVar_(Id vid, Type type_annotation, Var may_share) {
   ObjectPtr<ExtendedVarNode> n = make_object<ExtendedVarNode>();
   n->vid = std::move(vid);
   n->type_annotation = std::move(type_annotation);
@@ -126,11 +126,11 @@ std::string AsText(const ObjectRef& node, bool show_meta_data) {
   std::string ret = tvm::AsText(node, show_meta_data, annotate);
   size_t index = 0;
   while (true) {
-    index = ret.find("-114514", index);
+    index = ret.find("-114514i64", index);
     if (index == std::string::npos) {
       break;
     }
-    ret.replace(index, 7, "");
+    ret.replace(index, 10, "");
   }
   return ret;
 }

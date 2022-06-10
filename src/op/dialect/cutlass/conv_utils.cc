@@ -25,7 +25,7 @@ void CutlassConvOpEnv::InitConvOperation(
 
   int Q = (W + 2 * pad_w - ((S - 1) * dilation_w + 1)) / stride_w + 1;
 
-  functional_key_ = std::make_unique<ConvFunctionalKeyExt>(
+  functional_key_ = std::make_shared<ConvFunctionalKeyExt>(
       provider_, ConvKind::kFprop, element_A, layout_A, element_B, layout_B, element_C, layout_A,
       element_accumulator, element_compute, epilogue_math_op);
 
@@ -35,7 +35,7 @@ void CutlassConvOpEnv::InitConvOperation(
   CHECK(!operators_it->second.empty());
 
   preference_key_ =
-      std::make_unique<ConvPreferenceKey>(compute_capability(), IteratorAlgorithmID::kOptimized);
+      std::make_shared<ConvPreferenceKey>(compute_capability(), IteratorAlgorithmID::kOptimized);
 
   Operation const* operation =
       find_conv2d_operation(operators_it, *preference_key_, preferred_name);
@@ -74,7 +74,7 @@ void CutlassConvOpEnv::InitConvOperation(
   };
 }
 
-std::vector<std::unique_ptr<TunableConfig>> CutlassConvOpEnv::ListTunableConfigs() {
+std::vector<std::shared_ptr<TunableConfig>> CutlassConvOpEnv::ListTunableConfigs() {
   // Tunable configuration: kernel_name
   std::vector<std::string> kernel_names;
   auto operators_it = SingletonExt::get().operation_table.conv2d_operations.find(*functional_key_);
@@ -94,14 +94,14 @@ std::vector<std::unique_ptr<TunableConfig>> CutlassConvOpEnv::ListTunableConfigs
       }
     }
   }
-  std::vector<std::unique_ptr<TunableConfig>> rets;
+  std::vector<std::shared_ptr<TunableConfig>> rets;
   for (const auto& name : kernel_names) {
-    rets.push_back(std::make_unique<ConvTunableConfig>(name));
+    rets.push_back(std::make_shared<ConvTunableConfig>(name));
   }
   return rets;
 }
 
-void CutlassConvOpEnv::SetTunableConfig(const std::unique_ptr<TunableConfig>& tunable) {
+void CutlassConvOpEnv::SetTunableConfig(const std::shared_ptr<TunableConfig>& tunable) {
   tunable_ = *static_cast<ConvTunableConfig*>(tunable.get());
 }
 
