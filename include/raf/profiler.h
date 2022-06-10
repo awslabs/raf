@@ -196,6 +196,7 @@ class Profiler {
                          uint64_t end_time, const std::vector<std::string>& args);
   std::string GetProfile();
   std::vector<ProfileStat> GetProfileStats();
+  void ClearProfile();
 
   inline bool IsProfiling(int level) {
     return profile_level_ >= level;
@@ -231,6 +232,8 @@ class Profiler {
   std::recursive_mutex m_;
   /*! \brief The helper pool. */
   std::vector<ProfilerHelper> helpers_;
+  /*! \brief Cached profile records. */
+  std::vector<ProfileStat> cached_records_;
 };
 
 inline void ProfilerHelper::start() {

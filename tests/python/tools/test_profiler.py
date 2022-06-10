@@ -42,6 +42,7 @@ class TestCuda(raf.Model):
 @pytest.mark.skipif(not raf.build.with_cuda(), reason="CUDA is not enabled")
 @pytest.mark.parametrize("i", [0])
 def test_profiler_with_cuda(i):
+    profiler.clear()
     profiler.start()
     device = "cuda({})".format(i)
     print("device:", device)
@@ -60,6 +61,7 @@ def test_profiler_with_cuda(i):
         loss.backward()
         profiler.stop()
     data = profiler.get()
+    profiler.clear()
     assert len(data["traceEvents"]) >= 0
     op_count = 0
     for e in data["traceEvents"]:
@@ -70,6 +72,7 @@ def test_profiler_with_cuda(i):
 
 @pytest.mark.parametrize("i", [0])
 def test_profiler_without_cuda(i):
+    profiler.clear()
     profiler.start()
     batch_size = 16
     device = "cpu({})".format(i)
@@ -87,6 +90,7 @@ def test_profiler_without_cuda(i):
         loss.backward()
         profiler.stop()
     data = profiler.get()
+    profiler.clear()
     assert len(data["traceEvents"]) >= 0
     op_count = 0
     for e in data["traceEvents"]:

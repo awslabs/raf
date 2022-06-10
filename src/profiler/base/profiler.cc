@@ -38,6 +38,7 @@ std::string Profiler::GetProfile() {
   ss << "    \"traceEvents\": [" << std::endl;
 
   ProfileStat* stat;
+  std::vector<ProfileStat> stats;
   int stat_count = 0;
   while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
     CHECK_NOTNULL(stat);
@@ -47,7 +48,20 @@ std::string Profiler::GetProfile() {
       ss << ",\n";
     }
     profile_stat->EmitEvents(&ss);
+    stats.push_back(profile_stat.get());
     ++stat_count;
+  }
+  if (stat_count == 0) {
+    cached_records_ = stats;
+  } else {
+    for (const auto& stat : cached_records_) {
+      CHECK_NE(stat.categories_.c_str()[0], '\0') << "Category must be set";
+      if (stat_count) {
+        ss < ",\n";
+      }
+      stat.EmitEvents(&ss);
+      ++stat_count;
+    }
   }
   ss << "\n" << std::endl;
   ss << "    ]," << std::endl;
@@ -61,12 +75,23 @@ std::vector<ProfileStat> Profiler::GetProfileStats() {
   std::vector<ProfileStat> results;
 
   ProfileStat* stat;
+  int stat_count = 0;
   while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
     CHECK_NOTNULL(stat);
     results.push_back(*stat);
+    ++stat_count;
   }
+  if (stat_count == 0) {
+    return cached_records_;
+  } else {
+    cached_records_ = results;
+    return results;    
+  }
+}
 
-  return results;
+void Profiler::ClearProfile() {
+  std::lock_guard<std::recursive_mutex> lock{this->m_};
+  cached_records_.clear();
 }
 
 DeviceStats::~DeviceStats() {
@@ -139,10 +164,15 @@ std::string GetProfile() {
   return Profiler::Get()->GetProfile();
 }
 
+void ClearProfile() {
+  Profiler::Get()->ClearProfile();
+}
+
 RAF_REGISTER_GLOBAL("raf.profiler.EnableProfiler").set_body_typed(EnableProfiler);
 RAF_REGISTER_GLOBAL("raf.profiler.DisableProfiler").set_body_typed(DisableProfiler);
 RAF_REGISTER_GLOBAL("raf.profiler.CollectBaseProfile").set_body_typed(CollectBaseProfile);
 RAF_REGISTER_GLOBAL("raf.profiler.GetProfile").set_body_typed(GetProfile);
+RAF_REGISTER_GLOBAL("raf.profiler.ClearProfile").set_body_typed(GetProfile);
 
 }  // namespace profiler
 }  // namespace raf
