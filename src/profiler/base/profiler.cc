@@ -51,15 +51,17 @@ std::string Profiler::GetProfile() {
     stats.push_back(profile_stat.get());
     ++stat_count;
   }
-  if (stat_count == 0) {
-    cached_records_ = stats;
-  } else {
-    for (const auto& stat : cached_records_) {
-      CHECK_NE(stat.categories_.c_str()[0], '\0') << "Category must be set";
+  if (stat_count == 0 && !helpers_.empty()) {
+    CollectStat();
+    while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
+      CHECK_NOTNULL(stat);
+      std::unique_ptr<ProfileStat> profile_stat(stat);  // manage lifecycle
+      CHECK_NE(profile_stat->categories_.c_str()[0], '\0') << "Category must be set";
       if (stat_count) {
-        ss < ",\n";
+        ss << ",\n";
       }
-      stat.EmitEvents(&ss);
+      profile_stat->EmitEvents(&ss);
+      stats.push_back(profile_stat.get());
       ++stat_count;
     }
   }
@@ -75,23 +77,23 @@ std::vector<ProfileStat> Profiler::GetProfileStats() {
   std::vector<ProfileStat> results;
 
   ProfileStat* stat;
-  int stat_count = 0;
   while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
     CHECK_NOTNULL(stat);
     results.push_back(*stat);
-    ++stat_count;
   }
-  if (stat_count == 0) {
-    return cached_records_;
-  } else {
-    cached_records_ = results;
-    return results;    
+  if (results.empty() && !helpers_.empty()) {
+    CollectStat();
+    while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
+      CHECK_NOTNULL(stat);
+      results.push_back(*stat);
+    }
   }
+  return results;
 }
 
 void Profiler::ClearProfile() {
   std::lock_guard<std::recursive_mutex> lock{this->m_};
-  cached_records_.clear();
+  helpers_.clear();
 }
 
 DeviceStats::~DeviceStats() {

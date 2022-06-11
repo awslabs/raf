@@ -5,7 +5,8 @@
 import json
 from raf import build
 from raf._ffi.profiler import EnableProfiler, DisableProfiler
-from raf._ffi.profiler import CollectBaseProfile, CollectCudaProfile, GetProfile, ClearProfile
+from raf._ffi.profiler import CollectBaseProfile, CollectCudaProfile, GetProfile
+from raf._ffi.profiler import ClearProfile, ClearCudaProfile
 
 
 def start(prof_level=1):
@@ -27,6 +28,8 @@ def stop():
 def clear():
     """Clear the cached profiler records in backend."""
     ClearProfile()
+    if build.with_cuda():
+        ClearCudaProfile()
 
 
 def dump(filename="profile.json"):

@@ -206,7 +206,6 @@ class Profiler {
     for (int i = 0; i < helpers_.size(); i++) {
       helpers_[i].collect();
     }
-    helpers_.clear();
   }
 
   inline int profile_level() const {
@@ -232,8 +231,6 @@ class Profiler {
   std::recursive_mutex m_;
   /*! \brief The helper pool. */
   std::vector<ProfilerHelper> helpers_;
-  /*! \brief Cached profile records. */
-  std::vector<ProfileStat> cached_records_;
 };
 
 inline void ProfilerHelper::start() {

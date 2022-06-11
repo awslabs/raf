@@ -88,6 +88,8 @@ class CudaProfiler {
   uint64_t GetElapsedTimeInMicrosec(std::shared_ptr<Event> event);
   /*! \brief Collect CUDA stats. */
   void CollectCudaStat();
+  /*! \brief Clear CUDA stats. */
+  void ClearCudaStat();
 
   std::vector<CudaProfilerHelper>& HelperPool() {
     return cuda_helpers_;

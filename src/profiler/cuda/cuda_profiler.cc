@@ -81,15 +81,23 @@ void CudaProfiler::CollectCudaStat() {
   for (int i = 0; i < cuda_helpers_.size(); i++) {
     cuda_helpers_[i].collect();
   }
-  cuda_helpers_.clear();
   stop();
+}
+
+void CudaProfiler::ClearCudaStat() {
+  cuda_helpers_.clear();
 }
 
 void CollectCudaProfile() {
   CudaProfiler::Get()->CollectCudaStat();
 }
 
+void ClearCudaProfile() {
+  CudaProfiler::Get()->ClearCudaStat();
+}
+
 RAF_REGISTER_GLOBAL("raf.profiler.CollectCudaProfile").set_body_typed(CollectCudaProfile);
+RAF_REGISTER_GLOBAL("raf.profiler.ClearCudaProfile").set_body_typed(ClearCudaProfile);
 
 }  // namespace profiler
 }  // namespace raf
