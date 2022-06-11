@@ -37,6 +37,9 @@ std::string Profiler::GetProfile() {
   ss << "{" << std::endl;
   ss << "    \"traceEvents\": [" << std::endl;
 
+  if (profile_stats_.opr_exec_stats_->size_approx() == 0 && !helpers_.empty()) {
+    CollectStat();
+  }
   ProfileStat* stat;
   int stat_count = 0;
   while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
@@ -49,19 +52,6 @@ std::string Profiler::GetProfile() {
     profile_stat->EmitEvents(&ss);
     ++stat_count;
   }
-  if (stat_count == 0 && !helpers_.empty()) {
-    CollectStat();
-    while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
-      CHECK_NOTNULL(stat);
-      std::unique_ptr<ProfileStat> profile_stat(stat);  // manage lifecycle
-      CHECK_NE(profile_stat->categories_.c_str()[0], '\0') << "Category must be set";
-      if (stat_count) {
-        ss << ",\n";
-      }
-      profile_stat->EmitEvents(&ss);
-      ++stat_count;
-    }
-  }
   ss << "\n" << std::endl;
   ss << "    ]," << std::endl;
   ss << "    \"displayTimeUnit\": \"ms\"" << std::endl;
@@ -73,17 +63,13 @@ std::vector<ProfileStat> Profiler::GetProfileStats() {
   std::lock_guard<std::recursive_mutex> lock{this->m_};
   std::vector<ProfileStat> results;
 
+  if (profile_stats_.opr_exec_stats_->size_approx() == 0 && !helpers_.empty()) {
+    CollectStat();
+  }
   ProfileStat* stat;
   while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
     CHECK_NOTNULL(stat);
     results.push_back(*stat);
-  }
-  if (results.empty() && !helpers_.empty()) {
-    CollectStat();
-    while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
-      CHECK_NOTNULL(stat);
-      results.push_back(*stat);
-    }
   }
   return results;
 }
