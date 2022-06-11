@@ -38,7 +38,6 @@ std::string Profiler::GetProfile() {
   ss << "    \"traceEvents\": [" << std::endl;
 
   ProfileStat* stat;
-  std::vector<ProfileStat> stats;
   int stat_count = 0;
   while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
     CHECK_NOTNULL(stat);
@@ -48,7 +47,6 @@ std::string Profiler::GetProfile() {
       ss << ",\n";
     }
     profile_stat->EmitEvents(&ss);
-    stats.push_back(profile_stat.get());
     ++stat_count;
   }
   if (stat_count == 0 && !helpers_.empty()) {
@@ -61,7 +59,6 @@ std::string Profiler::GetProfile() {
         ss << ",\n";
       }
       profile_stat->EmitEvents(&ss);
-      stats.push_back(profile_stat.get());
       ++stat_count;
     }
   }
