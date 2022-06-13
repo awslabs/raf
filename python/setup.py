@@ -6,10 +6,10 @@ import os
 import shutil
 import subprocess
 import sys
+import sysconfig
 
 from setuptools import find_packages
 from setuptools.dist import Distribution
-
 
 # need to use distutils.core for correct placement of cython dll
 if "--inplace" in sys.argv:
@@ -20,14 +20,14 @@ else:
     from setuptools.extension import Extension
 
 SCRIPT_DIR = os.path.dirname(__file__)
-
-# FIXME: get_lib_path() does not work as it outputs "ImportError: No module named tvm"
+FFI_MODE = os.environ.get("TVM_FFI", "auto")
+CONDA_BUILD = os.getenv("CONDA_BUILD") is not None
 
 def get_env_flag(name, default=""):
     """Get environment bololean flag by all means."""
     return os.getenv(name, default).upper() in ["ON", "1", "YES", "TRUE", "Y"]
 
-
+# FIXME: get_lib_path() does not work as line 36: "exec(compile(ss, libinfo_py, "exec"), libinfo, libinfo)" errors
 def get_lib_path():
     """Get library path, name and version"""
     # We can not import `libinfo.py` in setup.py directly since __init__.py
@@ -49,7 +49,6 @@ def get_lib_path():
         libs = None
     return libs
 
-
 def get_build_version():
     """Generate the build version."""
     cwd = os.path.abspath(SCRIPT_DIR)
@@ -63,15 +62,13 @@ def get_build_version():
         version += "+git" + git_sha
     return version
 
+# FIXME: commented out LIB_LIST because it relies on get_lib_path()
+#LIB_LIST = get_lib_path()
 
-LIB_LIST = get_lib_path()
+# FIXME: commented out _version_ because subprocess.CalledProcessError: Command '['git', 'rev-parse', '--short', 'HEAD']' returned non-zero exit status 128. 
 #__version__ = get_build_version()
 
 __version__ = '0.1'
-
-FFI_MODE = os.environ.get("TVM_FFI", "auto")
-CONDA_BUILD = os.getenv("CONDA_BUILD") is not None
-import sysconfig
 
 def config_cython():
     """Try to configure cython and return cython configuration"""
@@ -130,14 +127,12 @@ def config_cython():
         print("WARNING: Cython is not installed, will compile without cython module")
         return []
 
-
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
         return True
 
     def is_pure(self):
         return False
-
 
 include_libs = False
 wheel_include_libs = False
@@ -162,11 +157,13 @@ if wheel_include_libs:
     setup_kwargs = {"include_package_data": True}
 
 # FIXME: this if statement does not work as it relies on get_lib_path()
+'''
 if include_libs:
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
     for i, path in enumerate(LIB_LIST):
         LIB_LIST[i] = os.path.relpath(path, curr_path)
     setup_kwargs = {"include_package_data": True, "data_files": [("raf", LIB_LIST)]}
+'''
 
 # Local change: Write out version to file and include in package
 os.makedirs(os.path.join(SCRIPT_DIR, "../build/private/raf/version"), exist_ok=True)
