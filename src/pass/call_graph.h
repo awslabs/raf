@@ -81,9 +81,9 @@ class CallGraph {
     funcs_[gv] = cg_node;
   }
   /*!
-   *  \brief Run topological sort and return a sorted list of functions. The other
-   *  field of the returned pair is whether the call graph is acyclic or not. The
-   *  returned list is in reverse topological sort (i.e., children first, parent last).
+   * \brief Run topological sort and return a sorted list of functions. The other
+   * field of the returned pair is whether the call graph is acyclic or not. The
+   * returned list is in reverse topological sort (i.e., children first, parent last).
    */
   std::pair<CallGraphNodeList, bool> ReverseTopologicalSortAndCheckCycle();
 
@@ -95,16 +95,22 @@ class CallGraph {
 /*! \brief Construct the call graph from module. */
 class CallGraphConstructor {
  public:
-  /*! \brief Construct the call graph from module. */
-  CallGraph ConstructCallGraph(const IRModule& mod);
+  /*! 
+   * \brief Construct the call graph from module. The boolean in the return value
+   * indicates whether the construction is successful. 
+   */
+  std::pair<CallGraph, bool> ConstructCallGraph(const IRModule& mod);
   /*! \brief Get the mapping from local vars to functions. */
   const LocalVarGVarMap& GetLocalVarFuncMap() {
     return local_var_to_funcs_;
   }
 
  private:
-  /*! \brief Analyze a function and connect it with its callers/callees in the call graph. */
-  void AnalyzeFunc(CallGraphNode* cg_node);
+  /*! 
+   * \brief Analyze a function and connect it with its callers/callees in the call graph. 
+   * Returns true on success and false when analysis fails. 
+   */
+  bool AnalyzeFunc(CallGraphNode* cg_node);
   /*! \brief A map from global vars to global functions in the module. */
   CallGraphNodeMap funcs_;
   /*! \brief A separate map from local vars to global functions. */

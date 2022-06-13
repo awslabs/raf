@@ -242,7 +242,13 @@ class FullInliner : public ExprMutator {
  */
 IRModule Inline(const IRModule& mod) {
   CallGraphConstructor cgc;
-  CallGraph cg = cgc.ConstructCallGraph(mod);
+  CallGraph cg;
+  bool construction_success;
+  std::tie(cg, construction_success) = cgc.ConstructCallGraph(mod);
+  if (!construction_success) {
+    LOG(WARNING) << "Call graph cannot be constructed, skip inlining pass. ";
+    return mod;
+  }
   CallGraphNodeList funcs;
   bool is_acyclic;
   std::tie(funcs, is_acyclic) = cg.ReverseTopologicalSortAndCheckCycle();
@@ -272,8 +278,13 @@ IRModule Inline(const IRModule& mod) {
 
 Pass FullInline() {
   return CreateModulePass(
-      [=](IRModule mod, const PassContext& pass_ctx) { return full_inline::Inline(mod); }, 0,
-      "FullInline", {"LambdaLift"});
+      [=](IRModule mod, const PassContext& pass_ctx) { 
+        // Runs LambdaLift, FullInline, and DCE all inside this one pass to avoid
+        // misuse of the pass. 
+        IRModule lifted_mod = LambdaLift()(std::move(mod));
+        IRModule inlined_mod = full_inline::Inline(std::move(lifted_mod));
+        return DeadCodeElimination()(std::move(inlined_mod)); 
+      }, 0, "FullInline", {});
 }
 
 RAF_REGISTER_GLOBAL("raf.pass_.FullInline").set_body_typed(FullInline);

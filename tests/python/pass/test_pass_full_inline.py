@@ -12,15 +12,12 @@ import tvm
 from tvm import relay
 
 
-def check_inlined_ir(orig, golden, run_lambda_lift=True, use_structural_equal=True):
+def check_inlined_ir(orig, golden, use_structural_equal=True):
     """
     Check if inlining actually does what we want. Only checks if the two IRs
     are structurally equal.
     """
-    passes = [InferType()]
-    if run_lambda_lift:
-        passes += [LambdaLift()]
-    passes += [FullInline(), DeadCodeElimination(), InferType()]
+    passes = [InferType(), FullInline(), InferType()]
     pass_seq = RAFSequential(passes)
     inlined = pass_seq(orig)
     golden = run_infer_type(golden)
@@ -222,7 +219,7 @@ def test_multi_level():
         func = relay.Function([inp0, inp1, inp2, inp3], sb.get())
         return tvm.IRModule.from_expr(func)
 
-    check_inlined_ir(get_mod_multi_func(), get_mod_inlined(), run_lambda_lift=False)
+    check_inlined_ir(get_mod_multi_func(), get_mod_inlined())
 
 
 # See if the inlining pass can detect cycles in the call graph. We skip the entire pass
@@ -297,6 +294,5 @@ def test_recursion():
     check_inlined_ir(
         get_mod_multi_func(),
         get_mod_multi_func(),
-        run_lambda_lift=False,
         use_structural_equal=False,
     )

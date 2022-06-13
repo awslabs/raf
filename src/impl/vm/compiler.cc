@@ -916,10 +916,9 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::InplaceUpdate());
 
   if (pass_ctx->GetConfig("raf.use_multi_func", Bool(false)).value()) {
-    // The memory-related passes below do not work well if we have multi-function
-    pass_seqs.push_back(pass::LambdaLift());
+    // The memory-related passes below do not support multi-function, so we need to inline
+    // all functions here. This one pass actually runs LambdaLift, inline, and DCE. 
     pass_seqs.push_back(pass::FullInline());
-    pass_seqs.push_back(pass::DeadCodeElimination());
   }
 
   if (!enable_stream_schedule) {
