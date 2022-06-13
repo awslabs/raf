@@ -277,15 +277,13 @@ IRModule Inline(const IRModule& mod) {
 }  // namespace full_inline
 
 Pass FullInline() {
-  return CreateModulePass(
+  auto inline_pass = CreateModulePass(
       [=](IRModule mod, const PassContext& pass_ctx) {
-        // Runs LambdaLift, FullInline, and DCE all inside this one pass to avoid
-        // misuse of the pass.
-        IRModule lifted_mod = LambdaLift()(std::move(mod));
-        IRModule inlined_mod = full_inline::Inline(std::move(lifted_mod));
-        return DeadCodeElimination()(std::move(inlined_mod));
+        return full_inline::Inline(mod);
       },
       0, "FullInline", {});
+  // Run LambdaLift, FullInline, and DCE in a pass sequence to avoid misuse of the pass.
+  return RAFSequential({LambdaLift(), inline_pass, DeadCodeElimination()}, "FullInline");
 }
 
 RAF_REGISTER_GLOBAL("raf.pass_.FullInline").set_body_typed(FullInline);
