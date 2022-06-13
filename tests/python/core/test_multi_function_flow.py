@@ -30,8 +30,7 @@ def run_vm(dev, model_or_mod, args, use_multi_func=False):
 
     InitPool(Device(dev), "no_pool")
     pass_config = {"raf.memory_schedule": True, "raf.memory_budget": int(13e9)}
-    if use_multi_func:
-        pass_config["raf.use_multi_func"] = True
+    pass_config["raf.use_multi_func"] = use_multi_func
 
     with tvm.transform.PassContext(
         opt_level=3, config=pass_config, disabled_pass=["FuseTVM", "FuseDialect"]
@@ -246,3 +245,7 @@ def test_simple_convnet(device):
     multi_func_res = _unwrap(RunModel(get_mod_multi_func(), interp_all_inputs))
     flat_res = _unwrap(RunModel(get_mod_flat(), interp_all_inputs))
     check(multi_func_res, flat_res)
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])

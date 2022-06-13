@@ -3,6 +3,7 @@
 
 # pylint: disable=protected-access, attribute-defined-outside-init, too-many-locals
 # pylint: disable=too-many-statements, no-self-use, too-many-arguments
+import pytest
 import raf
 from raf.ir import RAFSequential, ScopeBuilder
 from raf.testing import run_infer_type
@@ -296,3 +297,7 @@ def test_recursion():
         get_mod_multi_func(),
         use_structural_equal=False,
     )
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])
