@@ -18,6 +18,7 @@
 #include "raf/binding.h"
 #include "./common.h"
 #include "./let_list.h"
+#include "./call_graph.h"
 
 namespace raf {
 namespace pass {
@@ -34,204 +35,8 @@ namespace full_inline {
  */
 using namespace raf::ir;
 using namespace raf::op;
-
-struct CallGraphNode;
-using CallGraphNodeSet = std::unordered_set<CallGraphNode*>;
-using CallGraphNodeMap =
-    std::unordered_map<GlobalVar, CallGraphNode*, ObjectPtrHash, ObjectPtrEqual>;
-using LocalVarGVarMap = std::unordered_map<Var, GlobalVar, ObjectPtrHash, ObjectPtrEqual>;
-using CallGraphNodeList = std::vector<CallGraphNode*>;
+using namespace raf::pass::call_graph;
 using VarMap = std::unordered_map<Var, Expr, ObjectPtrHash, ObjectPtrEqual>;
-
-/*!
- *  \brief Classes to store the call graph and get some basic information about each function in the
- *  call graph. This is a simplified version of the TVM CallGraph class. We cannot use it directly
- *  because:
- *  - TVM's file structure: we cannot find call_graph.h from our include path and we don't want to
- *    change TVM's file hierarchy.
- *  - TVM's call graph does not seem to be able to detect loops in the call graph. In such cases we
- *    choose to skip this pass entirely.
- */
-
-/*! \brief One node of the call graph. Represents one function in the module. */
-struct CallGraphNode {
-  CallGraphNode(const GlobalVar& gv, const Function& f) : gvar(gv), func(f) {
-  }
-  /*! \brief The function. */
-  Function func;
-  /*! \brief The global var associated with the function. */
-  GlobalVar gvar;
-  /*! \brief Functions that called this function. */
-  CallGraphNodeSet callers;
-  /*! \brief Functions that are called by this function. */
-  CallGraphNodeSet callees;
-  /*! \brief Number of functions that called this function. Used to determine whether this function
-   *  is an entry function. */
-  size_t RefCount() {
-    return callers.size();
-  }
-};
-
-/*! \brief The whole call graph. */
-class CallGraph {
- public:
-  CallGraph() {
-  }
-  /*! \brief Add a node to the call graph. */
-  void AddNode(const GlobalVar& gv, CallGraphNode* cg_node) {
-    funcs_[gv] = cg_node;
-  }
-  /*!
-   *  \brief Run topological sort and return a sorted list of functions. The other
-   *  field of the returned pair is whether the call graph is acyclic or not. The
-   *  returned list is in reverse topological sort (i.e., children first, parent last).
-   */
-  std::pair<CallGraphNodeList, bool> ReverseTopologicalSortAndCheckCycle() {
-    CallGraphNodeList sorted_funcs;
-    CallGraphNode* start_node = nullptr;
-
-    // Find the entry functions, insert them into the list directly
-    // We will start with these functions when traversing the call graph
-    size_t entry_node_cnt = 0;
-    for (auto it : funcs_) {
-      CallGraphNode* cg_node = it.second;
-      if (cg_node->RefCount() == 0) {
-        start_node = cg_node;
-        entry_node_cnt++;
-      }
-    }
-    CHECK_EQ(entry_node_cnt, 1UL) << "Not handling more than one entry nodes for now!";
-
-    // Run DFS to detect cycles and do topological sorting at the same time
-
-    // Set of visited nodes
-    CallGraphNodeSet visited;
-    // Set of nodes on the path
-    CallGraphNodeSet path;
-    // Stack for DFS, we use the non-recursive implementation
-    CallGraphNodeList stack;
-
-    visited.insert(start_node);
-    stack.push_back(start_node);
-    path.insert(start_node);
-
-    while (!stack.empty()) {
-      CallGraphNode* curr_node = stack.back();
-      visited.insert(curr_node);
-      path.insert(curr_node);
-
-      // Check all children and count the number of unvisited neighbors
-      int num_unvisited = 0;
-      for (auto child : curr_node->callees) {
-        // Push a children onto the stack if it is not visited
-        if (!visited.count(child)) {
-          stack.push_back(child);
-          num_unvisited++;
-        } else if (path.count(child)) {
-          // If a child is visited and it's on the path, then we have a cycle
-          // in the call graph, return directly
-          return std::pair<CallGraphNodeList, bool>(CallGraphNodeList(), false);
-        }
-      }
-
-      // Only pop a node from stack and add it to our final list when all of its
-      // children have been visited
-      if (num_unvisited == 0) {
-        sorted_funcs.push_back(curr_node);
-        stack.pop_back();
-        path.erase(curr_node);
-      }
-    }
-
-    return std::pair<CallGraphNodeList, bool>(sorted_funcs, true);
-  }
-
- private:
-  /*! \brief A map from global vars to global functions in the module. */
-  CallGraphNodeMap funcs_;
-};
-
-/*! \brief Construct the call graph from module. */
-class CallGraphConstructor {
- public:
-  /*! \brief Construct the call graph from module. */
-  CallGraph ConstructCallGraph(const IRModule& mod) {
-    // Get all functions, insert the call graph nodes into the set
-    auto funcs_in_mod = mod->functions;
-    for (auto it : funcs_in_mod) {
-      auto gvar = it.first;
-      auto fn = it.second;
-      if (auto fn_node = fn.as<FunctionNode>()) {
-        CallGraphNode* new_fn_node = new CallGraphNode(gvar, GetRef<Function>(fn_node));
-        funcs_[gvar] = new_fn_node;
-      }
-    }
-    // Go through each function and link the call graph nodes together
-    for (auto it : funcs_) {
-      auto gvar = it.first;
-      auto cg_node = it.second;
-      AnalyzeFunc(cg_node);
-    }
-    // Put the nodes into the call graph and return it
-    CallGraph cg;
-    for (auto it : funcs_) {
-      cg.AddNode(it.first, it.second);
-    }
-    return cg;
-  }
-
-  /*! \brief Get the mapping from local vars to functions. */
-  const LocalVarGVarMap& GetLocalVarFuncMap() {
-    return local_var_to_funcs_;
-  }
-
- private:
-  /*! \brief Analyze a function and connect it with its callers/callees in the call graph. */
-  void AnalyzeFunc(CallGraphNode* cg_node) {
-    auto func = cg_node->func;
-    auto ell = ExplicitLetList::make(func->body);
-    const std::vector<Var>& vars = ell->vars;
-    const std::vector<Expr>& exprs = ell->exprs;
-    size_t n = vars.size();
-
-    for (size_t i = 0; i < n; i++) {
-      Var let_var = vars[i];
-      Expr expr = exprs[i];
-      if (auto gvar_node = expr.as<GlobalVarNode>()) {
-        // Case 1: the expr is a global var which may refer to a function
-        auto gvar = GetRef<GlobalVar>(gvar_node);
-        if (funcs_.count(gvar)) local_var_to_funcs_[let_var] = gvar;
-      } else if (auto call_node = expr.as<CallNode>()) {
-        // Case 2: call node, check if it is calling a global function
-        auto op = call_node->op;
-        if (auto gvar_node = op.as<GlobalVarNode>()) {
-          // Case 2.1: the call node is directly calling the global function
-          auto gvar = GetRef<GlobalVar>(gvar_node);
-          CHECK_GT(funcs_.count(gvar), 0)
-              << "The called global function " << gvar << " cannot be found!";
-          (cg_node->callees).insert(funcs_[gvar]);
-          funcs_[gvar]->callers.insert(cg_node);
-        } else if (auto var_node = op.as<VarNode>()) {
-          // Case 2.2: the call node is calling a local var, which may point to a global var
-          auto local_var = GetRef<Var>(var_node);
-          // The local var points to a global function if and only if it is stored in
-          // the local var-func map
-          if (local_var_to_funcs_.count(local_var)) {
-            CallGraphNode* node = funcs_[local_var_to_funcs_[local_var]];
-            (cg_node->callees).insert(node);
-            node->callers.insert(cg_node);
-          }
-        }
-      }
-      // We are not handling tuples and more than one levels of direct-assign for now.
-    }
-  }
-
-  /*! \brief A map from global vars to global functions in the module. */
-  CallGraphNodeMap funcs_;
-  /*! \brief A separate map from local vars to global functions. */
-  LocalVarGVarMap local_var_to_funcs_;
-};
 
 /*!
  *  \brief Perform full inlining on a function. The returned function body will
@@ -337,7 +142,6 @@ class FullInliner : public ExprMutator {
       return Downcast<Expr>(ret_var);
     } else {
       LOG(FATAL) << "Called global var " << gvar << " is not a function!";
-      // Unreachable code
     }
   }
 
@@ -388,7 +192,8 @@ class FullInliner : public ExprMutator {
       var_map_->insert(std::make_pair(let_var, new_let_var));
     }
 
-    // Return the ret var of the called function, it will be assigned to the
+    // Return the ret var of the called function, it will be assigned to the let 
+    // var associated with the original call node
     Expr ret;
     if (n > 0) {
       ret = VisitExpr(ell->ret);
@@ -442,7 +247,7 @@ IRModule Inline(const IRModule& mod) {
   bool is_acyclic;
   std::tie(funcs, is_acyclic) = cg.ReverseTopologicalSortAndCheckCycle();
   if (!is_acyclic) {
-    LOG(INFO) << "Call graph is cyclic, skip inlining pass.";
+    LOG(WARNING) << "Call graph is cyclic, skip inlining pass.";
     return mod;
   }
 
