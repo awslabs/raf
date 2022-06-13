@@ -3,6 +3,7 @@
 
 # pylint: disable=protected-access, attribute-defined-outside-init, too-many-locals
 # pylint: disable=too-many-statements, no-self-use, too-many-arguments
+import pytest
 import raf
 from raf._core.ndarray import get_ndarray_handle
 from raf.ir import ScopeBuilder
@@ -11,14 +12,14 @@ from raf._core.device import Device
 from raf._core.executor import VMExecutor
 from raf._ffi.model import RunModel
 from raf._ffi.memory_pool import InitPool
-from raf.testing import check, randn
+from raf.testing import get_testable_devices, check, randn
 from raf.model.trace import _unwrap
 
 import tvm
 from tvm import relay
 
 # Run a module through the VM, return the result in numpy
-def run_vm(model_or_mod, args, use_multi_func=False):
+def run_vm(dev, model_or_mod, args, use_multi_func=False):
 
     if not isinstance(model_or_mod, tvm.IRModule):
         record = model_or_mod._internal(*args)
@@ -27,9 +28,7 @@ def run_vm(model_or_mod, args, use_multi_func=False):
     else:
         mod = model_or_mod
 
-    # Use CPU to avoid workspace memory.
-    device = "cpu"
-    InitPool(Device(device), "page_unit_pool")
+    InitPool(Device(dev), "no_pool")
     pass_config = {"raf.memory_schedule": True, "raf.memory_budget": int(13e9)}
     if use_multi_func:
         pass_config["raf.use_multi_func"] = True
@@ -37,15 +36,14 @@ def run_vm(model_or_mod, args, use_multi_func=False):
     with tvm.transform.PassContext(
         opt_level=3, config=pass_config, disabled_pass=["FuseTVM", "FuseDialect"]
     ):
-        res = VMExecutor(mod, device).make_executor()(*args)
+        res = VMExecutor(mod, dev).make_executor()(*args)
 
     return res.numpy()
 
+@pytest.mark.parametrize("device", get_testable_devices())
+def test_simple_convnet(device):
+    """ Simple convnet to test the multi-function flow """
 
-# Simple convnet to test the multi-function flow
-def test_simple_convnet():
-
-    device = "cpu"
     ishape = (16, 16, 64, 64)
     pooled_ishape = (16, 16, 32, 32)
     dense_ishape = (16, 16)
@@ -92,29 +90,29 @@ def test_simple_convnet():
         fn(input, wgt0, wgt1, wgt2, wgt3, wgt4) {
 
             // Layer 0
-            let foo0 = layer0(inp0, wgt0) {
+            let layer0 = fn(inp0, wgt0) {
                 let conv_out0 = conv2d(inp0, wgt0)
                 let relu_out0 = relu(conv_out0)
                 relu_out0
             }
 
             // Layer 1
-            let foo1 = layer1(inp1, wgt1) {
+            let layer1 = fn(inp1, wgt1) {
                 let conv_out1 = conv2d(inp1, wgt1)
                 let relu_out1 = relu(conv_out1)
                 relu_out1
             }
 
             // First two layers
-            let a0 = foo0(input, wgt0)
-            let a1 = foo0(a0, wgt1)
+            let a0 = layer0(input, wgt0)
+            let a1 = layer0(a0, wgt1)
 
             // Go through a pooling layer
             let a1_pooled = maxpool_2d(a1, [2, 2])
 
             // Next two layers
-            let a2 = foo1(a1_pooled, wgt2)
-            let a3 = foo2(a2, wgt3)
+            let a2 = layer1(a1_pooled, wgt2)
+            let a3 = layer1(a2, wgt3)
 
             // Pool again and go through a dense layer
             let a3_pooled = maxpool_2d(a3, [32, 32]) // Pool each channel to 1 pixel
@@ -237,8 +235,8 @@ def test_simple_convnet():
     all_inputs = [m_x, m_wgt0, m_wgt1, m_wgt2, m_wgt3, m_wgt4]
 
     # Try the VM path
-    multi_func_res = run_vm(get_mod_multi_func(), all_inputs, use_multi_func=True)
-    flat_res = run_vm(get_mod_flat(), all_inputs)
+    multi_func_res = run_vm(device, get_mod_multi_func(), all_inputs, use_multi_func=True)
+    flat_res = run_vm(device, get_mod_flat(), all_inputs)
 
     check(multi_func_res, flat_res)
 
