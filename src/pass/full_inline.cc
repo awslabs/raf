@@ -278,11 +278,9 @@ IRModule Inline(const IRModule& mod) {
 
 Pass FullInline() {
   auto inline_pass = CreateModulePass(
-      [=](IRModule mod, const PassContext& pass_ctx) {
-        return full_inline::Inline(mod);
-      },
-      0, "FullInline", {});
-  // Run LambdaLift, FullInline, and DCE in a pass sequence to avoid misuse of the pass.
+      [=](IRModule mod, const PassContext& pass_ctx) { return full_inline::Inline(mod); }, 0,
+      "FullInline", {});
+  // Run LambdaLift, FullInline, and DCE in a pass sequence to avoid misuse of this pass.
   return RAFSequential({LambdaLift(), inline_pass, DeadCodeElimination()}, "FullInline");
 }
 

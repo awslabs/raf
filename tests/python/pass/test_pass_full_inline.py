@@ -6,7 +6,7 @@
 import raf
 from raf.ir import RAFSequential, ScopeBuilder
 from raf.testing import run_infer_type
-from raf._ffi.pass_ import InferType, LambdaLift, DeadCodeElimination, FullInline
+from raf._ffi.pass_ import InferType, FullInline
 
 import tvm
 from tvm import relay
