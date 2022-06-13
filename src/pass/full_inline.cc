@@ -192,7 +192,7 @@ class FullInliner : public ExprMutator {
       var_map_->insert(std::make_pair(let_var, new_let_var));
     }
 
-    // Return the ret var of the called function, it will be assigned to the let 
+    // Return the ret var of the called function, it will be assigned to the let
     // var associated with the original call node
     Expr ret;
     if (n > 0) {
@@ -278,13 +278,14 @@ IRModule Inline(const IRModule& mod) {
 
 Pass FullInline() {
   return CreateModulePass(
-      [=](IRModule mod, const PassContext& pass_ctx) { 
+      [=](IRModule mod, const PassContext& pass_ctx) {
         // Runs LambdaLift, FullInline, and DCE all inside this one pass to avoid
-        // misuse of the pass. 
+        // misuse of the pass.
         IRModule lifted_mod = LambdaLift()(std::move(mod));
         IRModule inlined_mod = full_inline::Inline(std::move(lifted_mod));
-        return DeadCodeElimination()(std::move(inlined_mod)); 
-      }, 0, "FullInline", {});
+        return DeadCodeElimination()(std::move(inlined_mod));
+      },
+      0, "FullInline", {});
 }
 
 RAF_REGISTER_GLOBAL("raf.pass_.FullInline").set_body_typed(FullInline);

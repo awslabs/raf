@@ -7,7 +7,7 @@
  * \file src/pass/call_graph.h
  * \brief A simple call graph implementation for function inlining. This call
  * graph only captures the relationship between global functions, so LambdaLift()
- * should be run before using this call graph. 
+ * should be run before using this call graph.
  */
 
 #include <unordered_set>
@@ -95,9 +95,9 @@ class CallGraph {
 /*! \brief Construct the call graph from module. */
 class CallGraphConstructor {
  public:
-  /*! 
+  /*!
    * \brief Construct the call graph from module. The boolean in the return value
-   * indicates whether the construction is successful. 
+   * indicates whether the construction is successful.
    */
   std::pair<CallGraph, bool> ConstructCallGraph(const IRModule& mod);
   /*! \brief Get the mapping from local vars to functions. */
@@ -106,9 +106,9 @@ class CallGraphConstructor {
   }
 
  private:
-  /*! 
-   * \brief Analyze a function and connect it with its callers/callees in the call graph. 
-   * Returns true on success and false when analysis fails. 
+  /*!
+   * \brief Analyze a function and connect it with its callers/callees in the call graph.
+   * Returns true on success and false when analysis fails.
    */
   bool AnalyzeFunc(CallGraphNode* cg_node);
   /*! \brief A map from global vars to global functions in the module. */
@@ -117,6 +117,6 @@ class CallGraphConstructor {
   LocalVarGVarMap local_var_to_funcs_;
 };
 
-}
-}
-}
+}  // namespace call_graph
+}  // namespace pass
+}  // namespace raf

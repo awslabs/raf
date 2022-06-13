@@ -40,6 +40,7 @@ def run_vm(dev, model_or_mod, args, use_multi_func=False):
 
     return res.numpy()
 
+
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_simple_convnet(device):
     """ Simple convnet to test the multi-function flow """

@@ -917,7 +917,7 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
 
   if (pass_ctx->GetConfig("raf.use_multi_func", Bool(false)).value()) {
     // The memory-related passes below do not support multi-function, so we need to inline
-    // all functions here. This one pass actually runs LambdaLift, inline, and DCE. 
+    // all functions here. This one pass actually runs LambdaLift, inline, and DCE.
     pass_seqs.push_back(pass::FullInline());
   }
 
