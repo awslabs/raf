@@ -88,7 +88,6 @@ def config_cython():
     try:
         from Cython.Build import cythonize
 
-        # from setuptools.extension import Extension
         if sys.version_info >= (3, 0):
             subdir = "_cy3"
         else:
@@ -208,4 +207,4 @@ if wheel_include_libs:
     os.remove(os.path.join(SCRIPT_DIR, "MANIFEST.in"))
     for path in LIB_LIST:
         _, libname = os.path.split(path)
-        os.remove("raf/%s" % libname)
+        os.remove("raf/%s" % libname)       
