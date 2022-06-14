@@ -207,4 +207,4 @@ if wheel_include_libs:
     os.remove(os.path.join(SCRIPT_DIR, "MANIFEST.in"))
     for path in LIB_LIST:
         _, libname = os.path.split(path)
-        os.remove("raf/%s" % libname)       
+        os.remove("raf/%s" % libname)
