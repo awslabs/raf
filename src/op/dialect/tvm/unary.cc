@@ -104,6 +104,7 @@ RAF_TVM_UNARY(batch_flatten, BatchFlatten);
 RAF_TVM_UNARY(zeros_like, ZerosLike);
 RAF_TVM_UNARY(ones_like, OnesLike);
 RAF_TVM_UNARY(trunc, Trunc);
+RAF_TVM_UNARY(reciprocal, Reciprocal);
 
 RAF_TVM_UNARY_DX(gelu_dx, GeluDx);
 RAF_TVM_UNARY_DX(erf_dx, ErfDx);
