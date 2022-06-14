@@ -17,7 +17,6 @@ cd $RAF_HOME/build
 cp ../cmake/config.cmake .
 
 # Edit the configuration file
-vim config.cmake
 echo set\(RAF_USE_LLVM \"llvm-config-8\"\) >> config.cmake
 echo set\(HIDE_PRIVATE_SYMBOLS ON\) >> config.cmake
 echo set\(RAF_USE_GTEST ON\) >> config.cmake
