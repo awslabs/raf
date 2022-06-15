@@ -54,6 +54,7 @@ OPS = [
     Op(name="erf", schema_name="unary"),
     Op(name="sqrt", schema_name="unary"),
     Op(name="rsqrt", schema_name="unary"),
+    Op(name="reciprocal", schema_name="unary"),
     Op(name="relu_dx", schema_name="unary_dx"),
     Op(name="gelu_dx", schema_name="unary_dx"),
     Op(name="tanh_dx", schema_name="unary_dx"),
