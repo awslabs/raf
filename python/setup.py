@@ -20,7 +20,6 @@ else:
     from setuptools.extension import Extension
 
 SCRIPT_DIR = os.path.dirname(__file__)
-FFI_MODE = os.environ.get("TVM_FFI", "auto")
 CONDA_BUILD = os.getenv("CONDA_BUILD") is not None
 
 
@@ -33,7 +32,7 @@ def get_lib_path():
     """Get library path, name and version"""
     # We can not import `libinfo.py` in setup.py directly since __init__.py
     # Will be invoked which introduces dependences
-    libinfo_py = os.path.join(SCRIPT_DIR, "./raf/python/raf/_lib.py")
+    libinfo_py = os.path.join(SCRIPT_DIR, "./raf/_lib.py")
     libinfo = {"__file__": libinfo_py}
     with open(libinfo_py, "rb") as f:
         ss = f.read()
@@ -73,63 +72,6 @@ LIB_LIST = get_lib_path()
 __version__ = "0.1"
 
 
-def config_cython():
-    """Try to configure cython and return cython configuration"""
-    if FFI_MODE not in ("cython"):
-        if os.name == "nt" and not CONDA_BUILD:
-            print("WARNING: Cython is not supported on Windows, will compile without cython module")
-            return []
-        sys_cflags = sysconfig.get_config_var("CFLAGS")
-        if sys_cflags and "i386" in sys_cflags and "x86_64" in sys_cflags:
-            print("WARNING: Cython library may not be compiled correctly with both i386 and x64")
-            return []
-    try:
-        from Cython.Build import cythonize
-
-        if sys.version_info >= (3, 0):
-            subdir = "_cy3"
-        else:
-            subdir = "_cy2"
-        ret = []
-        path = "./raf/3rdparty/tvm/python/tvm/_ffi/_cython"
-        extra_compile_args = ["-std=c++14", "-DDMLC_USE_LOGGING_LIBRARY=<tvm/runtime/logging.h>"]
-        if os.name == "nt":
-            library_dirs = ["tvm", "../build/Release", "../build"]
-            libraries = ["tvm"]
-            extra_compile_args = None
-            # library is available via conda env.
-            if CONDA_BUILD:
-                library_dirs = [os.environ["LIBRARY_LIB"]]
-        else:
-            library_dirs = None
-            libraries = None
-
-        for fn in os.listdir(path):
-            if not fn.endswith(".pyx"):
-                continue
-            ret.append(
-                Extension(
-                    "tvm._ffi.%s.%s" % (subdir, fn[:-4]),
-                    ["./raf/3rdparty/tvm/python/tvm/_ffi/_cython/%s" % fn],
-                    include_dirs=[
-                        "../include/",
-                        "../3rdparty/dmlc-core/include",
-                        "../3rdparty/dlpack/include",
-                    ],
-                    extra_compile_args=extra_compile_args,
-                    library_dirs=library_dirs,
-                    libraries=libraries,
-                    language="c++",
-                )
-            )
-        return cythonize(ret, compiler_directives={"language_level": 3})
-    except ImportError as error:
-        if FFI_MODE == "cython":
-            raise error
-        print("WARNING: Cython is not installed, will compile without cython module")
-        return []
-
-
 class BinaryDistribution(Distribution):
     def has_ext_modules(self):
         return True
@@ -155,7 +97,10 @@ if wheel_include_libs:
             if os.path.normpath(path) != os.path.normpath(
                 os.path.join(SCRIPT_DIR, "raf/libraf.so")
             ):
-                shutil.copy(path, os.path.join(SCRIPT_DIR, "raf"))
+                try:
+                    shutil.copy(path, os.path.join(SCRIPT_DIR, "raf"))
+                except shutil.SameFileError:
+                    pass
             _, libname = os.path.split(path)
             fo.write("include raf/%s\n" % libname)
     setup_kwargs = {"include_package_data": True}
@@ -193,7 +138,6 @@ setup(
     distclass=BinaryDistribution,
     url="https://github.com/awslabs/raf",
     python_requires=">=3.6",
-    ext_modules=config_cython(),
     **setup_kwargs
 )
 
