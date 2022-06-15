@@ -13,6 +13,7 @@ bash ./scripts/src_codegen/run_all.sh
 
 # TODO: Make this part of creating CMake configurable. It should take arguments from the command line to determine the configuration.  
 # Configuration file for CMake
+pushd .
 cd $RAF_HOME/build
 cp ../cmake/config.cmake .
 
@@ -44,5 +45,8 @@ export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 python3 -c "import raf"
 
 # Generate source distribution
-cd ../..
-python3 ./setup.py sdist
+popd
+pushd .
+cd python
+python3 ./setup.py bdist_wheel -d ../build/pipe/public/raf
+
