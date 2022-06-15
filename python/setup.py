@@ -6,7 +6,6 @@ import os
 import shutil
 import subprocess
 import sys
-import sysconfig
 
 from setuptools import find_packages
 from setuptools.dist import Distribution

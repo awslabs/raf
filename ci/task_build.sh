@@ -23,8 +23,10 @@ popd
 export TVM_LIBRARY_PATH=${PWD}/build/lib
 pushd .
 cd 3rdparty/tvm/python && python3 setup.py bdist_wheel -d ../build/pip/public/tvm_latest
+python3 -m pip install ../build/pip/public/tvm_latest/*.whl --upgrade --force-reinstall --no-deps
 popd
 pushd .
 cd python && python3 setup.py bdist_wheel -d ../build/pip/public/raf
+python3 -m pip install ../build/pip/public/raf/*.whl --upgrade --force-reinstall --no-deps
 popd
 
