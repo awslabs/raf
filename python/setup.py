@@ -29,7 +29,6 @@ def get_env_flag(name, default=""):
     return os.getenv(name, default).upper() in ["ON", "1", "YES", "TRUE", "Y"]
 
 
-# FIXME: get_lib_path() does not work as line 36: "exec(compile(ss, libinfo_py, "exec"), libinfo, libinfo)" errors
 def get_lib_path():
     """Get library path, name and version"""
     # We can not import `libinfo.py` in setup.py directly since __init__.py
@@ -66,8 +65,7 @@ def get_build_version():
     return version
 
 
-# FIXME: commented out LIB_LIST because it relies on get_lib_path()
-# LIB_LIST = get_lib_path()
+LIB_LIST = get_lib_path()
 
 # FIXME: commented out _version_ because subprocess.CalledProcessError: Command '['git', 'rev-parse', '--short', 'HEAD']' returned non-zero exit status 128.
 # __version__ = get_build_version()
@@ -162,14 +160,11 @@ if wheel_include_libs:
             fo.write("include raf/%s\n" % libname)
     setup_kwargs = {"include_package_data": True}
 
-# FIXME: this if statement does not work as it relies on get_lib_path()
-"""
 if include_libs:
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
     for i, path in enumerate(LIB_LIST):
         LIB_LIST[i] = os.path.relpath(path, curr_path)
     setup_kwargs = {"include_package_data": True, "data_files": [("raf", LIB_LIST)]}
-"""
 
 # Local change: Write out version to file and include in package
 os.makedirs(os.path.join(SCRIPT_DIR, "../build/private/raf/version"), exist_ok=True)

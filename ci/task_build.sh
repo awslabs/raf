@@ -16,3 +16,9 @@ git checkout --recurse-submodules .
 # build
 mkdir -p $BUILD_DIR
 cd $BUILD_DIR && cmake .. && make $MAKE_FLAGS && make raf-cpptest $MAKE_FLAGS && cd ..
+
+# test build wheels
+export TVM_LIBRARY_PATH=${PWD}/build/lib
+cd 3rdparty/tvm/python && python3 setup.py bdist_wheel -d ../build/pip/public/tvm_latest
+cd python && python3 setup.py bdist_wheel -d ../build/pip/public/raf
+

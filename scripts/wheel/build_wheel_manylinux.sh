@@ -45,4 +45,5 @@ python3 -c "import raf"
 
 # Generate source distribution
 cd ../..
-python3 ./setup.py sdist
+python3 ./setup.py bdist_wheel -d ../build/pipe/public/raf
+
