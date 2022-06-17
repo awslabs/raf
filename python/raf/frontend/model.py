@@ -171,7 +171,8 @@ class FrameworkModel(BaseModel):
     def train_mode(self, recursive=True):
         self._BaseModel__is_train = True
         for param in self.__arg_params.values():
-            param.requires_grad = True
+            if param not in self.__aux_params.values():
+                param.requires_grad = True
 
     def infer_mode(self, recursive=True):
         self._BaseModel__is_train = False
@@ -191,9 +192,7 @@ class FrameworkModel(BaseModel):
         mod = self.__train_mod if self._BaseModel__is_train else self.__infer_mod
         func_inputs = _get_main_func_params(self, args, kwargs, get_handle=False)
         mod["main"] = annotate_main_func_params(mod["main"], func_inputs)
-        requires_grads = [i.requires_grad if isinstance(i, ndarray) else None for i in func_inputs]
-        if None in requires_grads:
-            requires_grads = []
+        requires_grads = [i.requires_grad if isinstance(i, ndarray) else False for i in func_inputs]
         named_params = {}
         named_params.update(self.__arg_params)
         named_params.update(self.__aux_params)
