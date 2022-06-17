@@ -269,7 +269,7 @@ def test_add_sub():
 def test_dropout():
     device = "cpu"
     shape = (10, 5)
-    dropout_op = getattr(raf._op.sym, "_contrib_dropout")
+    dropout_op = raf._op.sym._contrib_dropout
 
     class Model(raf.Model):
         def build(self):
