@@ -17,6 +17,7 @@ raf_option(RAF_USE_NCCL "Build RAF with NCCL. Option: [ON/OFF]" OFF)
 raf_option(RAF_USE_CUBLAS "Build RAF with cuBLAS. Option: [ON/OFF]" OFF)
 raf_option(RAF_USE_GTEST "Build cpptests for RAF. Option: [ON/OFF]" OFF)
 raf_option(RAF_USE_SANITIZER "Build RAF with sanitizer. Option: [OFF/ASAN/MSAN/TSAN/UBSAN]" OFF)
+raf_option(RAF_INSTALL_DEV "Install RAF dev header files. Option: [ON/OFF]" OFF)
 raf_find_config()
 
 ################# Modules and Third-Party Targets #################
@@ -231,6 +232,16 @@ set_target_properties(raf PROPERTIES
   # CUDA_RESOLVE_DEVICE_SYMBOLS
 )
 raf_target_add_sanitizer(raf)
+
+if (RAF_INSTALL_DEV)
+  install(
+          DIRECTORY "include/."
+          DESTINATION "include"
+          FILES_MATCHING
+          PATTERN "*.h")
+  install(TARGETS raf
+          LIBRARY DESTINATION lib)
+endif (RAF_INSTALL_DEV)
 
 ################# Apps #################
 add_subdirectory(${PROJECT_SOURCE_DIR}/apps/include_raf/)
