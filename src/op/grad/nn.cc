@@ -459,10 +459,8 @@ Array<Expr> ReciprocalGrad(const Expr& orig_call, const Array<Expr> orig_args, c
   const CallNode* call = orig_call.as<CallNode>();
   CHECK_GE(call->args.size(), 1);
   const Expr& x = call->args[0];
-  Call one = Call(op_ones, {x});
-  Call x_pow_2 = Call(op_multiply, {x, x});
-  Call one_divide_x_pow_2 = Call(op_div, {one, x_pow_2});
-  Call dx = Call(op_negative, {one_divide_x_pow_2});
+  Call y_multiply_y = Call(op_multiply, {y, y});
+  Call dx = Call(op_negative, {y_multiply_y});
   return {Call(op_multiply, {dy, dx})};
 }
 
