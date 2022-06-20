@@ -34,6 +34,8 @@ RAF_TVM_BINARY(power, Power, BinaryArgs);
 RAF_TVM_BINARY(maximum, Maximum, BinaryArgs);
 RAF_TVM_BINARY(minimum, Minimum, BinaryArgs);
 RAF_TVM_BINARY(logical_and, LogicalAnd, BinaryArgs);
+RAF_TVM_BINARY(logical_or, LogicalOr, BinaryArgs);
+RAF_TVM_BINARY(logical_xor, LogicalXor, BinaryArgs);
 RAF_TVM_BINARY(right_shift, Right_shift, BinaryArgs);
 RAF_TVM_BINARY(left_shift, LeftShift, BinaryArgs);
 RAF_TVM_BINARY(equal, Equal, BinaryArgs);

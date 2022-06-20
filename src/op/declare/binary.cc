@@ -64,7 +64,7 @@ using namespace raf::value;
     return;                                                                   \
   }
 
-TensorValue MakeBinaryTensor(DLTensor* x1, DLTensor* x2, bool is_logical = false) {
+TensorValue MakeBinaryTensor(const DLTensor* x1, const DLTensor* x2, bool is_logical = false) {
   int ndim_1 = x1->ndim;
   int ndim_2 = x2->ndim;
   int ndim = std::max(ndim_1, ndim_2);
@@ -310,14 +310,21 @@ RAF_OP_DECLARE("raf.op.minimum", [](const CallValues& call) {
   RAF_BINARY_TENSOR(x1, x2);
 });
 
-RAF_OP_DECLARE("raf.op.logical_and", [](const CallValues& call) {
+void LogicalBinary(const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
   CHECK(args != nullptr);
-  const Value& x1 = args->x1;
-  const Value& x2 = args->x2;
-  RAF_BINARY_SCALAR(&&, x1, x2);
-  RAF_BINARY_TENSOR(x1, x2);
-});
+  const DLTensor* x1 = args->x1;
+  const DLTensor* x2 = args->x2;
+  CHECK(ir::DataType(x1->dtype).is_bool());
+  CHECK(ir::DataType(x2->dtype).is_bool());
+  const TensorValue& tv = MakeBinaryTensor(x1, x2, true);
+  call->out = tv;
+  call->device = tv->tensor->device;
+}
+
+RAF_OP_DECLARE("raf.op.logical_and", LogicalBinary);
+RAF_OP_DECLARE("raf.op.logical_or", LogicalBinary);
+RAF_OP_DECLARE("raf.op.logical_xor", LogicalBinary);
 
 void CollapseAxis(const CallValues& call) {
   const auto* args = call->args.as<BinaryArgs>();
