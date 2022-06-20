@@ -79,12 +79,16 @@ def test_binary(op, shape, dtype):
         sym.equal,
         sym.not_equal,
         sym.logical_and,
+        sym.logical_or,
+        sym.logical_xor,
     ],
 )
 @pytest.mark.parametrize("shape", [[(10, 4), (5, 10, 1), (5, 10, 4)]])
 @pytest.mark.parametrize("dtype", ["float32"])
-def test_logiacal(op, shape, dtype):
+def test_bool(op, shape, dtype):
     # pylint: disable=too-many-locals
+    if op in [sym.logical_and, sym.logical_or, sym.logical_xor]:
+        dtype = "bool"
     class Binary(raf.Model):
         def build(self):
             pass
@@ -106,7 +110,6 @@ def test_logiacal(op, shape, dtype):
     m_func = run_infer_type(m_func)
     desired_type = FuncType([t_a, t_b], t_c)
     check_type(m_func, desired_type)
-    # TODO(@hzfan): check backward. missing gradient registries.
 
 
 if __name__ == "__main__":
