@@ -89,6 +89,7 @@ def test_bool(op, shape, dtype):
     # pylint: disable=too-many-locals
     if op in [sym.logical_and, sym.logical_or, sym.logical_xor]:
         dtype = "bool"
+
     class Binary(raf.Model):
         def build(self):
             pass
