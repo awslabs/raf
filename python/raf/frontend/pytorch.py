@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """The frontend that converts PyTorch models to RAF models via Relay."""
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals, too-many-branches
 from collections import OrderedDict
 import os
 import hashlib
@@ -162,8 +162,8 @@ def from_pytorch(model, shape_dict, model_file=None, hash_file=None):
 
     py_parameters = scripted_model.named_parameters()
     param_dict = {}
-    for k, v in py_parameters:
-        param_dict[k] = v
+    for name, value in py_parameters:
+        param_dict[name] = value
     relay_mod, relay_params = relay.frontend.from_pytorch(scripted_model, shape_list)
     meta_mod = FromRelay()(relay_mod)
     meta_params = OrderedDict()
