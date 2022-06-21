@@ -159,9 +159,9 @@ def from_pytorch(model, shape_dict, model_file=None, hash_file=None):
         input_shape = input_info[0]
         input_type = input_info[1]
         shape_list.append((input_name, (input_shape, input_type)))
- 
+
     py_parameters = scripted_model.named_parameters()
-    param_dict ={} 
+    param_dict = {}
     for k, v in py_parameters:
         param_dict[k] = v
     relay_mod, relay_params = relay.frontend.from_pytorch(scripted_model, shape_list)
@@ -171,7 +171,7 @@ def from_pytorch(model, shape_dict, model_file=None, hash_file=None):
     for var in relay_mod["main"].params:
         name = var.name_hint
         if name in relay_params:
-            array_value  = ndarray(relay_params[name].numpy())
+            array_value = ndarray(relay_params[name].numpy())
             valid_name = validate_relay_param_name(name)
             meta_params[valid_name] = array_value
             if name in param_dict:
