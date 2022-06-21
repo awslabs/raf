@@ -124,7 +124,7 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                     # TODO(@anijain2305): We might mark requires_grad to non-float parameters
                     # which is incorrect. We should improve the gradient pass for better
                     # has_grad results.
-                    if param.requires_grad and "float" in param.dtype:
+                    if param.requires_grad:
                         assert isinstance(param, ndarray), "Only `raf.ndarray` can be optimized!"
 
                         # By default we directly use the model parameter as the SGD weight.
