@@ -1068,6 +1068,7 @@ def test_dense_pattern(trans):
 
     check_from_relay(model, r_func, [m_x, m_y])
 
+
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float64", "float32", "float16"])
