@@ -68,8 +68,22 @@ RAF_OP_TYPE("raf.op.less_equal", "LogicalBroadcast", LogicalBroadcastInfer);
 RAF_OP_TYPE("raf.op.greater_equal", "LogicalBroadcast", LogicalBroadcastInfer);
 RAF_OP_TYPE("raf.op.equal", "LogicalBroadcast", LogicalBroadcastInfer);
 RAF_OP_TYPE("raf.op.not_equal", "LogicalBroadcast", LogicalBroadcastInfer);
-RAF_OP_TYPE("raf.op.logical_and", "LogicalBroadcast", LogicalBroadcastInfer);
 RAF_OP_TYPE("raf.op.left_shift", "Broadcast", BroadcastInfer);
+
+Type LogicalOpInfer(const CallValues& value) {
+  const auto* args = value->args.as<BinaryArgs>();
+  CHECK(args != nullptr);
+  TensorType x1 = Downcast<TensorType>(GetType(args->x1));
+  TensorType x2 = Downcast<TensorType>(GetType(args->x2));
+  CHECK_EQ(x1->dtype, x2->dtype) << "Data types mismatch";
+  CHECK(x1->dtype.is_bool());
+  Array<PrimExpr> oshape = BroadcastShape(x1, x2);
+  return TensorType(oshape, DataType::Bool(x1->dtype.lanes()));
+}
+
+RAF_OP_TYPE("raf.op.logical_and", "LogicalAnd", LogicalOpInfer);
+RAF_OP_TYPE("raf.op.logical_or", "LogicalOr", LogicalOpInfer);
+RAF_OP_TYPE("raf.op.logical_xor", "LogicalXOr", LogicalOpInfer);
 
 Type AxisTypeInfer(const CallValues& value) {
   const auto* args = value->args.as<BinaryArgs>();
