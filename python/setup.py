@@ -114,9 +114,7 @@ if include_libs:
 os.makedirs(os.path.join(SCRIPT_DIR, "../build/private/raf/version"), exist_ok=True)
 with open(os.path.join(SCRIPT_DIR, "../build/private/raf/version/__init__.py"), "w") as fd:
     fd.write("__version__ = '" + __version__ + "'")
-setup_kwargs["package_dir"] = {
-    "raf.version": os.path.join(SCRIPT_DIR, "../build/private/raf/version")
-}
+setup_kwargs["package_dir"] = {"raf.version": "../build/private/raf/version"}
 # End local change
 
 setup(
