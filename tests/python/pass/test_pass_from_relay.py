@@ -1068,10 +1068,14 @@ def test_dense_pattern(trans):
 
     check_from_relay(model, r_func, [m_x, m_y])
 
+@pytest.mark.parametrize("device", get_testable_devices())
+@pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
+@pytest.mark.parametrize("dtype", ["float64", "float32", "float16"])
+def test_gelu_pattern(shape, dtype, device):
+    if dtype == "float16":
+        if device == "cpu":
+            pytest.skip("float16 is not supported on cpu")
 
-@pytest.mark.parametrize("shape", [(), (1,), (2, 2), (1, 2, 3), (1, 2, 3, 4)])
-@pytest.mark.parametrize("dtype", ["float64", "float32"])
-def test_gelu_pattern(shape, dtype):
     class TestModel(raf.Model):
         def build(self):
             pass
@@ -1082,8 +1086,8 @@ def test_gelu_pattern(shape, dtype):
             return attrgetter("gelu")(raf)(x)
 
     model = TestModel()
-    m_x, _ = randn(shape, dtype=dtype)
-    m_y, _ = randn(shape, dtype=dtype)
+    m_x, _ = randn(shape, dtype=dtype, device=device)
+    m_y, _ = randn(shape, dtype=dtype, device=device)
 
     r_x = _relay.var("x", shape=shape, dtype=dtype)
     bias = _relay.var("bias", shape=shape, dtype=dtype)
@@ -1096,7 +1100,7 @@ def test_gelu_pattern(shape, dtype):
     r_out = _relay.multiply(a0, a4)
     r_func = _relay.Function(params=[r_x, bias], body=r_out)
 
-    check_from_relay(model, r_func, [m_x, m_y])
+    check_from_relay(model, r_func, [m_x, m_y], device=device)
 
 
 def test_embedding_pattern():
