@@ -121,9 +121,6 @@ def with_sgd(learning_rate=0.1, momentum=0.01):
                 for name, param in self.model.state().items():
                     # For each tensor "param" that requires gradient (i.e., training weights),
                     # create a tensor "param.sgd_v" to be its SGD variant.
-                    # TODO(@anijain2305): We might mark requires_grad to non-float parameters
-                    # which is incorrect. We should improve the gradient pass for better
-                    # has_grad results.
                     if param.requires_grad:
                         assert isinstance(param, ndarray), "Only `raf.ndarray` can be optimized!"
 

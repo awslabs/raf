@@ -380,5 +380,37 @@ def test_save_and_load_model(shape_dict):
         from_pytorch(t_model, shape_dict, model_path, hash_path)
 
 
+def test_learnable_params():
+    class TorchModel(nn.Module):
+        def __init__(self, shape):
+            super(TorchModel, self).__init__()
+            A = torch.randn(shape, requires_grad=True)
+            B = torch.randn(shape, requires_grad=True)
+            self.A = torch.nn.Parameter(A)
+            self.B = torch.nn.Parameter(B, requires_grad=False)
+            self.register_buffer("buffer", torch.zeros(shape))
+
+        def forward(self, x):
+            b = x + self.A
+            y = b + self.B
+            return y + self.buffer
+
+    device = "cpu"
+    shape_dict = {"input0": ((32, 3, 28, 28), "float32")}
+    input_shape = list(shape_dict.values())[0][0]
+
+    t_model = TorchModel(input_shape)
+    m_model = from_pytorch(t_model, shape_dict)
+
+    t_model.to(device=device)
+    m_model.to(device=device)
+    m_model.train_mode()
+    m_params = m_model.state()
+    for n, param in t_model.named_parameters():
+        assert m_params["model_" + n].requires_grad == param.requires_grad
+
+    assert m_params["model_buffer"].requires_grad == False
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
