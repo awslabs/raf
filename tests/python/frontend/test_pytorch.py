@@ -408,8 +408,7 @@ def test_learnable_params():
     m_params = m_model.state()
     for n, param in t_model.named_parameters():
         assert m_params["model_" + n].requires_grad == param.requires_grad
-
-    assert m_params["model_buffer"].requires_grad == False
+    assert not m_params["model_buffer"].requires_grad
 
 
 if __name__ == "__main__":
