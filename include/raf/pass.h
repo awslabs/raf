@@ -83,6 +83,13 @@ Pass FoldConstant();
 Pass LambdaLift();
 
 /*!
+ * \brief A pass that inlines global functions and erases the inlined functions
+ * from the module.
+ * \return The created pass.
+ */
+Pass FullInline();
+
+/*!
  * \brief A pass that is used for gradient operator input selection.
  * \return The created pass.
  */

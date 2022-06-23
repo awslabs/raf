@@ -352,6 +352,40 @@ class ConcretizeAddSubRewrite : public DFPatternRewrite {
 };
 
 /*!
+ * \brief Remove dropout when p=0
+ */
+class ConcretizeDropoutRewrite : public DFPatternRewrite {
+ public:
+  ConcretizeDropoutRewrite() {
+    in1_pat_ = IsWildcard();
+    in2_pat_ = IsWildcard();
+    op_pat_ = IsOp("raf.op._contrib_dropout") || IsOp("raf.op._contrib_dropout_dx");
+    pattern_ = op_pat_({in1_pat_, in2_pat_}) || op_pat_({in1_pat_, in2_pat_, IsWildcard()}) ||
+               op_pat_({in1_pat_, IsWildcard(), IsWildcard(), in2_pat_});
+  }
+
+  Expr Callback(const Expr& pre, const Expr& post,
+                const Map<DFPattern, Array<Expr>>& node_map) const override {
+    Op op = Downcast<Op>(node_map[op_pat_][0]);
+    static auto dropout_op = Op::Get("raf.op._contrib_dropout");
+    static auto dropout_dx_op = Op::Get("raf.op._contrib_dropout_dx");
+    // Remove dropout if the probability is 0
+    if (op == dropout_op && IsExpectedScalar(node_map[in2_pat_][0], 0)) {
+      return Tuple({node_map[in1_pat_][0], MakeConstant(ScalarValue::make(0)),
+                    MakeConstant(ScalarValue::make(0))});
+    }
+
+    if (op == dropout_dx_op && IsExpectedScalar(node_map[in2_pat_][0], 0)) {
+      return node_map[in1_pat_][0];
+    }
+    return post;
+  }
+
+ protected:
+  DFPattern in1_pat_, in2_pat_, op_pat_;
+};
+
+/*!
  * \brief Check whether the cast from lhs to rhs is reversible. A cast is reversible
  * if lhs can be casted to rhs and then casted back without significant truncation
  */
@@ -613,6 +647,7 @@ Expr SimplifyExpr(const Expr& expr, const IRModule& mod) {
   composer.AddRewrite<ConcretizeBroadcastToLikeRewrite>();
   composer.AddRewrite<ConcretizeMultiplyRewrite>();
   composer.AddRewrite<ConcretizeAddSubRewrite>();
+  composer.AddRewrite<ConcretizeDropoutRewrite>();
   auto ret = raf::ir::RAFRewritePatterns(composer.MakeCallbacks(), expr, mod);
 
   // Phase 2: Sequence patterns that may need to be applied iteratively.

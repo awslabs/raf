@@ -188,6 +188,8 @@ RAF_OP_GRAD("raf.op.less_equal", BinaryZeroGrad);
 RAF_OP_GRAD("raf.op.greater", BinaryZeroGrad);
 RAF_OP_GRAD("raf.op.greater_equal", BinaryZeroGrad);
 RAF_OP_GRAD("raf.op.logical_and", BinaryZeroGrad);
+RAF_OP_GRAD("raf.op.logical_or", BinaryZeroGrad);
+RAF_OP_GRAD("raf.op.logical_xor", BinaryZeroGrad);
 
 }  // namespace grad
 }  // namespace op

@@ -182,7 +182,8 @@ const std::unordered_map<int, RAFPatternGrouper::Group>& RAFPatternGrouper::Grou
 
   pattern_ = pattern;
   pattern_graph_ = CreateIndexedGraph(pattern_);
-  auto matcher = RAFDFPatternMatcher(pre);
+  std::unique_ptr<tvm::relay::IndexedGraph<Expr>> expr_graph = tvm::relay::CreateIndexedGraph(pre);
+  RAFDFPatternMatcher matcher(expr_graph.get());
   matcher_ = &matcher;
   this->VisitExprs();
   return this->groups_;
@@ -274,7 +275,8 @@ namespace ir {
 using namespace pass;
 
 bool RAFMatchPattern(DFPattern pattern, Expr expr) {
-  return RAFDFPatternMatcher(expr).Match(pattern, expr);
+  std::unique_ptr<tvm::relay::IndexedGraph<Expr>> expr_graph = tvm::relay::CreateIndexedGraph(expr);
+  return RAFDFPatternMatcher(expr_graph.get()).Match(pattern, expr);
 }
 
 Expr RAFRewritePatterns(Array<DFPatternCallback> callbacks, Expr expr, IRModule mod) {

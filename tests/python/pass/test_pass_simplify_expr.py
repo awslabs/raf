@@ -6,7 +6,13 @@ import pytest
 import raf
 from raf._core.ir_ext import extended_var
 from raf._core.ndarray import array
-from raf._ffi.pass_ import SimplifyExpr, ToGraphNormalForm, ToBasicBlockNormalForm, InferType
+from raf._ffi.pass_ import (
+    SimplifyExpr,
+    ToGraphNormalForm,
+    ToBasicBlockNormalForm,
+    InferType,
+    AutoDiff,
+)
 from raf.ir import RAFSequential, ScopeBuilder
 from raf.testing import randn
 
@@ -258,6 +264,35 @@ def test_add_sub():
         return InferType()(mod)["main"]
 
     assert tvm.ir.structural_equal(mod["main"], expected()), raf.ir.AsText(mod["main"])
+
+
+def test_dropout():
+    device = "cpu"
+    shape = (10, 5)
+    dropout_op = raf._op.sym._contrib_dropout
+
+    class Model(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x, y):
+            x = raf.multiply(x, x)
+            x = dropout_op(x, p=0)
+            x = raf.nll_loss(x[0], y)
+            return x
+
+    model = Model()
+    m_x, _ = randn(shape, device=device, dtype="float32")
+    m_x.requires_grad = True
+    m_y, _ = randn(shape, device=device, dtype="float32")
+    record = model._internal(m_x, m_y)
+    mod = record.mod
+    mod = AutoDiff(record.requires_grads)(InferType()(mod))
+    mod = simplify(mod, device)
+    mod = InferType()(mod)
+    text = raf.ir.AsText(mod["main"])
+    assert "raf.op._contrib_dropout" not in text, text
 
 
 if __name__ == "__main__":

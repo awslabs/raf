@@ -51,6 +51,7 @@ RAF_OP_TYPE("raf.op.rsqrt", "Identity", UnaryInfer);
 RAF_OP_TYPE("raf.op.atan", "Identity", UnaryInfer);
 RAF_OP_TYPE("raf.op.trunc", "Identity", UnaryInfer);
 RAF_OP_TYPE("raf.op.ndarray_size", "Identity", UnaryInfer);
+RAF_OP_TYPE("raf.op.reciprocal", "Identity", UnaryInfer);
 
 Type UnaryDxInfer(const CallValues& value) {
   const auto* args = value->args.as<UnaryDxArgs>();

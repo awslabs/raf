@@ -19,7 +19,8 @@ using namespace raf::ir;
 
 class RAFDFPatternMatcher : public tvm::relay::DFPatternMatcher {
  public:
-  explicit RAFDFPatternMatcher(const Expr& root_expr) : DFPatternMatcher(root_expr) {
+  explicit RAFDFPatternMatcher(const tvm::relay::IndexedGraph<Expr>* expr_graph)
+      : DFPatternMatcher(expr_graph) {
   }
 
  protected:

@@ -123,3 +123,18 @@ def gelu_dx_compute(attrs, inputs, output_type):
 
 
 _reg.register_injective_schedule("raf.op.tvm.gelu_dx")
+
+
+@register_compute("raf.op.tvm.reciprocal")
+def reciprocal_compute(attrs, inputs, output_type):
+    x = inputs[0]
+    return [
+        _tvm.te.compute(
+            x.shape,
+            lambda *idx: 1 / x[idx],
+            tag=_tvm.topi.tag.ELEMWISE,
+        )
+    ]
+
+
+_reg.register_injective_schedule("raf.op.tvm.reciprocal")

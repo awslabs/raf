@@ -232,6 +232,14 @@ set_target_properties(raf PROPERTIES
 )
 raf_target_add_sanitizer(raf)
 
+install(
+      DIRECTORY "include/."
+      DESTINATION "include"
+      FILES_MATCHING
+      PATTERN "*.h")
+install(TARGETS raf
+      LIBRARY DESTINATION lib)
+
 ################# Apps #################
 add_subdirectory(${PROJECT_SOURCE_DIR}/apps/include_raf/)
 
