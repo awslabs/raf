@@ -41,7 +41,6 @@ then
     echo set\(RAF_USE_CUTLASS ON\) >> config.cmake
 fi
 
-
 # Configure the project
 cmake ..
 # Finally let's trigger build
@@ -50,7 +49,6 @@ make -j$(nproc)
 # Install python dependencies
 pip install six numpy pytest cython decorator scipy tornado typed_ast mypy orderedset pydot \
              antlr4-python3-runtime attrs requests Pillow packaging psutil dataclasses pycparser
-
 
 # Run RAF
 export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/python

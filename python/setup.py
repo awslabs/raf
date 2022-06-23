@@ -77,6 +77,7 @@ def get_build_raf_version():
     raf_build_platform = os.getenv("RAF_BUILD_PLATFORM")
     version_file = open("./raf/version.txt", "r")
     version = version_file.readline()
+    raf_version = version
     if raf_build_version == "stable":
         raf_version = version + "+" + raf_build_platform
 
