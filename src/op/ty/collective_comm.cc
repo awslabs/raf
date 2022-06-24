@@ -37,6 +37,7 @@ Type IdentityType(const CallValues& value) {
 }
 
 RAF_OP_TYPE("raf.op._allreduce", "NCCLAllReduce", IdentityType<AllreduceArgs>);
+RAF_OP_TYPE("raf.op._alltoall", "NCCLAllToAll", IdentityType<AlltoallArgs>);
 RAF_OP_TYPE("raf.op._broadcast", "NCCLBroadcast", IdentityType<BroadcastArgs>);
 RAF_OP_TYPE("raf.op._reduce", "NCCLReduce", IdentityType<CommReduceArgs>);
 

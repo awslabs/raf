@@ -202,6 +202,33 @@ void Send(const CallValues& call) {
                                     /*shape=*/std::vector<int64_t>{});
 }
 
+void AllToAll(const CallValues& call) {
+  const auto* args = call->args.as<AlltoallArgs>();
+  CHECK(args != nullptr);
+  ir::Array<Value> ret;
+  auto& tv = args->x;
+  const DLTensor* x = tv[0];
+  call->device = x->device;
+  for (int i = 0; i < tv.size(); ++i) {
+    const DLTensor* x = tv[i];
+    std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+    ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
+                                        /*dtype=*/x->dtype,
+                                        /*shape=*/shape));
+  }
+  if (ret.size() == 0) {
+    call->callee = ir::NullValue<OpValue>();
+  } else if (ret.size() == 1) {
+    call->out = ret[0];
+  } else {
+    call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
+  }
+}
+
+RAF_OP_DECLARE("raf.op._alltoall", AllToAll)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TRAFCollective>("TRAFCollective", true);
+
 RAF_OP_DECLARE("raf.op._send", Send)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<TRAFCollective>("TRAFCollective", true);

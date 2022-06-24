@@ -653,6 +653,116 @@ def test_group_reduce_scatter(computation):
         check(m_out[0], n_out)
 
 
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
+def test_alltoall_with_tensor(dtype):
+    """Testing alltoall with a single tensor as input."""
+
+    class TestModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x):
+            x = raf.alltoall(x)
+            return x
+
+    if raf.build.with_nccl() < 20700:
+        pytest.skip("alltoall is not supported in NCCL < 2.7")
+
+    model = TestModel()
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
+    device = f"cuda({local_rank})"
+    # each src rank s sends a tensor with shape (2,4) and
+    # value (s * total_rank + d) to dst rank d
+    x_slices = []
+    for d in range(total_rank):
+        x_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (rank * total_rank + d))
+    x_np = np.concatenate(x_slices, axis=0)
+    x = raf.array(x_np, device=device)
+    model.to(device=device)
+    y = model(x)
+    if rank == 0:
+        print(f"{rank} - X: ", x)
+
+    vx = raf.array(x_np, device=device)
+    vy = run_vm_model(model, device, [vx])
+    check(y, vy)
+
+    target_y_slices = []
+    for s in range(total_rank):
+        target_y_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (s * total_rank + rank))
+    target_y = np.concatenate(target_y_slices, axis=0)
+    if rank == 0:
+        print(f"{rank} - Y: ", y)
+        print(f"{rank} - T: ", target_y)
+    check(y, target_y)
+
+
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
+def test_alltoall_with_tensor_list(dtype):
+    """Testing alltoall with a list of tensors as input."""
+
+    class TestModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x1, x2):
+            x = raf.alltoall([x1, x2])
+            return x
+
+    if raf.build.with_nccl() < 20700:
+        pytest.skip("alltoall is not supported in NCCL < 2.7")
+
+    model = TestModel()
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
+    device = f"cuda({local_rank})"
+    # each src rank s sends two tensors to dst rank d:
+    #   1. x1: with shape (2,4) and value (s * total_rank + d)
+    #   2. x2: with shape (4,4) and value (total_rank^2 + s * total_rank + d)
+    x1_slices = []
+    x2_slices = []
+    for d in range(total_rank):
+        x1_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (rank * total_rank + d))
+        x2_slices.append(
+            np.ones(shape=(4, 4), dtype=dtype) * (total_rank**2 + rank * total_rank + d)
+        )
+    x1_np = np.concatenate(x1_slices, axis=0)
+    x2_np = np.concatenate(x2_slices, axis=0)
+    x1 = raf.array(x1_np, device=device)
+    x2 = raf.array(x2_np, device=device)
+    model.to(device=device)
+    y1, y2 = model(x1, x2)
+    if rank == 0:
+        print(f"{rank} - X1: ", x1)
+        print(f"{rank} - X2: ", x2)
+
+    vx1 = raf.array(x1_np, device=device)
+    vx2 = raf.array(x2_np, device=device)
+    vy1, vy2 = run_vm_model(model, device, [vx1, vx2])
+    check(y1, vy1)
+    check(y2, vy2)
+
+    target_y1_slices = []
+    target_y2_slices = []
+    for s in range(total_rank):
+        target_y1_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (s * total_rank + rank))
+        target_y2_slices.append(
+            np.ones(shape=(4, 4), dtype=dtype) * (total_rank**2 + s * total_rank + rank)
+        )
+    target_y1 = np.concatenate(target_y1_slices, axis=0)
+    target_y2 = np.concatenate(target_y2_slices, axis=0)
+    if rank == 0:
+        print(f"{rank} - Y1: ", y1)
+        print(f"{rank} - Y2: ", y2)
+        print(f"{rank} - T1: ", target_y1)
+        print(f"{rank} - T2: ", target_y2)
+    check(y1, target_y1)
+    check(y2, target_y2)
+
+
 if __name__ == "__main__":
     if os.environ.get("RAF_FILE_STORE_PATH", None):
         dist.set_default_communicator("void")

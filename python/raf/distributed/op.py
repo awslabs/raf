@@ -193,6 +193,29 @@ def broadcast(x, root):
     return sym._broadcast(x, root)
 
 
+def alltoall(x):
+    """Performs an all-to-all communication across all ranks.
+
+    Parameters
+    ----------
+    x : Tensor | List[Tensor]
+        The tensor(s) to perform all-to-all on. The input tensor is evenly split
+        into n chunks at axis 0, and chunk[i] is sent to rank i. If the input is a
+        list of tensors, the result is equivalent to calling alltoall on each tensor
+        individually, but only one fused alltoall call will be launched.
+
+    Returns
+    -------
+    ret: Tensor | List[Tensor]
+        all-to-all results. The received tensors from each rank are concatenated at
+        axis 0 to form a single tensor (with the same size as input).
+    """
+    if not isinstance(x, (tuple, list)):
+        x = [x]
+
+    return sym._alltoall(x)
+
+
 def send(x, peer, token=None):
     """Send x to peer.
     This operation is blocking for GPU.
