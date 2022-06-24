@@ -42,7 +42,7 @@ def run_vm(dev, model_or_mod, args, use_multi_func=False):
 
 @pytest.mark.parametrize("device", get_testable_devices())
 def test_simple_convnet(device):
-    """ Simple convnet to test the multi-function flow """
+    """Simple convnet to test the multi-function flow"""
 
     ishape = (16, 16, 64, 64)
     pooled_ishape = (16, 16, 32, 32)
