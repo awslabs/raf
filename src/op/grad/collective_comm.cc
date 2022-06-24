@@ -1,5 +1,9 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /*!
- * Copyright (c) 2019 by Contributors
  * \file src/op/grad/collective_comm.cc
  * \brief Declaration of gradients
  */
