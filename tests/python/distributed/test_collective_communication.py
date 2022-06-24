@@ -727,7 +727,7 @@ def test_alltoall_with_tensor_list(dtype):
     for d in range(total_rank):
         x1_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (rank * total_rank + d))
         x2_slices.append(
-            np.ones(shape=(4, 4), dtype=dtype) * (total_rank**2 + rank * total_rank + d)
+            np.ones(shape=(4, 4), dtype=dtype) * (total_rank ** 2 + rank * total_rank + d)
         )
     x1_np = np.concatenate(x1_slices, axis=0)
     x2_np = np.concatenate(x2_slices, axis=0)
@@ -750,7 +750,7 @@ def test_alltoall_with_tensor_list(dtype):
     for s in range(total_rank):
         target_y1_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (s * total_rank + rank))
         target_y2_slices.append(
-            np.ones(shape=(4, 4), dtype=dtype) * (total_rank**2 + s * total_rank + rank)
+            np.ones(shape=(4, 4), dtype=dtype) * (total_rank ** 2 + s * total_rank + rank)
         )
     target_y1 = np.concatenate(target_y1_slices, axis=0)
     target_y2 = np.concatenate(target_y2_slices, axis=0)
