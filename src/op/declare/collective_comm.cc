@@ -128,10 +128,10 @@ void ReduceScatter(const CallValues& call) {
   CHECK_GE(tvs.size(), 1U);
   const DLTensor* x = tvs[0];
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  if (tvs.size()==1){
-  int size = GetGlobalCommunicator()->size;
-  CHECK(shape[0] % size == 0);
-  shape[0] = shape[0] / size;
+  if (tvs.size() == 1) {
+    int size = GetGlobalCommunicator()->size;
+    CHECK(shape[0] % size == 0);
+    shape[0] = shape[0] / size;
   } else {
     for (const auto& tv : tvs) {
       const DLTensor* x = tv;

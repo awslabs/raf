@@ -48,7 +48,7 @@ Type ReduceScatterInfer(const CallValues& value) {
   CHECK(args != nullptr);
   CHECK_GE(args->x.size(), 1U);
   const auto& ty = GetType(args->x[0]);
-  if (args->x.size() == 1){
+  if (args->x.size() == 1) {
     int size = GetGlobalCommunicator()->size;
     auto tpn = ty.as<TensorTypeNode>();
     auto shape = tpn->shape;
