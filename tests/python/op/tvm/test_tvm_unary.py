@@ -60,6 +60,7 @@ def verify_unify_op(m_op, m_arg, device, ref_fwd_out, m_dy=None, ref_grad=None):
         (np.zeros_like, raf._op.sym.zeros_like),
         (np.ones_like, raf._op.sym.ones_like),
         (np.trunc, raf._op.sym.trunc),
+        (np.reciprocal, raf._op.sym.reciprocal),
     ],
 )
 @pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
@@ -86,6 +87,7 @@ def test_common_unary_ops(ops, shape, dtype, device):
         (torch.atan, raf._op.sym.atan),
         (torch.trunc, raf._op.sym.trunc),
         (torch.tanh, raf._op.sym.tanh),
+        (torch.reciprocal, raf._op.sym.reciprocal),
     ],
 )
 @pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
@@ -109,6 +111,7 @@ def test_unary_ops_with_grad(ops, shape, dtype, device):
         (torch.exp, raf._op.sym.exp),
         (torch.trunc, raf._op.sym.trunc),
         (torch.nn.ReLU(), raf._op.sym.relu),
+        (torch.reciprocal, raf._op.sym.reciprocal),
     ],
 )
 def test_unary_fp16_ops_with_grad(ops):

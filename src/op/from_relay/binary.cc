@@ -41,6 +41,8 @@ RAF_GENERIC_ATTR_OP_FROM_RELAY("not_equal", "raf.op.not_equal");
 RAF_GENERIC_ATTR_OP_FROM_RELAY("maximum", "raf.op.maximum");
 RAF_GENERIC_ATTR_OP_FROM_RELAY("minimum", "raf.op.minimum");
 RAF_GENERIC_ATTR_OP_FROM_RELAY("logical_and", "raf.op.logical_and");
+RAF_GENERIC_ATTR_OP_FROM_RELAY("logical_or", "raf.op.logical_or");
+RAF_GENERIC_ATTR_OP_FROM_RELAY("logical_xor", "raf.op.logical_xor");
 
 }  // namespace from_relay
 }  // namespace op

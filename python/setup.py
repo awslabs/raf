@@ -19,6 +19,7 @@ else:
     from setuptools.extension import Extension
 
 SCRIPT_DIR = os.path.dirname(__file__)
+CONDA_BUILD = os.getenv("CONDA_BUILD") is not None
 
 
 def get_env_flag(name, default=""):
@@ -63,7 +64,11 @@ def get_build_version():
 
 
 LIB_LIST = get_lib_path()
-__version__ = get_build_version()
+
+# FIXME: commented out _version_ because subprocess.CalledProcessError: Command '['git', 'rev-parse', '--short', 'HEAD']' returned non-zero exit status 128.
+# __version__ = get_build_version()
+
+__version__ = "0.1"
 
 
 class BinaryDistribution(Distribution):
@@ -91,7 +96,10 @@ if wheel_include_libs:
             if os.path.normpath(path) != os.path.normpath(
                 os.path.join(SCRIPT_DIR, "raf/libraf.so")
             ):
-                shutil.copy(path, os.path.join(SCRIPT_DIR, "raf"))
+                try:
+                    shutil.copy(path, os.path.join(SCRIPT_DIR, "raf"))
+                except shutil.SameFileError:
+                    pass
             _, libname = os.path.split(path)
             fo.write("include raf/%s\n" % libname)
     setup_kwargs = {"include_package_data": True}
@@ -106,15 +114,14 @@ if include_libs:
 os.makedirs(os.path.join(SCRIPT_DIR, "../build/private/raf/version"), exist_ok=True)
 with open(os.path.join(SCRIPT_DIR, "../build/private/raf/version/__init__.py"), "w") as fd:
     fd.write("__version__ = '" + __version__ + "'")
-setup_kwargs["package_dir"] = {
-    "raf.version": os.path.join(SCRIPT_DIR, "../build/private/raf/version")
-}
+setup_kwargs["package_dir"] = {"raf.version": "../build/private/raf/version"}
 # End local change
 
 setup(
     name="raf",
     version=__version__,
-    description="RAF Accelerates deep learning Frameworks",
+    license="Apache",
+    description="RAF Accelerates Deep Learning Frameworks",
     zip_safe=False,
     install_requires=[
         "tvm",

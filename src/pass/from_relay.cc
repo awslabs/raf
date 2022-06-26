@@ -97,22 +97,7 @@ struct CompositeGelu : RelayPattern {
  public:
   CompositeGelu() {
     // Match Patterns
-    DFPattern x_float64 = IsWildcard().HasDtype(DataType::Float(64));
-    auto gelu_float64 = IsOp("multiply")({IsFloatExpr(64, 1 / sqrt(2)), x_float64});
-    gelu_float64 = IsOp("erf")({gelu_float64});
-    gelu_float64 = IsOp("multiply")({IsFloatExpr(64, 0.5), gelu_float64});
-    gelu_float64 = IsOp("add")({IsFloatExpr(64, 0.5), gelu_float64});
-    gelu_float64 = IsOp("multiply")({x_float64, gelu_float64});
-
-    DFPattern x_float32 = IsWildcard().HasDtype(DataType::Float(32));
-    auto gelu_float32 = IsOp("multiply")({IsFloatExpr(32, 1 / sqrt(2)), x_float32});
-    gelu_float32 = IsOp("erf")({gelu_float32});
-    gelu_float32 = IsOp("multiply")({IsFloatExpr(32, 0.5), gelu_float32});
-    gelu_float32 = IsOp("add")({IsFloatExpr(32, 0.5), gelu_float32});
-    gelu_float32 = IsOp("multiply")({x_float32, gelu_float32});
-
-    // Match Patterns
-    this->pattern = gelu_float64 || gelu_float32;
+    this->pattern = GetGeluPattern(64) || GetGeluPattern(32) || GetGeluPattern(16);
 
     // Checker always returns true
     this->check = PackedFunc([](TVMArgs args, TVMRetValue* rv) { *rv = true; });
@@ -125,11 +110,22 @@ struct CompositeGelu : RelayPattern {
 
  private:
   inline DFPattern IsFloatExpr(int bits, double value) {
-    if (bits == 32) {
-      return IsExpr(tvm::relay::MakeConstantScalar(DataType::Float(32), static_cast<float>(value)));
+    if (bits == 32 || bits == 16) {
+      return IsExpr(
+          tvm::relay::MakeConstantScalar(DataType::Float(bits), static_cast<float>(value)));
     }
     CHECK_EQ(bits, 64);
     return IsExpr(tvm::relay::MakeConstantScalar(DataType::Float(64), value));
+  }
+
+  inline DFPattern GetGeluPattern(int bits) {
+    DFPattern x = IsWildcard().HasDtype(DataType::Float(bits));
+    auto gelu = IsOp("multiply")({IsFloatExpr(bits, 1 / sqrt(2)), x});
+    gelu = IsOp("erf")({gelu});
+    gelu = IsOp("multiply")({IsFloatExpr(bits, 0.5), gelu});
+    gelu = IsOp("add")({IsFloatExpr(bits, 0.5), gelu});
+    gelu = IsOp("multiply")({x, gelu});
+    return gelu;
   }
 };
 

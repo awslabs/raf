@@ -123,6 +123,7 @@ RAF_OP_DECLARE("raf.op.sqrt", Unary);
 RAF_OP_DECLARE("raf.op.atan", Unary);
 RAF_OP_DECLARE("raf.op.zeros_like", Unary);
 RAF_OP_DECLARE("raf.op.ones_like", Unary);
+RAF_OP_DECLARE("raf.op.reciprocal", Unary);
 
 RAF_OP_DECLARE("raf.op.trunc", [](const CallValues& call) {
   const auto* args = call->args.as<UnaryArgs>();

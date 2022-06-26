@@ -12,15 +12,124 @@
 #include "raf/registry.h"
 #include "raf/pass.h"
 
-#include "../3rdparty/tvm/src/relay/ir/indexed_graph.h"
-
 namespace raf {
 namespace pass {
+
+namespace dataflow_graph {
+
+class DataflowGraph {
+ public:
+  /*! \brief A Node that wraps the input type and represents the indexed graph and dominator tree */
+  struct Node {
+    /*! \brief Node Constructor
+     *  \param ref The input graph node
+     *  \param index The index of the node in toplogical order
+     */
+    Node(const Expr& ref, const size_t index) : ref_(ref), index_(index) {
+    }
+
+    /*! \brief The input node */
+    const Expr ref_;
+    /*! \brief The topological order index */
+    const size_t index_;
+
+    /*! \brief A boolean to determine if this node is external to the graph */
+    bool is_external_ = false;
+    /*! \brief The forward inputs of the node */
+    std::vector<Node*> inputs_;
+    /*! \brief The forward outputs/users of the node */
+    std::vector<Node*> outputs_;
+
+    /*! \brief The depth of the node in the dominator tree */
+    size_t depth_ = 0;
+    /*! \brief The dominator parent/final user of the outputs of this node */
+    Node* dominator_parent_;
+    /*! \brief The nodes this node dominates */
+    std::vector<Node*> dominator_children_;
+
+    bool Dominates(const Node* other) {
+      std::stack<const Node*> stack;
+      std::unordered_set<const Node*> visited;
+      stack.push(this);
+      while (!stack.empty()) {
+        const Node* current = stack.top();
+        stack.pop();
+        for (auto node : current->dominator_children_) {
+          if (visited.count(node) == 0) {
+            if (other == node) {
+              return true;
+            } else {
+              stack.push(node);
+            }
+            visited.insert(node);
+          }
+        }
+      }
+      return false;
+    }
+  };
+  /*! \brief Construct the domination tree inside IndexedGraph */
+  void PostDom() {
+    for (size_t i = topological_order_.size(); i != 0; --i) {
+      size_t index = i - 1;
+      auto* current = topological_order_[index].get();
+      if (current->is_external_) {
+        current->depth_ = 1;
+        current->dominator_parent_ = nullptr;
+      } else {
+        auto parent = LeastCommonAncestor(current->outputs_);
+        current->depth_ = parent ? parent->depth_ + 1 : 1;
+        current->dominator_parent_ = parent;
+        parent->dominator_children_.push_back(current);
+      }
+    }
+  }
+  /*! \brief Map of input nodes to IndexedGraph Nodes */
+  std::unordered_map<Expr, std::shared_ptr<Node>, ObjectPtrHash, ObjectPtrEqual> node_map_;
+  /*! \brief Topological IndexedGraph Nodes */
+  std::vector<std::shared_ptr<Node>> topological_order_;
+
+ protected:
+  /*! \brief Find the least common ancestor of all outputs of a node */
+  Node* LeastCommonAncestor(const std::vector<Node*>& outputs) {
+    if (outputs.size() == 0) {
+      return nullptr;
+    }
+    auto parent = outputs.at(0);
+    for (size_t i = 1; i < outputs.size(); ++i) {
+      parent = LeastCommonAncestor(parent, outputs.at(i));
+    }
+    return parent;
+  }
+
+  /*! \brief Find the least common ancestor of two nodes */
+  Node* LeastCommonAncestor(Node* lhs, Node* rhs) {
+    if (lhs == nullptr || rhs == nullptr) {
+      return nullptr;
+    }
+    while (lhs != rhs) {
+      ICHECK(lhs);
+      ICHECK(rhs);
+      if (lhs->depth_ < rhs->depth_) {
+        rhs = rhs->dominator_parent_;
+      } else if (lhs->depth_ > rhs->depth_) {
+        lhs = lhs->dominator_parent_;
+      } else {
+        rhs = rhs->dominator_parent_;
+        lhs = lhs->dominator_parent_;
+      }
+    }
+    return lhs;
+  }
+};
+
+}  // namespace dataflow_graph
+
 namespace deduplicate {
 
 using namespace raf::ir;
 
-using DataflowGraph = tvm::relay::IndexedGraph<Expr>;
+using DataflowGraph = pass::dataflow_graph::DataflowGraph;
 using Node = DataflowGraph::Node;
 using Nodes = std::vector<Node*>;
 using DomMask = std::vector<int>;
