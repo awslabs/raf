@@ -64,7 +64,6 @@ def get_build_version():
 
 
 LIB_LIST = get_lib_path()
-
 git_version = get_build_version()
 
 
@@ -76,12 +75,10 @@ def get_build_raf_version():
         raf_version = version
         if raf_build_version == "stable":
             raf_version = version + "+" + raf_build_platform
-
         elif raf_build_version == "nightly":
             version = inc_minor(version)
             today = date.today().strftime("%Y%m%d")
             raf_version = version + ".dev" + str(today) + "+" + raf_build_platform
-
         elif raf_build_version == "dev":
             version = inc_minor(version)
             raf_version = version + git_version + "+" + raf_build_platform
@@ -92,8 +89,8 @@ def get_build_raf_version():
 
 def inc_minor(version):
     split_version = version.split(".")
-    inc_version = int(split_version[1]) + 1
-    next_version = split_version[0] + "." + str(inc_version)
+    inc_version = int(split_version[-1]) + 1
+    next_version = ".".join(split_version[:-1]) + "." + str(inc_version)
     return next_version
 
 

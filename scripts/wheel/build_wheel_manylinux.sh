@@ -25,26 +25,20 @@ echo set\(RAF_USE_SANITIZER OFF\) >> config.cmake
 echo set\(RAF_USE_MPI OFF\) >> config.cmake
 echo set\(RAF_USE_NCCL OFF\) >> config.cmake
 
-# Set environment variables to specify the version and platform to build RAF
-# RAF_BUILD_VERSION. Option: [stable/nightly/dev]
-export RAF_BUILD_VERSION=
-
-# RAF_BUILD_PLATFORM. Option: [cpu/cu113]
-export RAF_BUILD_PLATFORM=
-
+# Set environment variables for the version and platform to build RAF
 # Check if environment variables are set, else set default
+# RAF_BUILD_VERSION. Option: [stable/nightly/dev]
 if [ -z "$RAF_BUILD_VERSION" ]
 then
-    echo "Setting default RAF_BUILD_VERSION=dev"
     export RAF_BUILD_VERSION=dev
 fi 
-
+# RAF_BUILD_PLATFORM. Option: [cpu/cu113]
 if [ -z "$RAF_BUILD_PLATFORM" ]
 then
-    echo "Setting default RAF_BUILD_PLATFORM=cu113"
     export RAF_BUILD_PLATFORM=cu113
 fi
-
+echo "Setting RAF_BUILD_VERSION="$RAF_BUILD_VERSION
+echo "Setting RAF_BUILD_PLATFORM="$RAF_BUILD_PLATFORM
 if [ $RAF_BUILD_PLATFORM = "cu113" ]
 then
     echo set\(RAF_USE_CUDA ON\) >> config.cmake
