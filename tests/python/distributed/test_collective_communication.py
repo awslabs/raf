@@ -696,8 +696,8 @@ def test_reduce_scatter_single_tensor(computation):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-def test_alltoall_with_tensor(dtype):
-    """Testing alltoall with a single tensor as input."""
+def test_all_to_all_with_tensor(dtype):
+    """Testing all_to_all with a single tensor as input."""
 
     class TestModel(raf.Model):
         def build(self):
@@ -705,11 +705,11 @@ def test_alltoall_with_tensor(dtype):
 
         @raf.model.trace
         def forward(self, x):
-            x = raf.alltoall(x)
+            x = raf.all_to_all(x)
             return x
 
     if raf.build.with_nccl() < 20700:
-        pytest.skip("alltoall is not supported in NCCL < 2.7")
+        pytest.skip("all_to_all is not supported in NCCL < 2.7")
 
     model = TestModel()
     total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
@@ -742,8 +742,8 @@ def test_alltoall_with_tensor(dtype):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-def test_alltoall_with_tensor_list(dtype):
-    """Testing alltoall with a list of tensors as input."""
+def test_all_to_all_with_tensor_list(dtype):
+    """Testing all_to_all with a list of tensors as input."""
 
     class TestModel(raf.Model):
         def build(self):
@@ -751,11 +751,11 @@ def test_alltoall_with_tensor_list(dtype):
 
         @raf.model.trace
         def forward(self, x1, x2):
-            x = raf.alltoall([x1, x2])
+            x = raf.all_to_all([x1, x2])
             return x
 
     if raf.build.with_nccl() < 20700:
-        pytest.skip("alltoall is not supported in NCCL < 2.7")
+        pytest.skip("all_to_all is not supported in NCCL < 2.7")
 
     model = TestModel()
     total_rank, rank, local_rank = get_dist_comm_info(verbose=True)

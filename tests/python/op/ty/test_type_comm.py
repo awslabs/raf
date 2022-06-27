@@ -81,8 +81,8 @@ def test_allreduce_with_tensor_list(computation):
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
-def test_alltoall_with_tensor():
-    print("Testing alltoall with a single tensor as input.")
+def test_all_to_all_with_tensor():
+    print("Testing all_to_all with a single tensor as input.")
 
     class TestModel(raf.Model):
         def build(self):
@@ -90,7 +90,7 @@ def test_alltoall_with_tensor():
 
         @raf.model.trace
         def forward(self, x):
-            x = raf.alltoall(x)
+            x = raf.all_to_all(x)
             return x
 
     shape = (4, 4)
@@ -109,8 +109,8 @@ def test_alltoall_with_tensor():
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
-def test_alltoall_with_tensor_list():
-    print("Testing alltoall with a list of tensors as input.")
+def test_all_to_all_with_tensor_list():
+    print("Testing all_to_all with a list of tensors as input.")
 
     class TestModel(raf.Model):
         def build(self):
@@ -118,7 +118,7 @@ def test_alltoall_with_tensor_list():
 
         @raf.model.trace
         def forward(self, x1, x2):
-            x = raf.alltoall([x1, x2])
+            x = raf.all_to_all([x1, x2])
             return x
 
     shape1 = (4, 4)

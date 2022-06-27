@@ -739,7 +739,7 @@ SCHEMAS = {
         Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
         Arg(name="root", cxx_type="int"),
     ],
-    "communication.h::alltoall": [
+    "communication.h::all_to_all": [
         Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
     ],
     "communication.h::send": [

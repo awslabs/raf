@@ -193,7 +193,7 @@ def broadcast(x, root):
     return sym._broadcast(x, root)
 
 
-def alltoall(x):
+def all_to_all(x):
     """Performs an all-to-all communication across all ranks.
 
     Parameters
@@ -201,8 +201,8 @@ def alltoall(x):
     x : Tensor | List[Tensor]
         The tensor(s) to perform all-to-all on. The input tensor is evenly split
         into n chunks at axis 0, and chunk[i] is sent to rank i. If the input is a
-        list of tensors, the result is equivalent to calling alltoall on each tensor
-        individually, but only one fused alltoall call will be launched.
+        list of tensors, the result is equivalent to calling all-to-all on each tensor
+        individually, but only one fused all-to-all call will be launched.
 
     Returns
     -------
@@ -213,7 +213,7 @@ def alltoall(x):
     if not isinstance(x, (tuple, list)):
         x = [x]
 
-    return sym._alltoall(x)
+    return sym._all_to_all(x)
 
 
 def send(x, peer, token=None):

@@ -209,7 +209,7 @@ void Send(const CallValues& call) {
 }
 
 void AllToAll(const CallValues& call) {
-  const auto* args = call->args.as<AlltoallArgs>();
+  const auto* args = call->args.as<AllToAllArgs>();
   CHECK(args != nullptr);
   ir::Array<Value> ret;
   auto& tv = args->x;
@@ -231,7 +231,7 @@ void AllToAll(const CallValues& call) {
   }
 }
 
-RAF_OP_DECLARE("raf.op._alltoall", AllToAll)
+RAF_OP_DECLARE("raf.op._all_to_all", AllToAll)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<TRAFCollective>("TRAFCollective", true);
 

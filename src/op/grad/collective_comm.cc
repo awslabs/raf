@@ -19,7 +19,7 @@ using namespace raf::ir;
 
 Array<Expr> AllToAllGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
                          const Expr& dy) {
-  static auto op_all_to_all = Op::Get("raf.op._alltoall");
+  static auto op_all_to_all = Op::Get("raf.op._all_to_all");
   if (orig_args[0]->checked_type_.defined()) {
     auto orig_arg_tt = Downcast<TupleType>(orig_args[0]->checked_type());
     if (orig_arg_tt->fields.size() == 1) {
@@ -33,7 +33,7 @@ Array<Expr> AllToAllGrad(const Expr& orig_call, const Array<Expr> orig_args, con
   }
 }
 
-RAF_OP_GRAD("raf.op._alltoall", AllToAllGrad);
+RAF_OP_GRAD("raf.op._all_to_all", AllToAllGrad);
 
 }  // namespace grad
 }  // namespace op

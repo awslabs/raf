@@ -515,12 +515,12 @@ class NCCLAllToAll : public raf::op::OpEnv {
   std::vector<size_t> tuple_sizes;
 
   explicit NCCLAllToAll(const CallValues& cv) {
-    auto op = ir::Op::Get("raf.op._alltoall");
+    auto op = ir::Op::Get("raf.op._all_to_all");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator, "nccl", NullValue<Value>());
-    auto args = cv->args.as<raf::op::schema::AlltoallArgs>();
+    auto args = cv->args.as<raf::op::schema::AllToAllArgs>();
     auto& tv = args->x;
     for (int i = 0; i < tv.size(); ++i) {
       DLTensor* x = tv[i];
@@ -543,11 +543,11 @@ class NCCLAllToAll : public raf::op::OpEnv {
   }
 
   std::string name() const override {
-    return TruncateName(GetUniqueName("raf.op.nccl._alltoall"));
+    return TruncateName(GetUniqueName("raf.op.nccl._all_to_all"));
   }
 
   void Execute(const CallValues& cv) override {
-    auto args = cv->args.as<raf::op::schema::AlltoallArgs>();
+    auto args = cv->args.as<raf::op::schema::AllToAllArgs>();
     Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
   }
 
@@ -646,8 +646,8 @@ class NCCLAllToAll : public raf::op::OpEnv {
   }
 };
 
-RAF_REGISTER_DIALECT_OP(nccl, _alltoall, 10);
-RAF_OP_ENV_MAKER("raf.op.nccl._alltoall", NCCLAllToAll::make);
+RAF_REGISTER_DIALECT_OP(nccl, _all_to_all, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._all_to_all", NCCLAllToAll::make);
 
 class NCCLSend : public NCCLOpEnv {
   int peer;
