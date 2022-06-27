@@ -59,56 +59,57 @@ def get_build_version():
         .decode("ascii")
         .strip()
     )
-    version = os.getenv("RAF_VERSION", default="0.1")
-    if not get_env_flag("RELEASE_VERSION", default="0"):
-        # version += "+git" + git_sha
-        version = "+git" + git_sha
+    version = "+git" + git_sha
     return version
 
 
 LIB_LIST = get_lib_path()
 
-# __version__ = get_build_version()
 git_version = get_build_version()
 
 
 def get_build_raf_version():
-    raf_build_version = os.getenv("RAF_BUILD_VERSION")
-    raf_build_platform = os.getenv("RAF_BUILD_PLATFORM")
-    version_file = open("./raf/version.txt", "r")
-    version = version_file.readline()
-    raf_version = version
-    if raf_build_version == "stable":
-        raf_version = version + "+" + raf_build_platform
+    raf_build_version = os.getenv("RAF_BUILD_VERSION", default="dev")
+    raf_build_platform = os.getenv("RAF_BUILD_PLATFORM", default="cu113")
+    with open("./raf/version.txt", "r") as version_file:
+        version = version_file.readline()
+        raf_version = version
+        if raf_build_version == "stable":
+            raf_version = version + "+" + raf_build_platform
 
-    if raf_build_version == "nightly":
-        version = float(version)
-        version += 0.1
-        today = date.today().strftime("%Y%m%d")
-        raf_version = str(version) + ".dev" + str(today) + "+" + raf_build_platform
+        elif raf_build_version == "nightly":
+            version = inc_minor(version)
+            today = date.today().strftime("%Y%m%d")
+            raf_version = version + ".dev" + str(today) + "+" + raf_build_platform
 
-    if raf_build_version == "dev":
-        version = float(version)
-        version += 0.1
-        raf_version = str(version) + git_version + "+" + raf_build_platform
-    version_file.close()
-    return raf_version
+        elif raf_build_version == "dev":
+            version = inc_minor(version)
+            raf_version = version + git_version + "+" + raf_build_platform
+        else:
+            raise ValueError("Unsupported RAF build version: " % raf_build_version)
+        return raf_version
+
+
+def inc_minor(version):
+    split_version = version.split(".")
+    inc_version = int(split_version[1]) + 1
+    next_version = split_version[0] + "." + str(inc_version)
+    return next_version
 
 
 __version__ = get_build_raf_version()
 
-version_file = open("./raf/version.py", "w")
-version_file.write(
-    '"""Auto-generated. Do not touch."""'
-    + "\n"
-    + "__version__ = "
-    + __version__
-    + "\n"
-    + "__gitrev__ = "
-    + git_version
-    + "\n"
-)
-version_file.close()
+with open("./raf/version.py", "w") as version_file:
+    version_file.write(
+        '"""Auto-generated. Do not touch."""'
+        + "\n"
+        + "__version__ = "
+        + __version__
+        + "\n"
+        + "__gitrev__ = "
+        + git_version
+        + "\n"
+    )
 
 
 class BinaryDistribution(Distribution):

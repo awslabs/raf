@@ -27,10 +27,23 @@ echo set\(RAF_USE_NCCL OFF\) >> config.cmake
 
 # Set environment variables to specify the version and platform to build RAF
 # RAF_BUILD_VERSION. Option: [stable/nightly/dev]
-export RAF_BUILD_VERSION=dev
+export RAF_BUILD_VERSION=
 
 # RAF_BUILD_PLATFORM. Option: [cpu/cu113]
-export RAF_BUILD_PLATFORM=cu113
+export RAF_BUILD_PLATFORM=
+
+# Check if environment variables are set, else set default
+if [ -z "$RAF_BUILD_VERSION" ]
+then
+    echo "Setting default RAF_BUILD_VERSION=dev"
+    export RAF_BUILD_VERSION=dev
+fi 
+
+if [ -z "$RAF_BUILD_PLATFORM" ]
+then
+    echo "Setting default RAF_BUILD_PLATFORM=cu113"
+    export RAF_BUILD_PLATFORM=cu113
+fi
 
 if [ $RAF_BUILD_PLATFORM = "cu113" ]
 then
