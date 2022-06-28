@@ -465,6 +465,7 @@ def test_fuse_closure():
     mod = InferType()(mod)
     mod = ManifestAlloc()(mod)
 
+    # pylint: disable=line-too-long
     # def @main(%p0: Tensor[(5, 5), float32],
     #           %p1: Tensor[(5, 5), float32],
     #           %p2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
@@ -487,6 +488,7 @@ def test_fuse_closure():
     #   let %x3 = %x_9;
     #   %x3
     # }
+    # pylint: enable=line-too-long
     expected = {
         "n_3": {},
         "x_0": {"param_0", "param_1", "param_2"},
