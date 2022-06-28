@@ -273,8 +273,8 @@ class ManifestAllocMutator : public ExprMutator {
   std::vector<Expr> DynamicInvoke(LetList* scope, const Var& bind_var, const Expr& op,
                                   const Array<Expr>& new_args,
                                   const std::vector<TensorType>& out_types, const Device& device) {
-    auto ins = scope->Push(Tuple(new_args));
     auto op_var = scope->Push(op);
+    auto ins = scope->Push(Tuple(new_args));
     auto infer_type = Call(Op::Get("raf.op.vm.infer_type"), Array<Expr>{op_var, ins});
     auto out_type_exprs = scope->Push(infer_type);
     std::vector<Expr> outs;
@@ -317,6 +317,16 @@ class ManifestAllocMutator : public ExprMutator {
   std::vector<Expr> StaticInvoke(LetList* scope, const Var& bind_var, const Expr& op,
                                  const Array<Expr>& new_args,
                                  const std::vector<TensorType>& out_types, const Device& device) {
+    auto op_var = scope->Push(op);
+    auto ins = scope->Push(Tuple(new_args));
+    if (op->IsInstance<FunctionNode>() &&
+        std::any_of(new_args.begin(), new_args.end(),
+                    [](Expr expr) { return tvm::relay::IsDynamic(expr->checked_type()); })) {
+      // for a fused func, if there are dynamic inputs, emit `infer_type`
+      auto infer_type = Call(Op::Get("raf.op.vm.infer_type"), Array<Expr>{op_var, ins});
+      auto out_type_exprs = scope->Push(infer_type);
+      op_var = scope->Push(TupleGetItem(out_type_exprs, 0));
+    }
     std::vector<Expr> outs;
     auto it = inplace_.var_share_map.find(bind_var);
     if (it != inplace_.var_share_map.end()) {
@@ -337,8 +347,7 @@ class ManifestAllocMutator : public ExprMutator {
       }
     }
     auto invoke = Call(Op::Get("raf.op.vm.invoke_op"),
-                       Array<Expr>{scope->Push(op), scope->Push(Tuple(new_args)),
-                                   scope->Push(Tuple(Array<Expr>(outs)))});
+                       Array<Expr>{op_var, ins, scope->Push(Tuple(Array<Expr>(outs)))});
     scope->Push(invoke);
     return outs;
   }
