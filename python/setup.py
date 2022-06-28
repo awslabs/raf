@@ -10,6 +10,8 @@ import sys
 from setuptools import find_packages
 from setuptools.dist import Distribution
 
+from datetime import date
+
 # need to use distutils.core for correct placement of cython dll
 if "--inplace" in sys.argv:
     from distutils.core import setup
@@ -57,18 +59,54 @@ def get_build_version():
         .decode("ascii")
         .strip()
     )
-    version = os.getenv("RAF_VERSION", default="0.1")
-    if not get_env_flag("RELEASE_VERSION", default="0"):
-        version += "+git" + git_sha
+    version = "+git" + git_sha
     return version
 
 
 LIB_LIST = get_lib_path()
+git_version = get_build_version()
 
-# FIXME: commented out _version_ because subprocess.CalledProcessError: Command '['git', 'rev-parse', '--short', 'HEAD']' returned non-zero exit status 128.
-# __version__ = get_build_version()
 
-__version__ = "0.1"
+def get_build_raf_version():
+    raf_build_version = os.getenv("RAF_BUILD_VERSION", default="dev")
+    raf_build_platform = os.getenv("RAF_BUILD_PLATFORM", default="cu113")
+    with open("./raf/version.txt", "r") as version_file:
+        version = version_file.readline()
+        raf_version = version
+        if raf_build_version == "stable":
+            raf_version = version + "+" + raf_build_platform
+        elif raf_build_version == "nightly":
+            version = inc_minor(version)
+            today = date.today().strftime("%Y%m%d")
+            raf_version = version + ".dev" + str(today) + "+" + raf_build_platform
+        elif raf_build_version == "dev":
+            version = inc_minor(version)
+            raf_version = version + git_version + "+" + raf_build_platform
+        else:
+            raise ValueError("Unsupported RAF build version: " % raf_build_version)
+        return raf_version
+
+
+def inc_minor(version):
+    split_version = version.split(".")
+    inc_version = int(split_version[-1]) + 1
+    next_version = ".".join(split_version[:-1]) + "." + str(inc_version)
+    return next_version
+
+
+__version__ = get_build_raf_version()
+
+with open("./raf/version.py", "w") as version_file:
+    version_file.write(
+        '"""Auto-generated. Do not touch."""'
+        + "\n"
+        + "__version__ = "
+        + __version__
+        + "\n"
+        + "__gitrev__ = "
+        + git_version
+        + "\n"
+    )
 
 
 class BinaryDistribution(Distribution):
