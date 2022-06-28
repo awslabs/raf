@@ -359,56 +359,50 @@ def test_after_manifest_alloc():
     # def @main(%param_0: Tensor[(5, 5), float32],
     #           %param_1: Tensor[(5, 5), float32],
     #           %param_2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
-    #   let %x_0 = nullptr /* ty=() */;
-    #   let %x_1 = nullptr /* ty=() */;
-    #   let %x_2 = raf.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_3 = raf.op.vm.alloc_tensor(%x_2, [5, 5], str"float32", [5, 5]);
-    #   let %x_4 = raf.op.add;
-    #   let %x_5 = (%param_0, %param_0, %x_0, %x_1);
-    #   let %x_6 = (%x_3,);
-    #   let %x_7 = raf.op.vm.invoke_op(%x_4, %x_5, %x_6);
-    #   let %a1 = %x_3;
-    #   let %x_8 = nullptr /* ty=() */;
-    #   let %x_9 = nullptr /* ty=() */;
-    #   let %x_10 = raf.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_11 = raf.op.vm.alloc_tensor(%x_10, [5, 5], str"float32", [5, 5]);
-    #   let %x_12 = raf.op.add;
-    #   let %x_13 = (%a1, %param_1, %x_8, %x_9);
-    #   let %x_14 = (%x_11,);
-    #   let %x_15 = raf.op.vm.invoke_op(%x_12, %x_13, %x_14);
-    #   let %a2 = %x_11;
-    #   let %x_16 = nullptr /* ty=() */;
-    #   let %x_17 = nullptr /* ty=() */;
-    #   let %x_18 = raf.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_19 = raf.op.vm.alloc_tensor(%x_18, [5, 5], str"float32", [5, 5]);
-    #   let %x_20 = raf.op.add;
-    #   let %x_21 = (%a2, %param_2, %x_16, %x_17);
-    #   let %x_22 = (%x_19,);
-    #   let %x_23 = raf.op.vm.invoke_op(%x_20, %x_21, %x_22);
-    #   let %a3 = %x_19;
+    #   let %x_2 = raf.op.add;
+    #   let %x_3 = (%param_0, %param_0, nullptr, nullptr);
+    #   let %x_4 = raf.op.vm.alloc_storage(int64(100), int64(128), int32(1), int32(0), str"float32") /* ty=float32 */;
+    #   let %x_5 = raf.op.vm.alloc_tensor(%x_4, [5, 5], str"float32", [5, 5]) /* ty=Tensor[(5, 5), float32] */;
+    #   let %x_6 = (%x_5,);
+    #   let %x_7 = raf.op.vm.invoke_op(%x_2, %x_3, %x_6) /* ty=() */;
+    #   let %a1 = %x_5;
+    #   let %x_10 = raf.op.add;
+    #   let %x_11 = (%a1, %param_1, nullptr, nullptr);
+    #   let %x_12 = raf.op.vm.alloc_storage(int64(100), int64(128), int32(1), int32(0), str"float32") /* ty=float32 */;
+    #   let %x_13 = raf.op.vm.alloc_tensor(%x_12, [5, 5], str"float32", [5, 5]) /* ty=Tensor[(5, 5), float32] */;
+    #   let %x_14 = (%x_13,);
+    #   let %x_15 = raf.op.vm.invoke_op(%x_10, %x_11, %x_14) /* ty=() */;
+    #   let %a2 = %x_13;
+    #   let %x_18 = raf.op.add;
+    #   let %x_19 = (%a2, %param_2, nullptr, nullptr);
+    #   let %x_20 = raf.op.vm.alloc_storage(int64(100), int64(128), int32(1), int32(0), str"float32") /* ty=float32 */;
+    #   let %x_21 = raf.op.vm.alloc_tensor(%x_20, [5, 5], str"float32", [5, 5]) /* ty=Tensor[(5, 5), float32] */;
+    #   let %x_22 = (%x_21,);
+    #   let %x_23 = raf.op.vm.invoke_op(%x_18, %x_19, %x_22) /* ty=() */;
+    #   let %a3 = %x_21;
     #   %a3
     # }
     # pylint: enable=line-too-long
 
     expected = {
         "x_2": {"param_0", "param_1", "param_2"},
-        "x_3": {"param_0", "param_1", "param_2", "t_0"},
-        "x_4": {"param_0", "param_1", "t_1", "param_2"},
-        "x_5": {"param_0", "param_1", "t_1", "param_2"},
+        "x_3": {"param_0", "param_1", "param_2"},
+        "x_4": {"param_0", "param_1", "param_2"},
+        "x_5": {"param_0", "param_1", "t_0", "param_2"},
         "x_6": {"param_0", "param_1", "t_1", "param_2"},
         "x_7": {"param_0", "param_1", "t_1", "param_2"},
         "a1": {"param_1", "t_1", "param_2"},
         "x_10": {"param_1", "t_1", "param_2"},
-        "x_11": {"param_1", "t_1", "param_2", "t_2"},
-        "x_12": {"param_1", "t_1", "param_2", "t_3"},
-        "x_13": {"param_1", "t_1", "param_2", "t_3"},
+        "x_11": {"param_1", "t_1", "param_2"},
+        "x_12": {"param_1", "t_1", "param_2"},
+        "x_13": {"param_1", "t_1", "param_2", "t_2"},
         "x_14": {"param_1", "t_1", "param_2", "t_3"},
         "x_15": {"param_1", "t_1", "param_2", "t_3"},
         "a2": {"t_3", "param_2"},
         "x_18": {"t_3", "param_2"},
-        "x_19": {"t_3", "param_2", "t_4"},
-        "x_20": {"param_2", "t_5", "t_3"},
-        "x_21": {"param_2", "t_5", "t_3"},
+        "x_19": {"t_3", "param_2"},
+        "x_20": {"param_2", "t_3"},
+        "x_21": {"param_2", "t_4", "t_3"},
         "x_22": {"param_2", "t_5", "t_3"},
         "x_23": {"param_2", "t_5", "t_3"},
         "a3": {"t_5"},
@@ -474,40 +468,38 @@ def test_fuse_closure():
     # def @main(%p0: Tensor[(5, 5), float32],
     #           %p1: Tensor[(5, 5), float32],
     #           %p2: Tensor[(5, 5), float32]) -> Tensor[(5, 5), float32] {
-    #   let %x_0 = raf.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_1 = raf.op.vm.alloc_tensor(%x_0, [5, 5], str"float32",[5, 5]);
-    #   let %x_2 = raf.op.cublas.matmul;
-    #   let %x_3 = (%p0, %p1);
-    #   let %x_4 = (%x_1,);
-    #   let %x_5 = raf.op.vm.invoke_op(%x_2, %x_3, %x_4);
-    #   let %x1 = %x_1;
-    #   let %x_6 = raf.op.vm.alloc_storage(int64(100), int64(64), int32(1), int32(0), str"float32");
-    #   let %x_7 = raf.op.vm.alloc_tensor(%x_6, [5, 5], str"float32",[5, 5]);
-    #   let %x_8 = fn (%p01: Tensor[(5, 5), float32],
-    #                  %p11: Tensor[(5, 5), float32], Primitive=1, Dialect="tvm")
-    #              -> Tensor[(5, 5), float32] {
-    #     %0 = raf.op.tvm.add(%p01, %p11, nullptr /* ty=() */, nullptr /* ty=() */);
-    #     raf.op.tvm.relu(%0)
+    #   let %x_0 = raf.op.cublas.matmul;
+    #   let %x_1 = (%p0, %p1);
+    #   let %x_2 = raf.op.vm.alloc_storage(int64(100), int64(128), int32(1), int32(0), str"float32") /* ty=float32 */;
+    #   let %x_3 = raf.op.vm.alloc_tensor(%x_2, [5, 5], str"float32", [5, 5]) /* ty=Tensor[(5, 5), float32] */;
+    #   let %x_4 = (%x_3,);
+    #   let %x_5 = raf.op.vm.invoke_op(%x_0, %x_1, %x_4) /* ty=() */;
+    #   let %x1 = %x_3;
+    #   let %x_6 = fn (%p01: Tensor[(5, 5), float32], %p11: Tensor[(5, 5), float32], Primitive=1, Dialect="tvm") -> Tensor[(5, 5), float32] {
+    #     %0 = raf.op.tvm.multiply(%p01, %p11) /* ty=Tensor[(5, 5), float32] */;
+    #     raf.op.tvm.relu(%0) /* ty=Tensor[(5, 5), float32] */
     #   };
-    #   let %x_9 = (%x1, %p2);
-    #   let %x_10 = (%x_7,);
-    #   let %x_11 = raf.op.vm.invoke_op(%x_8, %x_9, %x_10);
-    #   let %x3 = %x_7;
+    #   let %x_7 = (%x1, %p2);
+    #   let %x_8 = raf.op.vm.alloc_storage(int64(100), int64(128), int32(1), int32(0), str"float32") /* ty=float32 */;
+    #   let %x_9 = raf.op.vm.alloc_tensor(%x_8, [5, 5], str"float32", [5, 5]) /* ty=Tensor[(5, 5), float32] */;
+    #   let %x_10 = (%x_9,);
+    #   let %x_11 = raf.op.vm.invoke_op(%x_6, %x_7, %x_10) /* ty=() */;
+    #   let %x3 = %x_9;
     #   %x3
     # }
     expected = {
         "n_3": {},
         "x_0": {"param_0", "param_1", "param_2"},
-        "x_1": {"param_0", "param_1", "param_2", "t_0"},
-        "x_2": {"param_0", "param_1", "param_2", "t_1"},
-        "x_3": {"param_0", "param_1", "param_2", "t_1"},
+        "x_1": {"param_0", "param_1", "param_2"},
+        "x_2": {"param_0", "param_1", "param_2"},
+        "x_3": {"param_0", "param_1", "param_2", "t_0"},
         "x_4": {"param_0", "param_1", "param_2", "t_1"},
         "x_5": {"param_0", "param_1", "param_2", "t_1"},
         "x1": {"param_2", "t_1"},
         "x_6": {"param_2", "t_1"},
-        "x_7": {"param_2", "t_1", "t_2"},
-        "x_8": {"param_2", "t_1", "t_3"},
-        "x_9": {"param_2", "t_1", "t_3"},
+        "x_7": {"param_2", "t_1"},
+        "x_8": {"param_2", "t_1"},
+        "x_9": {"param_2", "t_1", "t_2"},
         "x_10": {"param_2", "t_1", "t_3"},
         "x_11": {"param_2", "t_1", "t_3"},
         "x3": {"t_3"},
