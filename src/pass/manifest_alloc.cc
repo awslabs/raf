@@ -187,7 +187,12 @@ class ManifestAllocMutator : public ExprMutator {
         if (tvm::relay::IsDynamic(ret_type)) {
           outs = DynamicInvoke(scope, bind_var, call->op, new_args, out_types, device);
         } else {
-          outs = StaticInvoke(scope, bind_var, call->op, new_args, out_types, device);
+          bool need_infertype =
+              func != nullptr && std::any_of(call->args.begin(), call->args.end(), [](Expr expr) {
+                return tvm::relay::IsDynamic(expr->checked_type());
+              });
+          outs =
+              StaticInvoke(scope, bind_var, call->op, new_args, out_types, device, need_infertype);
         }
 
         // if op uses upper bound shape, reshapes its results
@@ -316,12 +321,11 @@ class ManifestAllocMutator : public ExprMutator {
 
   std::vector<Expr> StaticInvoke(LetList* scope, const Var& bind_var, const Expr& op,
                                  const Array<Expr>& new_args,
-                                 const std::vector<TensorType>& out_types, const Device& device) {
+                                 const std::vector<TensorType>& out_types, const Device& device,
+                                 bool need_infertype) {
     auto op_var = scope->Push(op);
     auto ins = scope->Push(Tuple(new_args));
-    if (op->IsInstance<FunctionNode>() &&
-        std::any_of(new_args.begin(), new_args.end(),
-                    [](Expr expr) { return tvm::relay::IsDynamic(expr->checked_type()); })) {
+    if (need_infertype) {
       // for a fused func, if there are dynamic inputs, emit `infer_type`
       auto infer_type = Call(Op::Get("raf.op.vm.infer_type"), Array<Expr>{op_var, ins});
       auto out_type_exprs = scope->Push(infer_type);
