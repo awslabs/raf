@@ -93,6 +93,20 @@ def profile_schedule(**params):
     local_rank = comm.local_rank
 
     def _wrapper(sch_func):
+        class TensorSet:
+            """A custom set to explicitly use 'same_as' for comparison to avoid rank-0 ambiguous."""
+
+            def __init__(self):
+                self.tensor_list = []
+
+            def add(self, tensor):
+                if any([tensor.same_as(t) for t in self.tensor_list]):
+                    return
+                self.tensor_list.append(tensor)
+
+            def to_list(self):
+                return self.tensor_list
+
         def _profile(outs, **kwargs):
             # If not enabled, do not pass any tunable parameters so that the schedule
             # function will use the built-in default values.
@@ -102,7 +116,7 @@ def profile_schedule(**params):
             outs = [outs] if isinstance(outs, tvm.te.tensor.Tensor) else outs
 
             # Collect arguments.
-            args_set = set()
+            args_set = TensorSet()
 
             def collect_args(tensor):
                 operator = tensor.op
@@ -118,7 +132,7 @@ def profile_schedule(**params):
             # Generate random input data for profiling.
             tvm_target = tvm.target.Target.current(allow_none=False)
             tvm_device = tvm.device(str(tvm_target), local_rank)
-            args = list(args_set)
+            args = args_set.to_list()
             args_data = []
             for arg in args:
                 shape = [s.value for s in arg.shape]
