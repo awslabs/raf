@@ -100,11 +100,13 @@ def profile_schedule(**params):
                 self.tensor_list = []
 
             def add(self, tensor):
+                """Add a tensor if it is not in the list."""
                 if any([tensor.same_as(t) for t in self.tensor_list]):
                     return
                 self.tensor_list.append(tensor)
 
             def to_list(self):
+                """Get the list of tensors."""
                 return self.tensor_list
 
         def _profile(outs, **kwargs):
