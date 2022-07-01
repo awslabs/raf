@@ -3,7 +3,9 @@
 
 """RAF is Not MXNet, it's MXNet 3.0."""
 
-__version__ = "0.0.2.dev"
+from .version import __version__ as __version__
+from .version import __full_version__ as __full_version__
+from .version import __gitrev__ as __gitrev__
 
 from ._core.ndarray import array, ndarray
 from ._op.imp import *  # pylint: disable=redefined-builtin

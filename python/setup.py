@@ -68,8 +68,8 @@ git_version = get_build_version()
 
 
 def get_build_raf_version():
-    raf_build_version = os.getenv("RAF_BUILD_VERSION", default="dev")
-    raf_build_platform = os.getenv("RAF_BUILD_PLATFORM", default="cu113")
+    raf_build_version = os.getenv("RAF_BUILD_VERSION", default="nightly")
+    raf_build_platform = os.getenv("RAF_BUILD_PLATFORM", default="cpu")
     with open("./raf/version.txt", "r") as version_file:
         version = version_file.readline()
         raf_version = version
@@ -95,16 +95,22 @@ def inc_minor(version):
 
 
 __version__ = get_build_raf_version()
+__raf_version__ = repr(__version__.split("+")[0])
+str_version = repr(__version__)
+str_git = repr(git_version)
 
 with open("./raf/version.py", "w") as version_file:
     version_file.write(
         '"""Auto-generated. Do not touch."""'
         + "\n"
         + "__version__ = "
-        + __version__
+        + __raf_version__
+        + "\n"
+        + "__full_version__ = "
+        + str_version
         + "\n"
         + "__gitrev__ = "
-        + git_version
+        + str_git
         + "\n"
     )
 
@@ -156,7 +162,7 @@ setup_kwargs["package_dir"] = {"raf.version": "../build/private/raf/version"}
 # End local change
 
 setup(
-    name="raf",
+    name="rafbuild",
     version=__version__,
     license="Apache",
     description="RAF Accelerates Deep Learning Frameworks",
