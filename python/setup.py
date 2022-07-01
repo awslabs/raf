@@ -68,8 +68,8 @@ git_version = get_build_version()
 
 
 def get_build_raf_version():
-    raf_build_version = os.getenv("RAF_BUILD_VERSION", default="nightly")
-    raf_build_platform = os.getenv("RAF_BUILD_PLATFORM", default="cpu")
+    raf_build_version = os.getenv("RAF_BUILD_VERSION", default="dev")
+    raf_build_platform = os.getenv("RAF_BUILD_PLATFORM", default="cu113")
     with open("./raf/version.txt", "r") as version_file:
         version = version_file.readline()
         raf_version = version
