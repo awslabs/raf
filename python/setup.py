@@ -95,16 +95,22 @@ def inc_minor(version):
 
 
 __version__ = get_build_raf_version()
+__raf_version__ = repr(__version__.split("+")[0])
+__full_version__ = repr(__version__)
+__gitrev__ = repr(git_version)
 
 with open("./raf/version.py", "w") as version_file:
     version_file.write(
         '"""Auto-generated. Do not touch."""'
         + "\n"
         + "__version__ = "
-        + __version__
+        + __raf_version__
+        + "\n"
+        + "__full_version__ = "
+        + __full_version__
         + "\n"
         + "__gitrev__ = "
-        + git_version
+        + __gitrev__
         + "\n"
     )
 
