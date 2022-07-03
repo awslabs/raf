@@ -162,6 +162,7 @@ struct DataParallel {
             }
           }
         }
+        Profiler::Get()->ClearProfile();
       } else {
         int op_count = 0;
         for (auto& item : Profiler::Get()->GetProfileStats()) {
@@ -173,6 +174,7 @@ struct DataParallel {
             op_count++;
           }
         }
+        Profiler::Get()->ClearProfile();
       }
     } else if (dcfg->iteration == dcfg->auto_dp_profiling_end_iter + 1) {
       Profiler::Get()->set_profile_level(prof_level);  // Enbale user's config
