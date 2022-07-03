@@ -69,18 +69,18 @@ def test_dynamic_model():
         "\n".join(text.splitlines()[:-4])
         == """#[version = "0.0.5"]
 fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
-  let %x_0 = raf.op.vm.alloc_storage(int64(32), int64(128), int32(1), int32(0), str"int32");
-  let %x_1 = raf.op.vm.alloc_tensor(%x_0, [4, 2], str"int32", [4, 2]);
-  let %x_2 = raf.op.vm.alloc_storage(int64(16), int64(128), int32(1), int32(0), str"int64");
-  let %x_3 = raf.op.vm.alloc_tensor(%x_2, [2], str"int64", [2]);
-  let %x_4 = raf.op.upper_bound.argwhere;
-  let %x_5 = (%x,);
-  let %x_6 = (%x_1, %x_3);
-  let %x_7 = raf.op.vm.invoke_op(%x_4, %x_5, %x_6);
-  let %x1 = raf.op.vm.set_shape(%x_1, %x_3);
-  let %x_8 = (%x1,);
-  let %x_9 = raf.op.upper_bound.argwhere;
-  let %x_10 = raf.op.vm.infer_type(%x_9, %x_8);
+  let %x_0 = raf.op.upper_bound.argwhere;
+  let %x_1 = (%x,);
+  let %x_2 = raf.op.vm.alloc_storage(int64(32), int64(128), int32(1), int32(0), str"int32");
+  let %x_3 = raf.op.vm.alloc_tensor(%x_2, [4, 2], str"int32", [4, 2]);
+  let %x_4 = raf.op.vm.alloc_storage(int64(16), int64(128), int32(1), int32(0), str"int64");
+  let %x_5 = raf.op.vm.alloc_tensor(%x_4, [2], str"int64", [2]);
+  let %x_6 = (%x_3, %x_5);
+  let %x_7 = raf.op.vm.invoke_op(%x_0, %x_1, %x_6);
+  let %x1 = raf.op.vm.set_shape(%x_3, %x_5);
+  let %x_8 = raf.op.upper_bound.argwhere;
+  let %x_9 = (%x1,);
+  let %x_10 = raf.op.vm.infer_type(%x_8, %x_9);
   let %x_11 = %x_10.1;
   let %x_12 = %x_11.0;
   let %x_13 = %x_11.1;
@@ -92,19 +92,19 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_19 = raf.op.vm.alloc_storage(%x_18, int64(128), int32(1), int32(0), str"int64");
   let %x_20 = raf.op.vm.alloc_tensor(%x_19, %x_17, str"int64", %x_17);
   let %x_21 = (%x_15, %x_20);
-  let %x_22 = raf.op.vm.invoke_op(%x_9, %x_8, %x_21);
+  let %x_22 = raf.op.vm.invoke_op(%x_8, %x_9, %x_21);
   let %x2 = raf.op.vm.set_shape(%x_15, %x_20);
   let %x_23 = nullptr;
   let %x_24 = nullptr;
-  let %x_25 = (%x2, %x_23, %x_24);
-  let %x_26 = fn (%p0: Tensor[(?, 2), int32], %p1: (), %p2: (), Primitive=1, Dialect="tvm") -> Tensor[(meta[tir.Div][0], 2), int32] {
+  let %x_25 = fn (%p0: Tensor[(?, 2), int32], %p1: (), %p2: (), Primitive=1, Dialect="tvm") -> Tensor[(meta[tir.Div][0], 2), int32] {
     %0 = raf.op.tvm.split(%p0, int64(2), int64(0)) /* ty=(Tensor[(meta[tir.Div][0], 2), int32], Tensor[(meta[tir.Div][1], 2), int32]) */;
     %1 = %0.0;
     %2 = %0.1;
     %3 = raf.op.tvm.add(%1, %2, %p1, %p2) /* ty=Tensor[(meta[tir.Div][0], 2), int32] */;
     raf.op.tvm.abs(%3) /* ty=Tensor[(meta[tir.Div][0], 2), int32] */
   };
-  let %x_27 = raf.op.vm.infer_type(%x_26, %x_25);
+  let %x_26 = (%x2, %x_23, %x_24);
+  let %x_27 = raf.op.vm.infer_type(%x_25, %x_26);
   let %x_28 = %x_27.1;
   let %x_29 = %x_28.0;
   let %x_30 = %x_28.1;
@@ -112,7 +112,7 @@ fn (%x: Tensor[(2, 2), float32]) -> Tensor[(meta[tir.Div][0], 2), int32] {
   let %x_32 = raf.op.vm.alloc_tensor(%x_31, %x_29, str"int32", %x_29);
   let %x_33 = %x_27.0;
   let %x_34 = (%x_32,);
-  let %x_35 = raf.op.vm.invoke_op(%x_33, %x_25, %x_34);
+  let %x_35 = raf.op.vm.invoke_op(%x_33, %x_26, %x_34);
   let %x4 = %x_32;
   %x4
 }"""
