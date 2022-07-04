@@ -3,11 +3,17 @@
 
 # pylint: disable=missing-function-docstring, too-many-locals, unused-argument
 """Reduction compute definition and schedules."""
+from operator import mul
+from functools import reduce
+
+import numpy as np
+
 from raf._tvm_op.nn import schedule_generic
 from .._lib import register_compute
 from .._lib import generic_func
 from .._lib import tvm as _tvm
 from .._lib import _reg
+from .utils import get_cuda_max_thread, profile_schedule
 
 _topi = _tvm.topi  # pylint: disable=invalid-name, no-member
 
@@ -61,10 +67,270 @@ def schedule_sum(attrs, outs, target):
         return _topi.generic.schedule_injective(outs)
 
 
+def _schedule_cuda_sum_long_reduce(op, sch, **kwargs):
+    """The helper function for scheduling sum with long reduction length for CUDA.
+    In this case, we want to parallelize the reduction to keep the GPU busy. This is modified
+    from TOPI reduce schedule for CUDA.
+
+    Parameters
+    ----------
+    op: tvm.Operation
+        The operator being scheduled.
+
+    sch: tvm.schedule.Schedule
+        The working schedule.
+
+    **kwargs: Dict[str, List[Any]]
+        Tunable parameters. If not presents, the default values will be used.
+
+    Returns
+    -------
+    sch: Schedule
+        The computation schedule for the op.
+    """
+    # pylint: disable=invalid-name
+
+    # Whether this workload is reducing all axes.
+    data_out = op.output(0)
+    all_reduce = len(sch[data_out].op.axis) == 0
+
+    # Setup the tunable parameter value.
+    num_thread = kwargs.get("num_thread", get_cuda_max_thread() if all_reduce else 32)
+    thread_x = _tvm.te.thread_axis((0, num_thread), "threadIdx.x")
+
+    # Fuse and rfactor the reduce axis
+    fused_reduce = sch[data_out].fuse(
+        *[sch[data_out].op.reduce_axis[i] for i in range(len(sch[data_out].op.reduce_axis))]
+    )
+    _, ki = sch[data_out].split(fused_reduce, factor=num_thread)
+    data_out_rf = sch.rfactor(data_out, ki)
+    tx = sch[data_out].op.reduce_axis[0]
+    sch[data_out].bind(tx, thread_x)
+    sch[data_out_rf].compute_at(sch[data_out], tx)
+
+    if not all_reduce:
+        # There are one or more axes to not reduced. Here we bind them to threads and blocks
+        # for parallelism.
+        block_x = _tvm.te.thread_axis("blockIdx.x")
+        thread_y = _tvm.te.thread_axis((0, num_thread), "threadIdx.y")
+
+        # Fuse and split the axis
+        fused_outer = sch[data_out].fuse(
+            *[sch[data_out].op.axis[i] for i in range(len(sch[data_out].op.axis))]
+        )
+        bx, outer_in = sch[data_out].split(fused_outer, factor=num_thread)
+
+        # Bind non-reduced axes to threads and blocks
+        sch[data_out].bind(outer_in, thread_y)
+        sch[data_out].bind(bx, block_x)
+        sch[data_out].set_store_predicate(
+            _tvm.tir.all(
+                thread_x.equal(0), block_x * num_thread + thread_y < reduce(mul, data_out.shape)
+            )
+        )
+    else:
+        # All axes are reduced.
+        sch[data_out].set_store_predicate(thread_x.equal(0))
+    return sch
+
+
+@profile_schedule(
+    num_thread=[32, 64, get_cuda_max_thread()],
+    validator=lambda _, reduce_last_axis: not reduce_last_axis,
+)
+def schedule_cuda_sum_long_reduce(outs, reduce_last_axis, **kwargs):
+    """Schedule sum for CUDA. This schedule targets to the sum with long reduction length.
+    In this case, we want to parallelize the reduction to keep the GPU busy. This is modified
+    from TOPI reduce schedule for CUDA.
+
+    In addition, this schedule is tunable if the last axis is not reduced.
+
+    Parameters
+    ----------
+    outs: Array of Tensor
+        The computation graph description of reduce in the format of an array of tensors.
+
+    reduce_last_axis: bool
+        A hint indicating whether the last axis is reduced.
+
+    **kwargs: Dict[str, List[Any]]
+        Tunable parameters. If not presents, the default values will be used.
+
+    Returns
+    -------
+    sch: Schedule
+        The computation schedule for the op.
+    """
+    # pylint: disable=unused-argument
+    outs = [outs] if isinstance(outs, _tvm.te.tensor.Tensor) else outs
+    sch = _tvm.te.create_schedule([x.op for x in outs])
+    scheduled_ops = []
+
+    def _enable_auto_inline(sch):
+        def is_scheduled(stage):
+            # auto inline requires the attach type is AttachType.kGroupRoot
+            conds = [
+                len(stage.relations) == 0,
+                stage.attach_type == 1,
+                stage.all_iter_vars == stage.leaf_iter_vars,
+            ]
+            if not all(conds):
+                return True
+            return False
+
+        for stage in sch.stages:
+            if not stage.is_output and isinstance(stage.op, _tvm.te.ComputeOp):
+                if is_scheduled(stage) or len(stage.op.reduce_axis) != 0:
+                    return False
+        return True
+
+    enable_auto_inline = _enable_auto_inline(sch)
+
+    def traverse_before_reduce(tensor):
+        """Internal traverse function"""
+        operator = tensor.op
+        if isinstance(operator, _tvm.te.PlaceholderOp):
+            return
+        if _topi.tag.is_injective(operator.tag):
+            sch[operator].compute_inline()
+            for inp_tensor in operator.input_tensors:
+                if inp_tensor.op not in scheduled_ops:
+                    traverse_before_reduce(inp_tensor)
+        else:
+            raise RuntimeError("Unsupported operator: %s" % operator.tag)
+
+        scheduled_ops.append(operator)
+
+    def traverse_after_reduce(tensor):
+        """Internal traverse function"""
+        operator = tensor.op
+        if _topi.tag.is_broadcast(operator.tag):
+            if operator not in scheduled_ops:
+                _topi.schedule_injective_from_existing(  # pylint: disable=no-member
+                    sch, operator.output(0)
+                )
+            for inp_tensor in operator.input_tensors:
+                if inp_tensor.op not in scheduled_ops:
+                    if enable_auto_inline:
+                        traverse_before_reduce(inp_tensor)
+                    else:
+                        traverse_after_reduce(inp_tensor)
+        elif operator.tag == "comm_reduce":
+            if operator not in scheduled_ops:
+                _schedule_cuda_sum_long_reduce(operator, sch, **kwargs)
+            for inp_tensor in operator.input_tensors:
+                if inp_tensor.op not in scheduled_ops:
+                    traverse_before_reduce(inp_tensor)
+        elif isinstance(operator, _tvm.te.PlaceholderOp):
+            pass
+        else:
+            raise RuntimeError("Unsupported operator tag: %s" % operator.tag)
+
+        scheduled_ops.append(operator)
+
+    for out in outs:
+        traverse_after_reduce(out)
+
+    return sch
+
+
+@profile_schedule(num_thread=[32, 64, get_cuda_max_thread()], max_block=[256, 512])
+def schedule_cuda_short_reduce(outs, **kwargs):
+    """Schedule sum for CUDA. This schedule targets to the sum with short reduction length.
+    In this case, each thread is responsible for reduction. The parallelization is across
+    the output elements. This is modified from TOPI injective schedule for CUDA.
+
+    Parameters
+    ----------
+    outs: Array of Tensor
+        The computation graph description of injective in the format of an array of tensors.
+
+    **kwargs: Dict[str, List[Any]]
+        Tunable parameters. If not presents, the default values will be used.
+
+    Returns
+    -------
+    sch: Schedule
+        The computation schedule for the op.
+    """
+    # pylint: disable=invalid-name
+    # Tunable parameters.
+    num_thread = kwargs.get(
+        "num_thread", _tvm.target.Target.current(allow_none=False).max_num_threads
+    )
+    max_block = kwargs.get("max_block", 256)
+
+    def find_nearest_small_factor(num, target):
+        """Find the nearest factor of the given number that is smaller than the target."""
+        for i in range(target, 0, -1):
+            if num % i == 0:
+                return i
+        # Unreachable because i=1 must hold.
+        return -1
+
+    outs = [outs] if isinstance(outs, _tvm.te.tensor.Tensor) else outs
+    sch = _tvm.te.create_schedule([x.op for x in outs])
+
+    _tvm.te.schedule.AutoInlineInjective(sch)  # pylint: disable=no-member
+    for out in outs:
+        if not _topi.utils.is_empty_shape(out.shape):
+            fused = sch[out].fuse(*sch[out].op.axis)
+
+            # Vectorize on fp16 data type to enable half2 for better memory bandwidth utilization.
+            vector_width = 2 if out.dtype == "float16" else 1
+
+            out_len = _topi.utils.prod(out.shape)
+
+            try:
+                const_size = _topi.utils.get_const_int(out_len)
+
+                # Adjust block and thread to make sure they are dividable so that vectorize can be
+                # correctly applied.
+                if vector_width > 1 and const_size % vector_width == 0:
+                    remain_total_size = const_size // vector_width
+                    cand_sizes = [0, 0]
+                    for idx, max_size in enumerate([num_thread, max_block]):
+                        cand_sizes[idx] = (
+                            max_size
+                            if remain_total_size % max_size == 0
+                            else find_nearest_small_factor(remain_total_size, max_size)
+                        )
+                        remain_total_size //= cand_sizes[idx]
+
+                    # If the product of candidate dividable (block * thread) is too small,
+                    # then the performance may be worse even half2 is enabled. Note that 0.7
+                    # is just a heuristic ratio and may not be optimal for all workloads.
+                    if np.prod(cand_sizes) / (max_block * num_thread) >= 0.7:
+                        num_thread, max_block = cand_sizes
+
+                need_block_split = const_size > max_block * num_thread * vector_width
+            except ValueError:
+                need_block_split = False
+                const_size = 0
+
+            if vector_width > 1:
+                fused, vec = sch[out].split(fused, vector_width)
+                sch[out].vectorize(vec)
+
+            if need_block_split:
+                xo, xi = sch[out].split(fused, factor=num_thread * max_block)
+                bx, tx = sch[out].split(xi, factor=num_thread)
+                sch[out].reorder(bx, tx, xo)
+                sch[out].bind(bx, _tvm.te.thread_axis("blockIdx.x"))
+                sch[out].bind(tx, _tvm.te.thread_axis("threadIdx.x"))
+            else:
+                if const_size != 0 and const_size < num_thread:
+                    bx, tx = sch[out].split(fused, factor=const_size)
+                else:
+                    bx, tx = sch[out].split(fused, factor=num_thread)
+                sch[out].bind(tx, _tvm.te.thread_axis("threadIdx.x"))
+                sch[out].bind(bx, _tvm.te.thread_axis("blockIdx.x"))
+    return sch
+
+
 @schedule_sum.register(["cuda", "gpu"])
 def schedule_sum_cuda(attrs, outs, target):
     # pylint: disable=unused-argument
-    # pylint: disable=invalid-name
     def get_num_elements(axes):
         extents = [int(iv.dom.extent) for iv in axes]
         n_elems = 1
@@ -72,20 +338,39 @@ def schedule_sum_cuda(attrs, outs, target):
             n_elems *= extent
         return n_elems
 
+    def get_sum_input(tensor):
+        operator = tensor.op
+        if len(operator.input_tensors) != 1:
+            return None
+
+        input_tensor = operator.input_tensors[0]
+        if isinstance(input_tensor.op, _tvm.te.PlaceholderOp):
+            return input_tensor
+        return None
+
     with target:
         out = outs[0]
         num_out_elements = get_num_elements(out.op.axis)
         num_reduce_elements = get_num_elements(out.op.reduce_axis)
 
-        # We want to saturate the GPU cores by parallelization. There are 2 scenarios
-        # 1) Reduce dimension is small - In this case, each thread is responsible for reduction.
-        # The parallelization is across the output elements.
-        # 2) Reduce dimension is large - We want to parallelize the reduction to keep the GPU busy.
-        # Here we fall back to TVM schedule.
-        if num_out_elements > num_reduce_elements:
-            return _topi.cuda.schedule_injective(outs)
+        # Whether the last axis is reduced. Note that axis=-1 should already be proceed in advance.
+        reduce_last_axis = False
+        input_tensor = get_sum_input(out)
+        if input_tensor is not None:
+            # Only try to analyze the workload with sum as the last op.
+            reduce_axis = [False for _ in range(len(input_tensor.shape))]
+            for axis in attrs.axis:
+                reduce_axis[axis.value] = True
+            if attrs.exclude == 1:
+                reduce_axis = [not axis for axis in reduce_axis]
+            reduce_last_axis = reduce_axis[-1]
 
-        return _topi.cuda.schedule_reduce(outs)
+        # We attempt to saturate the GPU cores by parallelization, so we dispatch
+        # the sum workloads to two schedules based on their reduction length.
+        if num_out_elements > num_reduce_elements:
+            return schedule_cuda_short_reduce(outs)
+
+        return schedule_cuda_sum_long_reduce(outs, reduce_last_axis=reduce_last_axis)
 
 
 _reg.register_schedule("raf.op.tvm.sum", schedule_sum)

@@ -286,7 +286,6 @@ def compact_nonzero_indices_ir(condition, write_indices, out, out_shape, do_writ
                 condition[size_1d - 1] == 0, _tvm.tir.const(0, "int64"), _tvm.tir.const(1, "int64")
             )
             out_shape[0] = valid_index
-        with ib.if_scope(idx == 1):
             out_shape[1] = ndim
 
     return ib.get()

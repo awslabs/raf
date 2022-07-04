@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """The frontend that converts PyTorch models to RAF models via Relay."""
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals, too-many-branches
 from collections import OrderedDict
 import os
 import hashlib
@@ -159,13 +159,28 @@ def from_pytorch(model, shape_dict, model_file=None, hash_file=None):
         input_shape = input_info[0]
         input_type = input_info[1]
         shape_list.append((input_name, (input_shape, input_type)))
+
+    py_parameters = scripted_model.named_parameters()
+    param_dict = {}
+    for name, value in py_parameters:
+        param_dict[name] = value
     relay_mod, relay_params = relay.frontend.from_pytorch(scripted_model, shape_list)
     meta_mod = FromRelay()(relay_mod)
     meta_params = OrderedDict()
+    aux_params = OrderedDict()
     for var in relay_mod["main"].params:
         name = var.name_hint
         if name in relay_params:
-            meta_params[validate_relay_param_name(name)] = ndarray(relay_params[name].numpy())
+            array_value = ndarray(relay_params[name].numpy())
+            valid_name = validate_relay_param_name(name)
+            meta_params[valid_name] = array_value
+            if name in param_dict:
+                # If a learnable paratmer's requires_grad is False,
+                # the training freezes the parameter update.
+                if not param_dict[name].requires_grad:
+                    aux_params[valid_name] = array_value
+            else:
+                aux_params[valid_name] = array_value
     # relay_params may contain unused parameters, which are not present in meta_params
     assert len(meta_params) <= len(relay_params)
-    return FrameworkModel(SwitchTrainOp(True)(meta_mod), meta_mod, meta_params, {})
+    return FrameworkModel(SwitchTrainOp(True)(meta_mod), meta_mod, meta_params, aux_params)
