@@ -347,7 +347,7 @@ def test_reduce_scatter_input_tensor(computation):
             out = raf.reduce_scatter(x, computation=computation)
             return out
 
-    if computation == "avg" and ref.build.with_nccl() < 21000:
+    if computation == "avg" and raf.build.with_nccl() < 21000:
         pytest.skip("avg is not supported in NCCL < 2.10")
 
     model = TestModel()
