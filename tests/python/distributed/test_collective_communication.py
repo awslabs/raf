@@ -335,6 +335,61 @@ def test_reduce_scatter(computation):
         check(m_out, n_out)
 
 
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
+@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
+def test_reduce_scatter_input_tensor(computation):
+    class TestModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x):
+            out = raf.reduce_scatter(x, computation=computation)
+            return out
+
+    if computation == "avg" and ref.build.with_nccl() < 21000:
+        pytest.skip("avg is not supported in NCCL < 2.10")
+
+    model = TestModel()
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
+    device = f"cuda({local_rank})"
+    n_ones = np.ones(shape=(4, 4), dtype="float32")
+    n_x = n_ones * (rank + 1)
+    n_y = -n_ones * (rank + 1)
+    n_in = np.concatenate([n_x, n_y])
+    m_in = raf.array(n_in, device=device)
+    model.to(device=device)
+    m_out = run_model(model, m_in, device)
+    if rank == 0:
+        if computation == "sum":
+            n_out = n_ones * sum(range(1, total_rank + 1))
+        elif computation == "prod":
+            n_out = n_ones * np.prod(range(1, total_rank + 1))
+        elif computation == "min":
+            n_out = n_ones * min(1, total_rank)
+        elif computation == "max":
+            n_out = n_ones * max(1, total_rank)
+        elif computation == "avg":
+            n_out = n_ones * sum(range(1, total_rank + 1))
+            n_out = n_out / total_rank
+        else:
+            assert False, "Invalid computation"
+        check(m_out, n_out)
+    elif rank == 1:
+        if computation == "sum":
+            n_out = -n_ones * sum(range(1, total_rank + 1))
+        elif computation == "prod":
+            n_out = n_ones * np.prod(range(1, total_rank + 1))
+        elif computation == "min":
+            n_out = -n_ones * max(1, total_rank)
+        elif computation == "max":
+            n_out = -n_ones * min(1, total_rank)
+        elif computation == "avg":
+            n_out = -n_ones * sum(range(1, total_rank + 1))
+            n_out = n_out / total_rank
+        check(m_out, n_out)
+
+
 @pytest.mark.skipif(skip_dist_test(min_rank_num=4, require_exact_rank=True), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
 @pytest.mark.parametrize("rank_list", [[[0, 1], [2, 3]]])
