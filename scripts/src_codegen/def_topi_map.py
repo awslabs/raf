@@ -50,6 +50,7 @@ OP_MAP = {
     "raf.op.tvm.logical_and": "logical_and",
     "raf.op.tvm.logical_not": "logical_not",
     "raf.op.tvm.logical_or": "logical_or",
+    "raf.op.tvm.logical_xor": "logical_xor",
     "raf.op.tvm.max": "max",
     "raf.op.tvm.maximum": "maximum",
     "raf.op.tvm.mean": "mean",

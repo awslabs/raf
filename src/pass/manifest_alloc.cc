@@ -187,7 +187,12 @@ class ManifestAllocMutator : public ExprMutator {
         if (tvm::relay::IsDynamic(ret_type)) {
           outs = DynamicInvoke(scope, bind_var, call->op, new_args, out_types, device);
         } else {
-          outs = StaticInvoke(scope, bind_var, call->op, new_args, out_types, device);
+          bool need_infertype =
+              func != nullptr && std::any_of(call->args.begin(), call->args.end(), [](Expr expr) {
+                return tvm::relay::IsDynamic(expr->checked_type());
+              });
+          outs =
+              StaticInvoke(scope, bind_var, call->op, new_args, out_types, device, need_infertype);
         }
 
         // if op uses upper bound shape, reshapes its results
@@ -217,8 +222,8 @@ class ManifestAllocMutator : public ExprMutator {
  private:
   Expr ComputeAlignment(DataType dtype) {
     int64_t align = dtype.bits() / 8 * dtype.lanes();
-    if (align < 64) {
-      align = 64;
+    if (align < kDefaultMemoryAlignment) {
+      align = kDefaultMemoryAlignment;
     }
     return MakeConstant(ScalarValue::make(align));
   }
@@ -273,8 +278,8 @@ class ManifestAllocMutator : public ExprMutator {
   std::vector<Expr> DynamicInvoke(LetList* scope, const Var& bind_var, const Expr& op,
                                   const Array<Expr>& new_args,
                                   const std::vector<TensorType>& out_types, const Device& device) {
-    auto ins = scope->Push(Tuple(new_args));
     auto op_var = scope->Push(op);
+    auto ins = scope->Push(Tuple(new_args));
     auto infer_type = Call(Op::Get("raf.op.vm.infer_type"), Array<Expr>{op_var, ins});
     auto out_type_exprs = scope->Push(infer_type);
     std::vector<Expr> outs;
@@ -316,7 +321,16 @@ class ManifestAllocMutator : public ExprMutator {
 
   std::vector<Expr> StaticInvoke(LetList* scope, const Var& bind_var, const Expr& op,
                                  const Array<Expr>& new_args,
-                                 const std::vector<TensorType>& out_types, const Device& device) {
+                                 const std::vector<TensorType>& out_types, const Device& device,
+                                 bool need_infertype) {
+    auto op_var = scope->Push(op);
+    auto ins = scope->Push(Tuple(new_args));
+    if (need_infertype) {
+      // for a fused func, if there are dynamic inputs, emit `infer_type`
+      auto infer_type = Call(Op::Get("raf.op.vm.infer_type"), Array<Expr>{op_var, ins});
+      auto out_type_exprs = scope->Push(infer_type);
+      op_var = scope->Push(TupleGetItem(out_type_exprs, 0));
+    }
     std::vector<Expr> outs;
     auto it = inplace_.var_share_map.find(bind_var);
     if (it != inplace_.var_share_map.end()) {
@@ -337,8 +351,7 @@ class ManifestAllocMutator : public ExprMutator {
       }
     }
     auto invoke = Call(Op::Get("raf.op.vm.invoke_op"),
-                       Array<Expr>{scope->Push(op), scope->Push(Tuple(new_args)),
-                                   scope->Push(Tuple(Array<Expr>(outs)))});
+                       Array<Expr>{op_var, ins, scope->Push(Tuple(Array<Expr>(outs)))});
     scope->Push(invoke);
     return outs;
   }

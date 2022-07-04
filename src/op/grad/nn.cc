@@ -450,6 +450,22 @@ Array<Expr> LayerNormTrainGrad(const Expr& orig_call, const Array<Expr> orig_arg
 
 RAF_OP_GRAD("raf.op.layer_norm_train", LayerNormTrainGrad);
 
+Array<Expr> ReciprocalGrad(const Expr& orig_call, const Array<Expr> orig_args, const Var& y,
+                           const Expr& dy) {
+  static auto op_div = Op::Get("raf.op.divide");
+  static auto op_multiply = Op::Get("raf.op.multiply");
+  static auto op_negative = Op::Get("raf.op.negative");
+  static auto op_ones = Op::Get("raf.op.ones_like");
+  const CallNode* call = orig_call.as<CallNode>();
+  CHECK_GE(call->args.size(), 1);
+  const Expr& x = call->args[0];
+  Call y_multiply_y = Call(op_multiply, {y, y});
+  Call dx = Call(op_negative, {y_multiply_y});
+  return {Call(op_multiply, {dy, dx})};
+}
+
+RAF_OP_GRAD("raf.op.reciprocal", ReciprocalGrad);
+
 }  // namespace grad
 }  // namespace op
 }  // namespace raf

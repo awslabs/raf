@@ -11,6 +11,7 @@
 #include <string>
 #include "dlpack/dlpack.h"
 #include "tvm/runtime/c_runtime_api.h"
+#include "tvm/runtime/device_api.h"
 #include "tvm/runtime/ndarray.h"
 #include "tvm/support/with.h"
 #include "./enum_base.h"
@@ -20,7 +21,7 @@ namespace raf {
 
 using namespace raf::ir;
 
-constexpr int64_t kDefaultMemoryAlignment = 64;
+constexpr int64_t kDefaultMemoryAlignment = tvm::runtime::kAllocAlignment;
 
 class DTypeCode final : public EnumBase<DTypeCode, 5, int32_t, DLDataTypeCode> {
  public:

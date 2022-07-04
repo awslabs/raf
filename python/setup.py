@@ -10,6 +10,8 @@ import sys
 from setuptools import find_packages
 from setuptools.dist import Distribution
 
+from datetime import date
+
 # need to use distutils.core for correct placement of cython dll
 if "--inplace" in sys.argv:
     from distutils.core import setup
@@ -19,6 +21,7 @@ else:
     from setuptools.extension import Extension
 
 SCRIPT_DIR = os.path.dirname(__file__)
+CONDA_BUILD = os.getenv("CONDA_BUILD") is not None
 
 
 def get_env_flag(name, default=""):
@@ -56,14 +59,60 @@ def get_build_version():
         .decode("ascii")
         .strip()
     )
-    version = os.getenv("RAF_VERSION", default="0.1")
-    if not get_env_flag("RELEASE_VERSION", default="0"):
-        version += "+git" + git_sha
+    version = "+git" + git_sha
     return version
 
 
 LIB_LIST = get_lib_path()
-__version__ = get_build_version()
+git_version = get_build_version()
+
+
+def get_build_raf_version():
+    raf_build_version = os.getenv("RAF_BUILD_VERSION", default="dev")
+    raf_build_platform = os.getenv("RAF_BUILD_PLATFORM", default="cu113")
+    with open("./raf/version.txt", "r") as version_file:
+        version = version_file.readline()
+        raf_version = version
+        if raf_build_version == "stable":
+            raf_version = version + "+" + raf_build_platform
+        elif raf_build_version == "nightly":
+            version = inc_minor(version)
+            today = date.today().strftime("%Y%m%d")
+            raf_version = version + ".dev" + str(today) + "+" + raf_build_platform
+        elif raf_build_version == "dev":
+            version = inc_minor(version)
+            raf_version = version + git_version + "+" + raf_build_platform
+        else:
+            raise ValueError("Unsupported RAF build version: " % raf_build_version)
+        return raf_version
+
+
+def inc_minor(version):
+    split_version = version.split(".")
+    inc_version = int(split_version[-1]) + 1
+    next_version = ".".join(split_version[:-1]) + "." + str(inc_version)
+    return next_version
+
+
+__version__ = get_build_raf_version()
+__raf_version__ = repr(__version__.split("+")[0])
+__full_version__ = repr(__version__)
+__gitrev__ = repr(git_version)
+
+with open("./raf/version.py", "w") as version_file:
+    version_file.write(
+        '"""Auto-generated. Do not touch."""'
+        + "\n"
+        + "__version__ = "
+        + __raf_version__
+        + "\n"
+        + "__full_version__ = "
+        + __full_version__
+        + "\n"
+        + "__gitrev__ = "
+        + __gitrev__
+        + "\n"
+    )
 
 
 class BinaryDistribution(Distribution):
@@ -91,7 +140,10 @@ if wheel_include_libs:
             if os.path.normpath(path) != os.path.normpath(
                 os.path.join(SCRIPT_DIR, "raf/libraf.so")
             ):
-                shutil.copy(path, os.path.join(SCRIPT_DIR, "raf"))
+                try:
+                    shutil.copy(path, os.path.join(SCRIPT_DIR, "raf"))
+                except shutil.SameFileError:
+                    pass
             _, libname = os.path.split(path)
             fo.write("include raf/%s\n" % libname)
     setup_kwargs = {"include_package_data": True}
@@ -106,15 +158,14 @@ if include_libs:
 os.makedirs(os.path.join(SCRIPT_DIR, "../build/private/raf/version"), exist_ok=True)
 with open(os.path.join(SCRIPT_DIR, "../build/private/raf/version/__init__.py"), "w") as fd:
     fd.write("__version__ = '" + __version__ + "'")
-setup_kwargs["package_dir"] = {
-    "raf.version": os.path.join(SCRIPT_DIR, "../build/private/raf/version")
-}
+setup_kwargs["package_dir"] = {"raf.version": "../build/private/raf/version"}
 # End local change
 
 setup(
     name="raf",
     version=__version__,
-    description="RAF Accelerates deep learning Frameworks",
+    license="Apache",
+    description="RAF Accelerates Deep Learning Frameworks",
     zip_safe=False,
     install_requires=[
         "tvm",

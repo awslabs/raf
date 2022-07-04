@@ -914,6 +914,13 @@ IRModule VMCompiler::OptimizeModule(const IRModule& mod, const DeviceMap& device
   pass_seqs.push_back(pass::InlinePrimitives());
   pass_seqs.push_back(pass::InferType());
   pass_seqs.push_back(pass::InplaceUpdate());
+
+  if (pass_ctx->GetConfig("raf.use_multi_func", Bool(false)).value()) {
+    // The memory-related passes below do not support multi-function, so we need to inline
+    // all functions here. This one pass actually runs LambdaLift, inline, and DCE.
+    pass_seqs.push_back(pass::FullInline());
+  }
+
   if (!enable_stream_schedule) {
     // TODO(@comaniac): Support rematerialization with multi-streaming.
     pass_seqs.push_back(pass::InferType());
@@ -991,6 +998,7 @@ PackedFunc VMCompiler::GetFunction(const std::string& name, const ObjectPtr<Obje
 }
 
 TVM_REGISTER_PASS_CONFIG_OPTION("raf.vm.optimize.anf_only", Bool);
+TVM_REGISTER_PASS_CONFIG_OPTION("raf.use_multi_func", Bool);
 
 RAF_REGISTER_GLOBAL("raf.vm.VMCompiler").set_body_typed(CreateVMCompiler);
 

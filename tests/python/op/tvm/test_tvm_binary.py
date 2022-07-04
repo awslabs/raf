@@ -116,6 +116,8 @@ def test_power(dtype, device):
     "ops",
     [
         (np.logical_and, raf._op.sym.logical_and),
+        (np.logical_or, raf._op.sym.logical_or),
+        (np.logical_xor, raf._op.sym.logical_xor),
     ],
 )
 @pytest.mark.parametrize(
@@ -126,7 +128,7 @@ def test_power(dtype, device):
     ],
 )
 @pytest.mark.parametrize("dtype", ["bool"])
-def test_binary_bool_ops(ops, shape, dtype, device):
+def test_binary_logical_ops(ops, shape, dtype, device):
     n_op, m_op = ops
     m_x1, n_x1 = randn(shape[0], dtype=dtype, device=device)
     m_x2, n_x2 = randn(shape[1], dtype=dtype, device=device)
