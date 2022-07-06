@@ -51,14 +51,14 @@ def test_fold_const_ir(device, shape):
             return raf.matmul(x, z)
 
     def expected():
-        x = tvm.raf.ir.var("x", tvm.relay.TensorType(shape))
-        c = tvm.raf.ir.var("c", tvm.relay.TensorType(shape))
+        x = raf.ir.var("x", tvm.relay.TensorType(shape))
+        c = raf.ir.var("c", tvm.relay.TensorType(shape))
         # we are only interested in the structure
         t_value = raf._core.value.TensorValue.from_numpy(const.numpy())
         const_var = raf._ffi.ir._make.Constant(t_value)
         closure2 = raf.ir.op.matmul(x, const_var)
-        var_a2 = tvm.raf.ir.var("a2")
-        var_a3 = tvm.raf.ir.var("a3")
+        var_a2 = raf.ir.var("a2")
+        var_a3 = raf.ir.var("a3")
         closure3 = raf.ir.op.matmul(x, var_a2)
         let3 = tvm.relay.Let(var_a3, closure3, var_a3)
         let2 = tvm.relay.Let(var_a2, closure2, let3)
