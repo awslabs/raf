@@ -21,12 +21,14 @@ tvm::runtime::Module MakeCutlassModule(PackedFunc pf) {
   return tvm::runtime::Module(n);
 }
 
-PackedFunc TimeEvaluator(PackedFunc pf, Device dev, int number, int repeat, int min_repeat_ms) {
+PackedFunc TimeEvaluator(PackedFunc pf, Device dev, int number, int repeat, int min_repeat_ms,
+                         int cooldown_interval_ms, int repeats_to_cooldown) {
   tvm::Device tvm_dev = dev;
   auto wrapper = [=](TVMArgs args, TVMRetValue* rv) mutable {
     const static PackedFunc rpv_eval = registry::GetPackedFunc("runtime.RPCTimeEvaluator");
-    PackedFunc timer = rpv_eval(MakeCutlassModule(pf), "main", (int)tvm_dev.device_type,
-                                (int)tvm_dev.device_id, number, repeat, min_repeat_ms, "");
+    PackedFunc timer =
+        rpv_eval(MakeCutlassModule(pf), "main", (int)tvm_dev.device_type, (int)tvm_dev.device_id,
+                 number, repeat, min_repeat_ms, cooldown_interval_ms, repeats_to_cooldown, "");
     TVMRetValue timer_rv;
     timer.CallPacked(args, &timer_rv);
     const double* speed = reinterpret_cast<const double*>(timer_rv.operator std::string().data());

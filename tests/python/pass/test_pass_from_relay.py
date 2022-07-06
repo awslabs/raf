@@ -77,7 +77,7 @@ def test_raf_constant():
     data = raf.array(1)
 
     def expected():
-        a1 = _relay.var("a1")  # pylint: disable=invalid-name
+        a1 = raf.ir.var("a1")  # pylint: disable=invalid-name
         t_value = raf._core.value.TensorValue.from_numpy(data.numpy())
         constant = raf._ffi.ir._make.Constant(t_value)
         let = _relay.Let(a1, constant, a1)
@@ -96,13 +96,13 @@ def test_raf_module(use_kwargs):
     f1 = _relay.GlobalVar("f1")  # pylint: disable=invalid-name
 
     def get_tvm_mod():
-        x = _relay.var("x", shape=(1, 100))
+        x = raf.ir.var("x", shape=(1, 100))
         tanh = _relay.tanh(x)
         tvm_mod = _tvm.IRModule()
         tvm_mod[f1] = _relay.Function([x], tanh)
         tvm_mod = _relay.transform.InferType()(tvm_mod)
 
-        y = _relay.var("y", shape=(1, 100))
+        y = raf.ir.var("y", shape=(1, 100))
         out = f1(y)
         main = _relay.GlobalVar("main")
         tvm_mod[main] = _relay.Function([y], out)
@@ -110,14 +110,14 @@ def test_raf_module(use_kwargs):
         return tvm_mod
 
     def expected():
-        a1 = _relay.var("a1")  # pylint: disable=invalid-name
-        x = _relay.var("x", shape=(1, 100))
+        a1 = raf.ir.var("a1")  # pylint: disable=invalid-name
+        x = raf.ir.var("x", shape=(1, 100))
         let = _relay.Let(a1, raf.ir.op.tanh(x), a1)
         f1_out = _relay.Function([x], let)
         mod = IRModule({f1: f1_out})
 
-        a1 = _relay.var("a1")  # pylint: disable=invalid-name
-        y = _relay.var("y", shape=(1, 100))
+        a1 = raf.ir.var("a1")  # pylint: disable=invalid-name
+        y = raf.ir.var("y", shape=(1, 100))
         let = _relay.Let(a1, _relay.Call(f1, [y]), a1)
         main_out = _relay.Function([y], let)
         mod[_relay.GlobalVar("main")] = main_out
@@ -178,7 +178,7 @@ def test_raf_unary_op(op_name, shape):
     m_x, _ = randn(shape)
 
     # relay ir
-    r_x = _relay.var("x", shape=shape)
+    r_x = raf.ir.var("x", shape=shape)
     if op_name in ["relu", "batch_flatten"]:
         r_func = _relay.Function(params=[r_x], body=attrgetter("nn.%s" % op_name)(_relay)(r_x))
     else:
@@ -217,8 +217,8 @@ def test_raf_binary_tensor_op(op_name, shape):
     m_y, _ = randn(shape)
 
     # relay ir
-    r_x = _relay.var("x", shape=shape)
-    r_y = _relay.var("y", shape=shape)
+    r_x = raf.ir.var("x", shape=shape)
+    r_y = raf.ir.var("y", shape=shape)
     r_func = _relay.Function(params=[r_x, r_y], body=attrgetter(op_name)(_relay)(r_x, r_y))
 
     check_from_relay(model, r_func, [m_x, m_y])
@@ -242,7 +242,7 @@ def test_topk(shape, k, axis, dtype, ret_type, is_ascend):
     model = Topk(k=k, axis=axis, ret_type=ret_type, is_ascend=is_ascend, dtype=dtype)
     m_x, _ = randn(shape, dtype=dtype)
 
-    r_var = _relay.var("x", shape=shape, dtype=dtype)
+    r_var = raf.ir.var("x", shape=shape, dtype=dtype)
     r_body = _relay.topk(r_var, k=k, axis=axis, ret_type=ret_type, is_ascend=is_ascend, dtype=dtype)
     if ret_type == "both":
         r_body = r_body.astuple()
@@ -267,7 +267,7 @@ def test_repeat(shape, repeats, axis, dtype):
     model = Repeat(repeats, axis)
     m_x, _ = randn(shape, dtype=dtype)
 
-    r_x = _relay.var("x", shape=shape)
+    r_x = raf.ir.var("x", shape=shape)
     r_func = _relay.Function(params=[r_x], body=_relay.repeat(r_x, repeats, axis))
 
     check_from_relay(model, r_func, [m_x])
@@ -296,8 +296,8 @@ def test_take(shape, axis, dtype, mode):
     m_indices, _ = randint(shape[1], low=0, high=size)
     model = Take(axis, mode)
 
-    r_x = _relay.var("x", shape=shape[0])
-    r_indices = _relay.var("i", shape=shape[1], dtype="int64")
+    r_x = raf.ir.var("x", shape=shape[0])
+    r_indices = raf.ir.var("i", shape=shape[1], dtype="int64")
     r_func = _relay.Function(
         params=[r_x, r_indices], body=_relay.take(r_x, r_indices, axis, mode=mode)
     )
@@ -329,8 +329,8 @@ def test_sequence_mask(max_length, batch_size, other_feature_dims, axis, dtype):
     m_x, _ = randn(x_shape, dtype=dtype)
     m_length, _ = randint([batch_size], low=0, high=max_length, dtype=dtype)
 
-    r_x = _relay.var("x", shape=x_shape)
-    r_l = _relay.var("l", shape=[batch_size])
+    r_x = raf.ir.var("x", shape=x_shape)
+    r_l = raf.ir.var("l", shape=[batch_size])
     r_func = _relay.Function(params=[r_x, r_l], body=_relay.sequence_mask(r_x, r_l, -10, axis))
 
     check_from_relay(model, r_func, [m_x, m_length])
@@ -351,7 +351,7 @@ def test_reverse(shape, axis, dtype):
     m_x, _ = randn(shape, dtype=dtype)
     model = Reverse(axis=axis)
 
-    r_x = _relay.var("x", shape=shape)
+    r_x = raf.ir.var("x", shape=shape)
     r_func = _relay.Function(params=[r_x], body=_relay.reverse(r_x, axis))
 
     check_from_relay(model, r_func, [m_x])
@@ -377,8 +377,8 @@ def test_reverse_sequence(inputs, axes, dtype):
     m_x, _ = randn(shape, dtype=dtype)
     model = ReverseSequence(seq_axis, batch_axis)
 
-    r_x = _relay.var("x", shape=shape)
-    r_l = _relay.var("l", shape=(len(inputs["seq_length"]),), dtype="int64")
+    r_x = raf.ir.var("x", shape=shape)
+    r_l = raf.ir.var("l", shape=(len(inputs["seq_length"]),), dtype="int64")
     r_func = _relay.Function(
         params=[r_x, r_l], body=_relay.reverse_sequence(r_x, r_l, seq_axis, batch_axis)
     )
@@ -400,7 +400,7 @@ def test_broadcast_to(shape, dtype):
     model = BroadcastTo(shape[1])
     m_x, _ = randn(shape[0], dtype=dtype)
 
-    r_x = _relay.var("x", shape=shape[0])
+    r_x = raf.ir.var("x", shape=shape[0])
     r_func = _relay.Function(params=[r_x], body=_relay.broadcast_to(r_x, shape[1]))
 
     check_from_relay(model, r_func, [m_x])
@@ -426,8 +426,8 @@ def test_binary_shape_like(op, shape, dtype):
     m_x, _ = randn(shape[0], dtype=dtype)
     like_type, _ = randn(shape[1], dtype=dtype)
 
-    r_x = _relay.var("x", shape=shape[0])
-    r_b = _relay.var("b", shape=shape[1])
+    r_x = raf.ir.var("x", shape=shape[0])
+    r_b = raf.ir.var("b", shape=shape[1])
     r_func = _relay.Function(params=[r_x, r_b], body=r_op(r_x, r_b))
 
     check_from_relay(model, r_func, [m_x, like_type])
@@ -449,7 +449,7 @@ def test_transpose(shape, dtype):
     model = Transpose(axes)
     m_x, _ = randn(shape[0], dtype=dtype)
 
-    r_x = _relay.var("x", shape=shape[0])
+    r_x = raf.ir.var("x", shape=shape[0])
     r_func = _relay.Function(params=[r_x], body=_relay.transpose(r_x, axes))
 
     check_from_relay(model, r_func, [m_x])
@@ -473,7 +473,7 @@ def test_split(shape, axis, indices_or_sections, dtype):
     model = Split(indices_or_sections, axis)
     m_x, _ = randn(shape, dtype=dtype)
 
-    r_x = _relay.var("x", shape=shape, dtype=dtype)
+    r_x = raf.ir.var("x", shape=shape, dtype=dtype)
     r_func = _relay.Function(
         params=[r_x], body=_relay.split(r_x, indices_or_sections, axis).astuple()
     )
@@ -496,7 +496,7 @@ def test_concatenate(shapes, axis, dtype):
     args = [randn(shape, dtype=dtype)[0] for shape in shapes]
     model = Concatenate(axis)
 
-    r_vars = [_relay.var("x%d" % idx, shape=shape) for idx, shape in enumerate(shapes)]
+    r_vars = [raf.ir.var("x%d" % idx, shape=shape) for idx, shape in enumerate(shapes)]
     r_func = _relay.Function(params=r_vars, body=_relay.concatenate(r_vars, axis=axis))
 
     check_from_relay(model, r_func, args)
@@ -517,7 +517,7 @@ def test_stack(shapes, axis, dtype):
     args = [randn(shape, dtype=dtype)[0] for shape in shapes]
     model = Stack(axis)
 
-    r_vars = [_relay.var("x%d" % idx, shape=shape, dtype=dtype) for idx, shape in enumerate(shapes)]
+    r_vars = [raf.ir.var("x%d" % idx, shape=shape, dtype=dtype) for idx, shape in enumerate(shapes)]
     r_func = _relay.Function(params=r_vars, body=_relay.stack(r_vars, axis=axis))
 
     check_from_relay(model, r_func, args)
@@ -538,7 +538,7 @@ def test_squeeze(shape, axis, dtype):
     model = Squeeze(axis)
     m_x, _ = randn(shape, dtype=dtype)
 
-    r_var = _relay.var("x", shape=shape, dtype=dtype)
+    r_var = raf.ir.var("x", shape=shape, dtype=dtype)
     r_func = _relay.Function(params=[r_var], body=_relay.squeeze(r_var, axis))
 
     check_from_relay(model, r_func, [m_x])
@@ -561,7 +561,7 @@ def test_clip(shape, a_min, a_max, dtype):
 
     m_x, _ = randn(shape, dtype=dtype)
 
-    r_var = _relay.var("x", shape=shape, dtype=dtype)
+    r_var = raf.ir.var("x", shape=shape, dtype=dtype)
     r_func = _relay.Function(params=[r_var], body=_relay.clip(r_var, a_min, a_max))
 
     check_from_relay(model, r_func, [m_x])
@@ -589,15 +589,15 @@ def test_cast_n_cast_like(shape, itype, otype):
 
     m_x, _ = randn(shape, dtype=itype)
     cast_model = Cast(otype)
-    r_var = _relay.var("x", shape=shape, dtype=itype)
+    r_var = raf.ir.var("x", shape=shape, dtype=itype)
     r_func = _relay.Function(params=[r_var], body=_relay.cast(r_var, otype))
     check_from_relay(cast_model, r_func, [m_x])
 
     m_x_like, _ = randn(shape, dtype=otype)
     cast_like_model = CastLike()
     cast_like_model(m_x, m_x_like)
-    r_var = _relay.var("x", shape=shape, dtype=itype)
-    r_var2 = _relay.var("y", shape=shape, dtype=otype)
+    r_var = raf.ir.var("x", shape=shape, dtype=itype)
+    r_var2 = raf.ir.var("y", shape=shape, dtype=otype)
     r_func = _relay.Function(params=[r_var, r_var2], body=_relay.cast_like(r_var, r_var2))
     check_from_relay(cast_like_model, r_func, [m_x, m_x_like])
 
@@ -618,8 +618,8 @@ def test_gather(dshape, axis, dtype):
     m_i, _ = randint(dshape, high=dshape[axis])
     model = Gather(axis)
 
-    r_x = _relay.var("x", shape=dshape, dtype=dtype)
-    r_i = _relay.var("i", shape=dshape, dtype="int64")
+    r_x = raf.ir.var("x", shape=dshape, dtype=dtype)
+    r_i = raf.ir.var("i", shape=dshape, dtype="int64")
     r_func = _relay.Function(params=[r_x, r_i], body=_relay.gather(r_x, axis, r_i))
 
     check_from_relay(model, r_func, [m_x, m_i])
@@ -641,8 +641,8 @@ def test_gather_nd(dshape, dtype, ishape):
     m_i, _ = randint(ishape, high=dshape[0 : ishape[-1]], dtype="int64")
     model = GatherNd()
 
-    r_x = _relay.var("x", shape=dshape, dtype=dtype)
-    r_i = _relay.var("i", shape=ishape, dtype="int64")
+    r_x = raf.ir.var("x", shape=dshape, dtype=dtype)
+    r_i = raf.ir.var("i", shape=ishape, dtype="int64")
     r_func = _relay.Function(params=[r_x, r_i], body=_relay.gather_nd(r_x, r_i))
 
     check_from_relay(model, r_func, [m_x, m_i])
@@ -671,7 +671,7 @@ def test_reshape(params, reverse, dtype):
     model = Reshape(shape=to_shape, reverse=reverse)
     m_x, _ = randn(orig_shape, dtype=dtype)
 
-    r_x = _relay.var("x", shape=orig_shape, dtype=dtype)
+    r_x = raf.ir.var("x", shape=orig_shape, dtype=dtype)
     r_func = _relay.Function(params=[r_x], body=_relay.reshape(r_x, to_shape))
 
     check_from_relay(model, r_func, [m_x])
@@ -694,7 +694,7 @@ def test_expand_dims(shape, dtype, axis, num_newaxis):
     m_x, _ = randn(shape, dtype=dtype)
     model = ExpandDims(axis, num_newaxis)
 
-    r_x = _relay.var("x", shape=shape, dtype=dtype)
+    r_x = raf.ir.var("x", shape=shape, dtype=dtype)
     r_func = _relay.Function(params=[r_x], body=_relay.expand_dims(r_x, axis, num_newaxis))
 
     check_from_relay(model, r_func, [m_x])
@@ -735,7 +735,7 @@ def test_full_like(shape, dtype, val):
     m_x, _ = randn(shape, dtype=dtype)
     model = FullLike(val)
 
-    r_x = _relay.var("x", shape=shape, dtype=dtype)
+    r_x = raf.ir.var("x", shape=shape, dtype=dtype)
     r_func = _relay.Function(params=[r_x], body=_relay.full_like(r_x, _relay.const(val)))
 
     check_from_relay(model, r_func, [m_x], disabled_pass=["FoldConstant", "SimplifyExpr"])
@@ -758,7 +758,7 @@ def test_strided_slice(dtype, params):
     model = StridedSlice(begin, end, strides)
     m_x, _ = randn(shape, dtype=dtype)
 
-    r_x = _relay.var("x", shape=shape, dtype=dtype)
+    r_x = raf.ir.var("x", shape=shape, dtype=dtype)
     r_func = _relay.Function(params=[r_x], body=_relay.strided_slice(r_x, begin, end, strides))
 
     check_from_relay(model, r_func, [m_x])
@@ -779,9 +779,9 @@ def test_where(shape):
     m_x, _ = randn(shape)
     m_y, _ = randn(shape)
 
-    r_c = _relay.var("c", shape=shape, dtype="bool")
-    r_x = _relay.var("x", shape=shape)
-    r_y = _relay.var("y", shape=shape)
+    r_c = raf.ir.var("c", shape=shape, dtype="bool")
+    r_x = raf.ir.var("x", shape=shape)
+    r_y = raf.ir.var("y", shape=shape)
     r_func = _relay.Function(params=[r_c, r_x, r_y], body=_relay.where(r_c, r_x, r_y))
 
     check_from_relay(model, r_func, [m_cond, m_x, m_y])
@@ -807,8 +807,8 @@ def test_raf_conv2d(xshape, wshape, stride, dilation, padding):
     m_w, _ = randn(wshape)
 
     # relay ir
-    r_x = _relay.var("x", shape=xshape)
-    r_w = _relay.var("w", shape=wshape)
+    r_x = raf.ir.var("x", shape=xshape)
+    r_w = raf.ir.var("w", shape=wshape)
     r_c = _relay.nn.conv2d(r_x, r_w, strides=stride, dilation=dilation, padding=padding)
     r_func = _relay.Function(params=[r_x, r_w], body=r_c)
 
@@ -844,8 +844,8 @@ def test_raf_conv2d_trans(xshape, wshape, stride_output_padding, dilation, paddi
     m_x, _ = randn(xshape)
     m_w, _ = randn(wshape)
     # relay ir
-    r_x = _relay.var("x", shape=xshape)
-    r_w = _relay.var("w", shape=wshape)
+    r_x = raf.ir.var("x", shape=xshape)
+    r_w = raf.ir.var("w", shape=wshape)
     r_c = _relay.nn.conv2d_transpose(
         r_x, r_w, strides=stride, dilation=dilation, padding=padding, output_padding=output_padding
     )
@@ -871,7 +871,7 @@ def test_contrib_dropout(device, shape, p):
     model = ContribDropout(p)
     m_x, _ = randn(shape)
 
-    r_x = _relay.var("x", shape=shape)
+    r_x = raf.ir.var("x", shape=shape)
     r_c = _relay.nn.dropout(r_x, rate=p)
     r_func = _relay.Function(params=[r_x], body=r_c)
 
@@ -906,7 +906,7 @@ def test_raf_pool2d(kernel, stride, padding, funcs):
     m_x, _ = randn([8, 3, 32, 32])
 
     # relay ir
-    r_x = _relay.var("x", shape=[8, 3, 32, 32])
+    r_x = raf.ir.var("x", shape=[8, 3, 32, 32])
     r_c = relay_fwd(r_x, pool_size=kernel, strides=stride, padding=padding)
     r_func = _relay.Function(params=[r_x], body=r_c)
 
@@ -937,7 +937,7 @@ def test_raf_adaptive_pool2d(out_shape, layout, funcs):
     m_x, _ = randn([8, 3, 32, 32])
 
     # relay ir
-    r_x = _relay.var("x", shape=[8, 3, 32, 32])
+    r_x = raf.ir.var("x", shape=[8, 3, 32, 32])
     r_c = relay_fwd(r_x, out_shape, layout)
     r_func = _relay.Function(params=[r_x], body=r_c)
 
@@ -963,9 +963,9 @@ def test_raf_layer_norm(shape, axis, eps, dtype):
     m_w, _ = randn([shape[axis]], dtype=dtype)
     m_b, _ = randn([shape[axis]], dtype=dtype)
 
-    r_x = _relay.var("x", shape=shape, dtype=dtype)
-    r_w = _relay.var("w", shape=[shape[axis]], dtype=dtype)
-    r_b = _relay.var("b", shape=[shape[axis]], dtype=dtype)
+    r_x = raf.ir.var("x", shape=shape, dtype=dtype)
+    r_w = raf.ir.var("w", shape=[shape[axis]], dtype=dtype)
+    r_b = raf.ir.var("b", shape=[shape[axis]], dtype=dtype)
     r_func = _relay.Function(
         params=[r_x, r_w, r_b], body=_relay.nn.layer_norm(r_x, r_w, r_b, axis, eps)
     )
@@ -998,11 +998,11 @@ def test_raf_batch_norm_train(shape):
 
     model = BatchNorm()
 
-    r_x = _relay.var("x", shape=shape)
-    r_w = _relay.var("w", shape=stats_shape)
-    r_b = _relay.var("b", shape=stats_shape)
-    r_m = _relay.var("m", shape=stats_shape)
-    r_v = _relay.var("v", shape=stats_shape)
+    r_x = raf.ir.var("x", shape=shape)
+    r_w = raf.ir.var("w", shape=stats_shape)
+    r_b = raf.ir.var("b", shape=stats_shape)
+    r_m = raf.ir.var("m", shape=stats_shape)
+    r_v = raf.ir.var("v", shape=stats_shape)
     r_func = _relay.Function(
         params=[r_x, r_w, r_b, r_m, r_v],
         body=_relay.nn.batch_norm(r_x, r_w, r_b, r_m, r_v, epsilon=eps)[0],
@@ -1032,7 +1032,7 @@ def test_pad(dtype, dimension, pad_value, pad_mode):
     m_x, _ = randn(shape, dtype=dtype)
     model = Pad()
 
-    r_x = _relay.var("x", shape=shape, dtype=dtype)
+    r_x = raf.ir.var("x", shape=shape, dtype=dtype)
     r_func = _relay.Function(params=[r_x], body=_relay.nn.pad(r_x, pad_width, pad_value, pad_mode))
 
     check_from_relay(model, r_func, [m_x])
@@ -1058,8 +1058,8 @@ def test_dense_pattern(trans):
     m_x, _ = randn((10, 10), dtype="float32")
     m_y, _ = randn((10, 10), dtype="float32")
 
-    r_x = _relay.var("x", shape=(10, 10), dtype="float32")
-    r_y = _relay.var("x", shape=(10, 10), dtype="float32")
+    r_x = raf.ir.var("x", shape=(10, 10), dtype="float32")
+    r_y = raf.ir.var("x", shape=(10, 10), dtype="float32")
     tran_x = _relay.nn.relu(r_x)
     tran_x = _relay.transpose(tran_x) if trans[0] else tran_x
     tran_y = _relay.transpose(r_y) if trans[1] else r_y
@@ -1090,8 +1090,8 @@ def test_gelu_pattern(shape, dtype, device):
     m_x, _ = randn(shape, dtype=dtype, device=device)
     m_y, _ = randn(shape, dtype=dtype, device=device)
 
-    r_x = _relay.var("x", shape=shape, dtype=dtype)
-    bias = _relay.var("bias", shape=shape, dtype=dtype)
+    r_x = raf.ir.var("x", shape=shape, dtype=dtype)
+    bias = raf.ir.var("bias", shape=shape, dtype=dtype)
 
     a0 = _relay.add(r_x, bias)
     a1 = _relay.multiply(a0, _relay.const(1 / 2 ** 0.5, dtype))
@@ -1129,9 +1129,9 @@ def test_embedding_pattern():
     m_i, _ = randint(indices_shape, high=10000)
     m_i2 = raf.array(0, dtype="int64")
 
-    r_x = _relay.var("x", shape=data_shape, dtype="float32")
-    r_i = _relay.var("i", shape=indices_shape, dtype="int64")
-    r_i2 = _relay.var("i2", shape=(), dtype="int64")
+    r_x = raf.ir.var("x", shape=data_shape, dtype="float32")
+    r_i = raf.ir.var("i", shape=indices_shape, dtype="int64")
+    r_i2 = raf.ir.var("i2", shape=(), dtype="int64")
     out = _relay.cast(r_i, "int32")
     out1 = _relay.take(r_x, out)  # Should be converted to embedding along with the cast.
 
@@ -1161,7 +1161,7 @@ def test_sum(shape, axis, keep):
 
     model = Sum(axis, keep)
     m_x, _ = randn(shape)
-    r_x = _relay.var("x", shape=shape)
+    r_x = raf.ir.var("x", shape=shape)
     r_func = _relay.Function(params=[r_x], body=_relay.sum(r_x, axis, keep))
 
     check_from_relay(model, r_func, [m_x])
@@ -1184,9 +1184,9 @@ def test_arange(data):
     m_start = raf.array(start, dtype=dtype)
     m_stop = raf.array(stop, dtype=dtype)
     m_step = raf.array(step, dtype=dtype)
-    r_start = _relay.var("start", shape=[], dtype=dtype)
-    r_stop = _relay.var("stop", shape=[], dtype=dtype)
-    r_step = _relay.var("step", shape=[], dtype=dtype)
+    r_start = raf.ir.var("start", shape=[], dtype=dtype)
+    r_stop = raf.ir.var("stop", shape=[], dtype=dtype)
+    r_step = raf.ir.var("step", shape=[], dtype=dtype)
     x = _relay.arange(r_start, r_stop, r_step)
     r_func = _relay.Function([r_start, r_stop, r_step], x)
     check_from_relay(model, r_func, [m_start, m_stop, m_step], check_model_structure=False)
@@ -1208,12 +1208,12 @@ def test_adv_index(data_shape, index_shapes):
     m_x, _ = randn(data_shape)
     m_indices = []
     model = Index()
-    inputs = [_relay.var("data", _relay.TensorType(data_shape, dtype))]
+    inputs = [raf.ir.var("data", _relay.TensorType(data_shape, dtype))]
     for i, index_shape in enumerate(index_shapes):
         limit = data_shape[i]
         index = np.random.uniform(0, limit - 1, size=index_shape).astype("int64")
         m_indices.append(raf.array(index))
-        inputs.append(_relay.var("index_{}".format(i), _relay.TensorType(index_shape, "int64")))
+        inputs.append(raf.ir.var("index_{}".format(i), _relay.TensorType(index_shape, "int64")))
 
     out = _relay.op.adv_index(inputs)
     r_func = _relay.Function(inputs, out)
@@ -1251,7 +1251,7 @@ def test_threefry_generate(shape):
     m_key = raf.array(_relay.random.threefry_key(0).data.numpy(), dtype="uint64")
     model = ThreefryGenerate(shape)
 
-    r_key = _relay.var("key", shape=(10,), dtype="uint64")
+    r_key = raf.ir.var("key", shape=(10,), dtype="uint64")
     r_func = _relay.Function(params=[r_key], body=_relay.random.threefry_generate(r_key, shape))
 
     check_from_relay(model, r_func, [m_key])
@@ -1269,7 +1269,7 @@ def test_threefry_split():
     m_key = raf.array(_relay.random.threefry_key(0).data.numpy(), dtype="uint64")
     model = ThreefrySplit()
 
-    r_key = _relay.var("key", shape=(10,), dtype="uint64")
+    r_key = raf.ir.var("key", shape=(10,), dtype="uint64")
     r_func = _relay.Function(params=[r_key], body=_relay.random.threefry_split(r_key))
 
     check_from_relay(model, r_func, [m_key])
@@ -1290,7 +1290,7 @@ def test_mean(shape, axis, keep):
 
     model = Mean(axis, keep)
     m_x, _ = randn(shape)
-    r_x = _relay.var("x", shape=shape)
+    r_x = raf.ir.var("x", shape=shape)
     r_func = _relay.Function(params=[r_x], body=_relay.mean(r_x, axis, keep))
 
     check_from_relay(model, r_func, [m_x])
@@ -1309,7 +1309,7 @@ def test_argwhere(shape):
     model = ArgWhere()
     m_x, _ = randn(shape)
 
-    r_x = _relay.var("x", shape=shape)
+    r_x = raf.ir.var("x", shape=shape)
     r_func = _relay.Function(params=[r_x], body=_relay.argwhere(r_x))
     check_from_relay(model, r_func, [m_x])
 
@@ -1341,8 +1341,8 @@ def test_roi_align():
     m_rois = raf.array(np_rois)
     model = RoiAlign((7, 7), 1.0, -1, "NCHW", "avg")
 
-    r_data = _relay.var("data", shape=(1, 4, 16, 16), dtype="float32")
-    r_rois = _relay.var("rois", shape=(32, 5), dtype="float32")
+    r_data = raf.ir.var("data", shape=(1, 4, 16, 16), dtype="float32")
+    r_rois = raf.ir.var("rois", shape=(32, 5), dtype="float32")
     r_func = _relay.Function(
         params=[r_data, r_rois],
         body=_relay.vision.roi_align(r_data, r_rois, (7, 7), 1.0, -1, "NCHW", "avg"),
@@ -1371,7 +1371,7 @@ def test_cumsum(shape, axis, exclusive):
     # Relay cumsum allows exclusive to be None, whcih means False.
     relaty_exclusive = exclusive if exclusive else None
 
-    r_data = _relay.var("data", shape=shape, dtype=dtype)
+    r_data = raf.ir.var("data", shape=shape, dtype=dtype)
     r_func = _relay.Function(
         params=[r_data],
         body=_relay.cumsum(r_data, axis=axis, dtype=dtype, exclusive=relaty_exclusive),

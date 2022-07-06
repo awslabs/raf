@@ -61,9 +61,9 @@ def test_dp(config):
         shape = [config[0], config[1]]
 
         # Params
-        x = relay.var("x", relay.TensorType(shape))
-        c = relay.var("c", relay.TensorType(shape))
-        y_true = relay.var(
+        x = raf.ir.var("x", relay.TensorType(shape))
+        c = raf.ir.var("c", relay.TensorType(shape))
+        y_true = raf.ir.var(
             "y_true",
             relay.TensorType(
                 [
@@ -75,13 +75,13 @@ def test_dp(config):
 
         # Forward IR components
         expr_a1 = raf.ir.op.matmul(x, c)
-        var_a1 = relay.var("a1")
+        var_a1 = raf.ir.var("a1")
 
         expr_a2 = raf.ir.op.nll_loss(y_true, var_a1)
-        var_a2 = relay.var("a2")
+        var_a2 = raf.ir.var("a2")
 
         # Backward IR components
-        dy = relay.var(
+        dy = raf.ir.var(
             "dy",
             relay.TensorType(
                 [
@@ -90,63 +90,63 @@ def test_dp(config):
                 dtype="float32",
             ),
         )
-        var_closure = relay.var("closure")
+        var_closure = raf.ir.var("closure")
 
         expr_x1 = raf.ir.op.nll_loss_dpred(dy, y_true, var_a1)
-        var_x0 = relay.var("x0")
+        var_x0 = raf.ir.var("x0")
 
         expr_x2 = raf.ir.op.matmul_nt(var_x0, c)
-        var_x1 = relay.var("x1")
+        var_x1 = raf.ir.var("x1")
 
-        allreduce_in = relay.var("allreduce_in")
+        allreduce_in = raf.ir.var("allreduce_in")
         expr_t = relay.Tuple([var_x1])
 
         expr_x3 = raf.ir.op.matmul_tn(x, var_x0)
-        var_x2 = relay.var("x2")
+        var_x2 = raf.ir.var("x2")
 
-        allreduce_in1 = relay.var("allreduce_in1")
+        allreduce_in1 = raf.ir.var("allreduce_in1")
         expr_t1 = relay.Tuple([var_x2])
 
         expr_x4 = raf.ir.op.zeros_like(y_true)
-        var_x3 = relay.var("x3")
+        var_x3 = raf.ir.var("x3")
 
-        allreduce_in2 = relay.var("allreduce_in2")
+        allreduce_in2 = raf.ir.var("allreduce_in2")
         expr_t2 = relay.Tuple([var_x3])
 
         if nccl_version > 21000:
             expr_g = raf.ir.op._allreduce(allreduce_in, "avg")
-            var_g = relay.var("g")
+            var_g = raf.ir.var("g")
 
             expr_g1 = raf.ir.op._allreduce(allreduce_in1, "avg")
-            var_g1 = relay.var("g1")
+            var_g1 = raf.ir.var("g1")
 
             expr_g2 = raf.ir.op._allreduce(allreduce_in2, "avg")
-            var_g2 = relay.var("g2")
+            var_g2 = raf.ir.var("g2")
         else:
             fdeno = raf.ir.const(float(comm.size), dtype="float32")
             ideno = raf.ir.const(comm.size, dtype="int64")
 
             expr_g = raf.ir.op._allreduce(allreduce_in)
-            var_g_sum = relay.var("g_sum")
+            var_g_sum = raf.ir.var("g_sum")
             expr_avg = raf.ir.op.divide(var_g_sum, fdeno)
-            var_g = relay.var("g")
+            var_g = raf.ir.var("g")
 
             expr_g1 = raf.ir.op._allreduce(allreduce_in1)
-            var_g1_sum = relay.var("g_sum1")
+            var_g1_sum = raf.ir.var("g_sum1")
             expr_avg1 = raf.ir.op.divide(var_g1_sum, fdeno)
-            var_g1 = relay.var("g1")
+            var_g1 = raf.ir.var("g1")
 
             expr_g2 = raf.ir.op._allreduce(allreduce_in2)
-            var_g2_sum = relay.var("g_sum2")
+            var_g2_sum = raf.ir.var("g_sum2")
             expr_avg2 = raf.ir.op.divide(var_g2_sum, ideno)
-            var_g2 = relay.var("g2")
+            var_g2 = raf.ir.var("g2")
 
         expr_x5 = relay.Tuple([var_g, var_g2, var_g1])
-        var_x5 = relay.var("x5")
+        var_x5 = raf.ir.var("x5")
 
         # Forward IR components
         expr_ret = relay.Tuple([var_a2, var_closure])
-        var_ret = relay.var("ret")
+        var_ret = raf.ir.var("ret")
         if nccl_version >= 21000:
             # Construct Backward IR as a closure
             let8 = relay.Let(var_x5, expr_x5, var_x5)
