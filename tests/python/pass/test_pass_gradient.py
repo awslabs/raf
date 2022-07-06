@@ -181,14 +181,14 @@ def test_no_grad2(device):
     dtype = "float32"
 
     def expected():
-        x = relay.var("x", shape=shape)
-        y = relay.var("y", shape=shape)
-        a1 = relay.var("a1")
-        closure = relay.var("adjoint_closure")
-        dy = relay.var("dy", shape=(3, 3))
-        x1 = relay.var("x")
-        x2 = relay.var("x")
-        ret = relay.var("ret")
+        x = raf.ir.var("x", shape=shape)
+        y = raf.ir.var("y", shape=shape)
+        a1 = raf.ir.var("a1")
+        closure = raf.ir.var("adjoint_closure")
+        dy = raf.ir.var("dy", shape=(3, 3))
+        x1 = raf.ir.var("x")
+        x2 = raf.ir.var("x")
+        ret = raf.ir.var("ret")
         inner_let2 = relay.Let(
             x2,
             relay.Tuple([x1, raf._ffi.ir._make.Constant(raf._core.value.NoGradValue())]),
@@ -231,7 +231,7 @@ def test_no_grad2(device):
 def test_basic(device):
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
 
         a = relay.tanh(x)
         b = relay.erf(a)
@@ -263,7 +263,7 @@ def test_basic(device):
 def test_concatenate(device):
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
 
         a = relay.tanh(x)
         b = relay.erf(a)
@@ -297,7 +297,7 @@ def test_concatenate(device):
 def test_split(device):
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(1, 102), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 102), dtype="float32")
 
         a = relay.tanh(x)
         b = relay.split(a, indices_or_sections=3, axis=1)
@@ -334,7 +334,7 @@ def test_split(device):
 def test_split_unused_output(device):
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
 
         a = relay.tanh(x)
         b = relay.split(a, indices_or_sections=2, axis=1)
@@ -367,7 +367,7 @@ def test_split_unused_output(device):
 def test_fanout(device):
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
 
         a = relay.tanh(x)
         b = relay.nn.relu(a)
@@ -401,7 +401,7 @@ def test_fanout(device):
 def test_split_concat(device):
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
 
         a = relay.tanh(x)
         b = relay.split(a, indices_or_sections=2, axis=1)
@@ -435,7 +435,7 @@ def test_split_concat(device):
 def test_split_with_fanout(device):
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
 
         a = relay.tanh(x)
         b = relay.split(a, indices_or_sections=2, axis=1)
@@ -472,8 +472,8 @@ def test_split_with_fanout(device):
 def test_concatenate_fanout(device):
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(1, 100), dtype="float32")
-        y = relay.var("y", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
+        y = raf.ir.var("y", shape=(1, 100), dtype="float32")
 
         a = relay.Tuple([x, y])
         b = relay.concatenate(a, axis=1)
@@ -512,7 +512,7 @@ def test_concatenate_fanout(device):
 def test_tuple_outputs(device):
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
 
         a = relay.tanh(x)
         b = relay.nn.relu(x)
@@ -544,7 +544,7 @@ def test_tuple_outputs(device):
 def test_nested_tuple_outputs():
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
 
         a = relay.tanh(x)
         b = relay.nn.relu(x)
@@ -580,7 +580,7 @@ def test_nested_tuple_outputs():
 def test_basic_function():
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
         a = relay.tanh(x)
         f1_out = a
         f1 = relay.Function([x], f1_out)
@@ -588,7 +588,7 @@ def test_basic_function():
         mod[f1_gvar] = f1
         mod = relay.transform.InferType()(mod)
 
-        y = relay.var("y", shape=(1, 100), dtype="float32")
+        y = raf.ir.var("y", shape=(1, 100), dtype="float32")
         a = relay.erf(y)
         b = f1_gvar(a)
         c = relay.nn.relu(b)
@@ -622,8 +622,8 @@ def test_basic_function_with_multiple_vars():
     def get_mod():
         mod = tvm.IRModule()
 
-        x = relay.var("x", shape=(1, 100), dtype="float32")
-        y = relay.var("y", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
+        y = raf.ir.var("y", shape=(1, 100), dtype="float32")
         a = relay.tanh(x)
         b = relay.nn.relu(y)
         c = relay.add(a, b)
@@ -633,8 +633,8 @@ def test_basic_function_with_multiple_vars():
         mod[f1_gvar] = f1
         mod = relay.transform.InferType()(mod)
 
-        p = relay.var("p", shape=(1, 100), dtype="float32")
-        q = relay.var("q", shape=(1, 100), dtype="float32")
+        p = raf.ir.var("p", shape=(1, 100), dtype="float32")
+        q = raf.ir.var("q", shape=(1, 100), dtype="float32")
         a = relay.nn.relu(p)
         b = f1_gvar(a, q)
         out = b
@@ -663,7 +663,7 @@ def test_function_fanout():
     def get_mod():
         mod = tvm.IRModule()
 
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
         a = relay.tanh(x)
         f1_out = a
         f1 = relay.Function([x], f1_out)
@@ -671,7 +671,7 @@ def test_function_fanout():
         mod[f1_gvar] = f1
         mod = relay.transform.InferType()(mod)
 
-        p = relay.var("p", shape=(1, 100), dtype="float32")
+        p = raf.ir.var("p", shape=(1, 100), dtype="float32")
         a = relay.nn.relu(p)
         b = f1_gvar(a)
         c = relay.tanh(b)
@@ -705,8 +705,8 @@ def test_basic_if():
 
         # Recursive function f
         ti32 = relay.scalar_type("int32")
-        n = relay.var("n", ti32)
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        n = raf.ir.var("n", ti32)
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
         with sb.if_scope(relay.equal(n, relay.const(0, ti32))):
             sb.ret(relay.tanh(x))
         with sb.else_scope():
@@ -739,9 +739,9 @@ def test_if_with_multiple_vars():
 
         # Recursive function f
         ti32 = relay.scalar_type("int32")
-        n = relay.var("n", ti32)
-        x = relay.var("x", shape=(1, 100), dtype="float32")
-        y = relay.var("y", shape=(1, 100), dtype="float32")
+        n = raf.ir.var("n", ti32)
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
+        y = raf.ir.var("y", shape=(1, 100), dtype="float32")
         with sb.if_scope(relay.equal(n, relay.const(0, ti32))):
             sb.ret(relay.add(relay.tanh(x), relay.tanh(y)))
         with sb.else_scope():
@@ -775,8 +775,8 @@ def test_recursive_with_if():
 
         # Recursive function f
         ti32 = relay.scalar_type("int32")
-        n = relay.var("n", ti32)
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        n = raf.ir.var("n", ti32)
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
         with sb.if_scope(relay.equal(n, relay.const(0, ti32))):
             sb.ret(x)
         with sb.else_scope():
@@ -784,8 +784,8 @@ def test_recursive_with_if():
         mod[f1] = relay.Function([n, x], sb.get())
         mod = relay.transform.InferType()(mod)
 
-        n1 = relay.var("n1", ti32)  # pylint: disable=invalid-name
-        y = relay.var("y", shape=(1, 100), dtype="float32")
+        n1 = raf.ir.var("n1", ti32)  # pylint: disable=invalid-name
+        y = raf.ir.var("y", shape=(1, 100), dtype="float32")
         out = f1(n1, y)
         mod[main] = relay.Function([n1, y], out)
         mod = relay.transform.InferType()(mod)
@@ -831,12 +831,12 @@ def test_while_loop():
         sb = ScopeBuilder()
         mod = tvm.IRModule()
 
-        loop = relay.var("loop")
-        y = relay.var("y", shape=(1, 100), dtype="float32")
+        loop = raf.ir.var("loop")
+        y = raf.ir.var("y", shape=(1, 100), dtype="float32")
         # Recursive function f
         ti32 = relay.scalar_type("int32")
-        counter_var = relay.var("counter", ti32)
-        x = relay.var("x", shape=(1, 100), dtype="float32")
+        counter_var = raf.ir.var("counter", ti32)
+        x = raf.ir.var("x", shape=(1, 100), dtype="float32")
         with sb.if_scope(relay.equal(counter_var, relay.const(5, ti32))):
             sb.ret(relay.Tuple([counter_var, x]))
         with sb.else_scope():
@@ -872,8 +872,8 @@ def test_simplify_sum():
     # Get a Relay func
     def get_mod():
         mod = tvm.IRModule()
-        x = relay.var("x", shape=(10, 100), dtype="float32")
-        y = relay.var("y", shape=(1, 100), dtype="float32")
+        x = raf.ir.var("x", shape=(10, 100), dtype="float32")
+        y = raf.ir.var("y", shape=(1, 100), dtype="float32")
         out = relay.add(x, y)
         mod["main"] = relay.Function([x, y], out)
         return mod

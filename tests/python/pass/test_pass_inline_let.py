@@ -180,11 +180,11 @@ def test_tuple_sequence():
             return a
 
     def expected():
-        x = relay.var("x", shape=shape)
-        y = relay.var("y", shape=shape)
-        a1 = relay.var("a1")
-        a2 = relay.var("a2")
-        a3 = relay.var("a3")
+        x = raf.ir.var("x", shape=shape)
+        y = raf.ir.var("y", shape=shape)
+        a1 = raf.ir.var("a1")
+        a2 = raf.ir.var("a2")
+        a3 = raf.ir.var("a3")
         let3 = relay.Let(a3, raf.ir.op.add(x, y), a3)
         let2 = relay.Let(
             a2,

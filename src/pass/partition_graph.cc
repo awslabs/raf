@@ -138,7 +138,7 @@ class PartitionFunction : public Object {
     }
     Tuple outs_tuple = Tuple(out_tuple_fields);
     std::string outs_var_name = func_name_ + "_outs";
-    Var outs_var = Var(outs_var_name, {});
+    Var outs_var = MakeVar(outs_var_name, {});
     ell_.vars.push_back(outs_var);
     ell_.exprs.push_back(outs_tuple);
     ell_.ret = outs_var;
@@ -154,7 +154,7 @@ class PartitionFunction : public Object {
     // Call the partition function and get the outputs TupleNode.
     auto func_call = Call(func, {}, Attrs());
     std::string ret_var_name = func_name_ + "_ret";
-    Var ret_var = Var(ret_var_name, {});
+    Var ret_var = MakeVar(ret_var_name, {});
     ret_ell_.vars.push_back(ret_var);
     ret_ell_.exprs.push_back(func_call);
     for (size_t i = 0; i < outs_.size(); ++i) {
@@ -296,7 +296,7 @@ class Partitioner : public ExprRewriter {
         auto out = Downcast<Var>(part_func->outs_[i]);
         CHECK_EQ(part_func_vars.count(out), 0U);
         std::string var_name = part_func->func_name_ + "_" + std::to_string(i);
-        Var func_var = Var(var_name, {});
+        Var func_var = MakeVar(var_name, {});
         part_func_vars[out] = func_var;
       }
     }

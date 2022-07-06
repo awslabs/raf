@@ -15,14 +15,14 @@ from raf._ffi.model import RunModel
 @pytest.mark.parametrize("shape", [[3, 3], [4, 4]])
 def test_basic_if(device, shape):
     # pylint: disable=too-many-locals
-    x = relay.var("x")
-    cond_p = relay.var("cond_p")
-    cond_q = relay.var("cond_q")
-    a = relay.var("a")
-    b = relay.var("b")
-    c = relay.var("c")
-    cond = relay.var("cond")
-    ret = relay.var("ret")
+    x = raf.ir.var("x")
+    cond_p = raf.ir.var("cond_p")
+    cond_q = raf.ir.var("cond_q")
+    a = raf.ir.var("a")
+    b = raf.ir.var("b")
+    c = raf.ir.var("c")
+    cond = raf.ir.var("cond")
+    ret = raf.ir.var("ret")
     lets = [
         (a, raf.ir.op.cos(x)),
         (cond, raf.ir.op.greater(cond_p, cond_q)),
