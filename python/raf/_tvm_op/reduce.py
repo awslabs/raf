@@ -135,7 +135,7 @@ def _schedule_cuda_sum_long_reduce(op, sch, **kwargs):
 
 
 @profile_schedule(
-    num_thread=[32, 64, get_cuda_max_thread()],
+    num_thread=[16, 32, 64, get_cuda_max_thread()],
     validator=lambda _, reduce_last_axis: not reduce_last_axis,
 )
 def schedule_cuda_sum_long_reduce(outs, reduce_last_axis, **kwargs):
@@ -234,7 +234,7 @@ def schedule_cuda_sum_long_reduce(outs, reduce_last_axis, **kwargs):
     return sch
 
 
-@profile_schedule(num_thread=[32, 64, get_cuda_max_thread()], max_block=[256, 512])
+@profile_schedule(num_thread=[16, 32, 64, get_cuda_max_thread()], max_block=[128, 256, 512])
 def schedule_cuda_short_reduce(outs, **kwargs):
     """Schedule sum for CUDA. This schedule targets to the sum with short reduction length.
     In this case, each thread is responsible for reduction. The parallelization is across
