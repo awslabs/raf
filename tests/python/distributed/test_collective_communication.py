@@ -388,7 +388,7 @@ def test_reduce_scatter_with_rank_list(computation, rank_list):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
-def test_reduce_scatter_input_tensor(computation):
+def test_reduce_scatter_input_single_tensor(computation):
     class TestModel(raf.Model):
         def build(self):
             pass
