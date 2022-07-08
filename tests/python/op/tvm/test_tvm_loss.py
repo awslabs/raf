@@ -1,6 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+# pylint: disable=too-many-locals
 import numpy as np
 import pytest
 import torch
