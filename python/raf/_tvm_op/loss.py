@@ -85,16 +85,20 @@ def nll_loss_compute(attrs, inputs, output_type):  # pylint: disable=unused-argu
     n, c = pred.shape
 
     if true.ndim == 1:  # one-host label encoding
+
         def fcompute_one_hot(i):  # pylint: disable=unused-argument
             return -pred[i, true[i]] / n
-        loss = _tvm.te.compute((n, ), fcompute_one_hot)
+
+        loss = _tvm.te.compute((n,), fcompute_one_hot)
         loss = _topi.sum(loss, axis=[0], keepdims=True)
     else:  # sparse label encoding
+
         def fcompute_sparse(x):  # pylint: disable=unused-argument
-            redn = _tvm.te.reduce_axis((0, n), name='rn')
-            redc = _tvm.te.reduce_axis((0, c), name='rc')
+            redn = _tvm.te.reduce_axis((0, n), name="rn")
+            redc = _tvm.te.reduce_axis((0, c), name="rc")
             return _tvm.te.sum(-pred[redn, redc] * true[redn, redc] / n, axis=[redc, redn])
-        loss = _tvm.te.compute((1, ), fcompute_sparse)
+
+        loss = _tvm.te.compute((1,), fcompute_sparse)
 
     return [loss]
 
@@ -109,8 +113,9 @@ def nllloss_dpred_compute(attr, inputs, output_type):  # pylint: disable=unused-
     dy = dy if dy.ndim == 0 else dy[0]
 
     if true.ndim == 1:  # one-hot label encoding
-        dpred = _tvm.te.compute((n, c), lambda x, y: _tvm.tir.if_then_else(
-            y == true[x], -dy/n, _tvm.tir.const(0)))
+        dpred = _tvm.te.compute(
+            (n, c), lambda x, y: _tvm.tir.if_then_else(y == true[x], -dy / n, _tvm.tir.const(0))
+        )
     else:  # sparse label encoding
         dpred = _tvm.te.compute((n, c), lambda x, y: -true[x, y] / n) * dy
     return [dpred]
