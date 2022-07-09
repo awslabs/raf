@@ -25,8 +25,8 @@ def test_simple():
             return y
 
     def expected():
-        x = relay.var("x", shape=(10, 20))
-        c = relay.var("c", shape=(1,))
+        x = raf.ir.var("x", shape=(10, 20))
+        c = raf.ir.var("c", shape=(1,))
         y = raf.ir.op.add(x, c)
         y = raf.ir.op.log(raf.ir.op.relu(y))
         f = relay.Function([x, c], y)
@@ -52,8 +52,8 @@ def test_tuple():
             return zz[0]
 
     def expected():
-        x = relay.var("x", shape=(10, 20))
-        y = relay.var("y", shape=(10, 1))
+        x = raf.ir.var("x", shape=(10, 20))
+        y = raf.ir.var("y", shape=(10, 1))
         z = raf.ir.op.add(x, y)
         z = raf.ir.op.split(z, 2)
         z = relay.TupleGetItem(z, 0)
@@ -83,9 +83,9 @@ def test_diamond():
             return raf.relu(raf.add(z1, z2))
 
     def expected():
-        x = relay.var("x", shape=(10, 20))
-        y = relay.var("y", shape=(10, 1))
-        c = relay.var("c", shape=(1,))
+        x = raf.ir.var("x", shape=(10, 20))
+        y = raf.ir.var("y", shape=(10, 1))
+        c = raf.ir.var("c", shape=(1,))
         z1 = raf.ir.op.add(x, y)
         z2 = raf.ir.op.multiply(x, c)
         z = raf.ir.op.add(z1, z2)

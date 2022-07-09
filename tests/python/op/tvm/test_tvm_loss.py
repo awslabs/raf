@@ -1,6 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+# pylint: disable=too-many-locals
 import numpy as np
 import pytest
 import torch
@@ -56,7 +57,8 @@ def test_smooth_l1_loss(device, shape):
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("n", [3, 7])
 @pytest.mark.parametrize("c", [2, 6])
-def test_nll_loss(device, n, c):
+@pytest.mark.parametrize("one_hot_label", [True, False])
+def test_nll_loss(device, n, c, one_hot_label):
     class TestModel(raf.Model):
         def build(self):
             pass
@@ -68,6 +70,11 @@ def test_nll_loss(device, n, c):
     model = TestModel()
     m_pred, t_pred = randn_torch((n, c), device=device, requires_grad=True)
     m_true, np_true = randint((n,), low=0, high=c, device=device, dtype="int64")
+    if not one_hot_label:
+        m_true = np.zeros((n, c), dtype="float32")
+        for i in range(n):
+            m_true[i, np_true[i]] = 1
+        m_true = raf.array(m_true, device=device)
     t_true = torch.tensor(np_true, device=device)
     # forward
     t_loss = F.nll_loss(t_pred, t_true)

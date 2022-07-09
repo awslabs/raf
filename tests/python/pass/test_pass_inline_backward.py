@@ -21,12 +21,12 @@ def test_basic():
 
     def expected(shape):
         # pylint: disable=too-many-locals
-        x = relay.var("x", shape=shape)
-        y = relay.var("y", shape=shape)
-        dy = relay.var("dy", shape=shape)
-        a1 = relay.var("a1")
-        gradient = relay.var("gradient")
-        ret = relay.var("ret")
+        x = raf.ir.var("x", shape=shape)
+        y = raf.ir.var("y", shape=shape)
+        dy = raf.ir.var("dy", shape=shape)
+        a1 = raf.ir.var("a1")
+        gradient = raf.ir.var("gradient")
+        ret = raf.ir.var("ret")
 
         let3 = relay.Let(ret, relay.Tuple([a1, gradient]), ret)
         let2 = relay.Let(gradient, relay.Tuple([dy, dy]), let3)

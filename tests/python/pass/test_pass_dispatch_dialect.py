@@ -41,8 +41,8 @@ def test_simple():
         log_op = raf._ffi.op.GetOp("raf.op.tvm.log")
         null = raf.ir.const(None)
 
-        x = relay.var("x", shape=shape)
-        y = relay.var("c", shape=(1,))
+        x = raf.ir.var("x", shape=shape)
+        y = raf.ir.var("c", shape=(1,))
         z = relay.Call(add_op, [x, y, null, null])
         z = relay.Call(log_op, [relay.Call(relu_op, [z])])
         return relay.Function([x, y], z)
