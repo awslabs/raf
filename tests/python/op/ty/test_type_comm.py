@@ -81,7 +81,8 @@ def test_allreduce_with_tensor_list(computation):
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
-def test_all_to_all_with_tensor():
+@pytest.mark.parametrize("group_use_memcpy", [True, False])
+def test_all_to_all_with_tensor(group_use_memcpy):
     print("Testing all_to_all with a single tensor as input.")
 
     class TestModel(raf.Model):
@@ -90,7 +91,7 @@ def test_all_to_all_with_tensor():
 
         @raf.model.trace
         def forward(self, x):
-            x = raf.all_to_all(x)
+            x = raf.all_to_all(x, group_use_memcpy)
             return x
 
     shape = (4, 4)
@@ -109,7 +110,8 @@ def test_all_to_all_with_tensor():
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
-def test_all_to_all_with_tensor_list():
+@pytest.mark.parametrize("group_use_memcpy", [True, False])
+def test_all_to_all_with_tensor_list(group_use_memcpy):
     print("Testing all_to_all with a list of tensors as input.")
 
     class TestModel(raf.Model):
@@ -118,7 +120,7 @@ def test_all_to_all_with_tensor_list():
 
         @raf.model.trace
         def forward(self, x1, x2):
-            x = raf.all_to_all([x1, x2])
+            x = raf.all_to_all([x1, x2], group_use_memcpy)
             return x
 
     shape1 = (4, 4)

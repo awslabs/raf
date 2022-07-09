@@ -695,8 +695,9 @@ def test_reduce_scatter_single_tensor(computation):
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.parametrize("group_use_memcpy", [True, False])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-def test_all_to_all_with_tensor(dtype):
+def test_all_to_all_with_tensor(group_use_memcpy, dtype):
     """Testing all_to_all with a single tensor as input."""
 
     class TestModel(raf.Model):
@@ -705,7 +706,7 @@ def test_all_to_all_with_tensor(dtype):
 
         @raf.model.trace
         def forward(self, x):
-            x = raf.all_to_all(x)
+            x = raf.all_to_all(x, group_use_memcpy)
             return x
 
     if raf.build.with_nccl() < 20700:
@@ -741,8 +742,9 @@ def test_all_to_all_with_tensor(dtype):
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.parametrize("group_use_memcpy", [True, False])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-def test_all_to_all_with_tensor_list(dtype):
+def test_all_to_all_with_tensor_list(group_use_memcpy, dtype):
     """Testing all_to_all with a list of tensors as input."""
 
     class TestModel(raf.Model):
@@ -751,7 +753,7 @@ def test_all_to_all_with_tensor_list(dtype):
 
         @raf.model.trace
         def forward(self, x1, x2):
-            x = raf.all_to_all([x1, x2])
+            x = raf.all_to_all([x1, x2], group_use_memcpy)
             return x
 
     if raf.build.with_nccl() < 20700:
@@ -768,7 +770,7 @@ def test_all_to_all_with_tensor_list(dtype):
     for d in range(total_rank):
         x1_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (rank * total_rank + d))
         x2_slices.append(
-            np.ones(shape=(4, 4), dtype=dtype) * (total_rank ** 2 + rank * total_rank + d)
+            np.ones(shape=(4, 4), dtype=dtype) * (total_rank**2 + rank * total_rank + d)
         )
     x1_np = np.concatenate(x1_slices, axis=0)
     x2_np = np.concatenate(x2_slices, axis=0)
@@ -791,7 +793,7 @@ def test_all_to_all_with_tensor_list(dtype):
     for s in range(total_rank):
         target_y1_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (s * total_rank + rank))
         target_y2_slices.append(
-            np.ones(shape=(4, 4), dtype=dtype) * (total_rank ** 2 + s * total_rank + rank)
+            np.ones(shape=(4, 4), dtype=dtype) * (total_rank**2 + s * total_rank + rank)
         )
     target_y1 = np.concatenate(target_y1_slices, axis=0)
     target_y2 = np.concatenate(target_y2_slices, axis=0)

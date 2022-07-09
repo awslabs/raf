@@ -222,9 +222,7 @@ void AllToAll(const CallValues& call) {
                                         /*dtype=*/x->dtype,
                                         /*shape=*/shape));
   }
-  if (ret.size() == 0) {
-    call->callee = ir::NullValue<OpValue>();
-  } else if (ret.size() == 1) {
+  if (ret.size() == 1) {
     call->out = ret[0];
   } else {
     call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
