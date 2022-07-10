@@ -333,7 +333,9 @@ struct DataParallel {
       LOG(FATAL) << "Return of backward IR must be Var or tuple of Vars in Data Parallel Pass.";
     }
 
-    dcfg->iteration++;
+    if (dcfg->enable_auto_dp_profiling) {
+      dcfg->iteration++;
+    }
 
     bp_n = bp_ell->vars.size();
     if (new_bp_rt.size() == 1) {
