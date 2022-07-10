@@ -146,6 +146,8 @@ struct DataParallel {
     // Store the running time of all ops.
     static std::vector<std::pair<std::string, int64_t> > op_running_time;
     if (dcfg->iteration < dcfg->auto_dp_profiling_start_iter) {
+      Profiler::Get()->GetProfileStats();
+      Profiler::Get()->ClearProfile();
       Profiler::Get()->set_profile_level(0);  // Disable profiling to warm up
     } else if (dcfg->iteration <= dcfg->auto_dp_profiling_end_iter) {
       Profiler::Get()->set_profile_level(1);  // Profiling the execution
