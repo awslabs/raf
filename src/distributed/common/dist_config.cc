@@ -50,8 +50,7 @@ void AutoDPProfilingEndIter(int auto_dp_profiling_end_iter) {
 RAF_REGISTER_GLOBAL("raf.distributed.GlobalDistConfig").set_body_typed(DistConfig::Global);
 RAF_REGISTER_GLOBAL("raf.distributed.EnableDataParallel").set_body_typed(EnableDataParallel);
 RAF_REGISTER_GLOBAL("raf.distributed.ZeroOpt").set_body_typed(ZeroOpt);
-RAF_REGISTER_GLOBAL("raf.distributed.EnableAutoDPProfiling")
-    .set_body_typed(EnableAutoDPProfiling);
+RAF_REGISTER_GLOBAL("raf.distributed.EnableAutoDPProfiling").set_body_typed(EnableAutoDPProfiling);
 RAF_REGISTER_GLOBAL("raf.distributed.AutoDPProfilingStartIter")
     .set_body_typed(AutoDPProfilingStartIter);
 RAF_REGISTER_GLOBAL("raf.distributed.AutoDPProfilingEndIter")
