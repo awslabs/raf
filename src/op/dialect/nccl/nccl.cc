@@ -297,7 +297,7 @@ class NCCLReduceScatter : public NCCLOpEnv {
 
   void Execute(const CallValues& cv) {
     auto args = cv->args.as<raf::op::schema::ReduceScatterArgs>();
-    Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
+    Execute({args->x}, cv->out);
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
