@@ -24,20 +24,20 @@ def test_conv2d():
             return z
 
     def expected():
-        x = relay.var("x", shape=(1, 1, 224, 224))
-        w = relay.var("w", shape=(1, 1, 3, 3))
-        dy = relay.var("dy", shape=(1, 1, 222, 222))
+        x = raf.ir.var("x", shape=(1, 1, 224, 224))
+        w = raf.ir.var("w", shape=(1, 1, 3, 3))
+        dy = raf.ir.var("dy", shape=(1, 1, 222, 222))
 
         # backward pass closure
-        x1 = relay.var("x1")
-        x2 = relay.var("x2")
-        x3 = relay.var("x3")
-        x4 = relay.var("x4")
+        x1 = raf.ir.var("x1")
+        x2 = raf.ir.var("x2")
+        x3 = raf.ir.var("x3")
+        x4 = raf.ir.var("x4")
 
-        closure = relay.var("closure")
-        ret = relay.var("ret")
-        v = relay.var("a1")
-        v1 = relay.var("a2")
+        closure = raf.ir.var("adjoint_closure")
+        ret = raf.ir.var("ret")
+        v = raf.ir.var("a1")
+        v1 = raf.ir.var("a2")
 
         let4 = relay.Let(x4, relay.Tuple((x2, x3)), x4)
         let3 = relay.Let(x3, raf.ir.op.conv2d_dw(x, None, x1, (1, 1, 3, 3), 1, 0, 1, 1), let4)
@@ -72,14 +72,14 @@ def test_conv2d():
 def test_multi_func():
     def multi_func_mod():
         f1 = relay.GlobalVar("f1")  # pylint: disable=invalid-name
-        a1 = relay.var("a1")  # pylint: disable=invalid-name
-        x = relay.var("x", shape=(1, 100))
+        a1 = raf.ir.var("a1")  # pylint: disable=invalid-name
+        x = raf.ir.var("x", shape=(1, 100))
         let = relay.Let(a1, raf.ir.op.tanh(x), a1)
         f1_out = relay.Function([x], let)
         mod = IRModule({f1: f1_out})
 
-        a1 = relay.var("a1")  # pylint: disable=invalid-name
-        y = relay.var("y", shape=(1, 100))
+        a1 = raf.ir.var("a1")  # pylint: disable=invalid-name
+        y = raf.ir.var("y", shape=(1, 100))
         let = relay.Let(a1, relay.Call(f1, [y]), a1)
         main_out = relay.Function([y], let)
         mod[relay.GlobalVar("main")] = main_out
