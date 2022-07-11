@@ -386,6 +386,10 @@ def test_reduce_scatter_input_single_tensor(computation):
         elif computation == "avg":
             n_out = -n_ones * sum(range(1, total_rank + 1))
             n_out = n_out / total_rank
+    print("Target output:")
+    print(n_out)
+    print("Ground truth:")
+    print(m_out)
     check(m_out, n_out)
 
 
