@@ -82,13 +82,24 @@ _reg.register_broadcast_schedule("raf.op.tvm.smooth_l1_loss_dtrue")
 @register_compute("raf.op.tvm.nll_loss")
 def nll_loss_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     true, pred = inputs
-    n, _ = pred.shape
+    n, c = pred.shape
 
-    def fcompute(i):  # pylint: disable=unused-argument
-        return -pred[i, true[i]] / n
+    if true.ndim == 1:  # one-host label encoding
 
-    loss = _tvm.te.compute((n,), fcompute)
-    loss = _topi.sum(loss, axis=[0], keepdims=True)
+        def fcompute_one_hot(i):  # pylint: disable=unused-argument
+            return -pred[i, true[i]] / n
+
+        loss = _tvm.te.compute((n,), fcompute_one_hot)
+        loss = _topi.sum(loss, axis=[0], keepdims=True)
+    else:  # sparse label encoding
+
+        def fcompute_sparse(x):  # pylint: disable=unused-argument
+            redn = _tvm.te.reduce_axis((0, n), name="rn")
+            redc = _tvm.te.reduce_axis((0, c), name="rc")
+            return _tvm.te.sum(-pred[redn, redc] * true[redn, redc] / n, axis=[redc, redn])
+
+        loss = _tvm.te.compute((1,), fcompute_sparse)
+
     return [loss]
 
 
@@ -99,12 +110,14 @@ _reg.register_injective_schedule("raf.op.tvm.nll_loss")
 def nllloss_dpred_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
     dy, true, pred = inputs
     n, c = pred.shape
-    dpred = _tvm.te.compute(
-        (n, c),
-        lambda x, y: _tvm.tir.if_then_else(
-            y == true[x], -dy / n if len(dy.shape) == 0 else -dy[0] / n, _tvm.tir.const(0)
-        ),
-    )
+    dy = dy if dy.ndim == 0 else dy[0]
+
+    if true.ndim == 1:  # one-hot label encoding
+        dpred = _tvm.te.compute(
+            (n, c), lambda x, y: _tvm.tir.if_then_else(y == true[x], -dy / n, _tvm.tir.const(0))
+        )
+    else:  # sparse label encoding
+        dpred = _tvm.te.compute((n, c), lambda x, y: -true[x, y] / n) * dy
     return [dpred]
 
 
@@ -113,9 +126,15 @@ _reg.register_broadcast_schedule("raf.op.tvm.nll_loss_dpred")
 
 @register_compute("raf.op.tvm.nll_loss_dtrue")
 def nllloss_dtrue_compute(attr, inputs, output_type):  # pylint: disable=unused-argument
-    dy, _, pred = inputs
+    dy, true, pred = inputs
     n, c = pred.shape
-    return [_tvm.te.compute((n, c), lambda x, y: -pred[x, y] / n) * dy]
+
+    dtrue = _tvm.te.compute((n, c), lambda x, y: -pred[x, y] / n) * dy
+
+    if true.ndim == 1:  # for one_hot label encoding
+        dtrue = _topi.sum(dtrue, axis=[1], keepdims=False)
+
+    return [dtrue]
 
 
 _reg.register_broadcast_schedule("raf.op.tvm.nll_loss_dtrue")

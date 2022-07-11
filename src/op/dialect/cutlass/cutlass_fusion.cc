@@ -77,14 +77,15 @@ OpEnv* Tune(const op::CallValues& call, OpEnv* op_env) {
     best = entry.GetConfig();
   } else {
     std::vector<std::shared_ptr<TunableConfig>> tunable = env->ListTunableConfigs();
-    const int number = 10, repeat = 1, min_repeat_ms = 0;
+    const int number = 10, repeat = 1, min_repeat_ms = 0, cooldown_interval_ms = 0,
+              repeats_to_cooldow = 1;
     double min_time = std::numeric_limits<double>::max();
     for (auto& config : tunable) {
       env->SetTunableConfig(config);
       env->Init(call);
       Array<FloatValue> result =
           TimeEvaluator(TypedPackedFunc<void()>([&]() { env->Execute(call); }), call->device,
-                        number, repeat, min_repeat_ms)();
+                        number, repeat, min_repeat_ms, cooldown_interval_ms, repeats_to_cooldow)();
       CHECK_EQ(result.size(), 1U);
       if (result[0]->value < min_time) {
         min_time = result[0]->value;

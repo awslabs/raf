@@ -23,12 +23,12 @@ def test_canonicalize_ops_bias_add_ir():
             return raf.bias_add(x, self.bias)
 
     def expected():
-        x_var = tvm.relay.var("x", tvm.relay.TensorType(x.shape))
-        bias_var = tvm.relay.var("bias", tvm.relay.TensorType(bias.shape, dtype="float32"))
+        x_var = raf.ir.var("x", tvm.relay.TensorType(x.shape))
+        bias_var = raf.ir.var("bias", tvm.relay.TensorType(bias.shape, dtype="float32"))
         expand_dim = raf.ir.op.expand_dims(bias_var, 1, 1)
-        var_tmp = tvm.relay.var("exp_bias_tmp")
+        var_tmp = raf.ir.var("exp_bias_tmp")
         add = raf.ir.op.add(x_var, var_tmp)
-        body = tvm.relay.var("a1")
+        body = raf.ir.var("a1")
         body = tvm.relay.Let(body, add, body)
         body = tvm.relay.Let(var_tmp, expand_dim, body)
         return tvm.relay.Function([x_var, bias_var], body)
@@ -58,8 +58,8 @@ def test_canonicalize_ops_multi_bias_add_ir():
 
     def expected(x, bias):
         null = raf.ir.const(None)
-        x = relay.var("x", relay.TensorType(x.shape))
-        bias = relay.var("bias", relay.TensorType(bias.shape, dtype="float32"))
+        x = raf.ir.var("x", relay.TensorType(x.shape))
+        bias = raf.ir.var("bias", relay.TensorType(bias.shape, dtype="float32"))
         sb = ScopeBuilder()
         x_1 = sb.let("x_1", raf.ir.op.expand_dims(bias, raf.ir.const(1), raf.ir.const(1)))
         a_1 = sb.let("a_1", raf.ir.op.add(x, x_1, null, null))
