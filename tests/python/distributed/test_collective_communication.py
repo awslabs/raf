@@ -344,6 +344,7 @@ def test_reduce_scatter_input_single_tensor(computation):
 
         @raf.model.trace
         def forward(self, x):
+            x = Symbol.make_tuple([x])
             out = raf.reduce_scatter(x, computation=computation)
             return out
 
