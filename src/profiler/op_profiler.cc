@@ -366,7 +366,12 @@ RAF_REGISTER_GLOBAL("raf.op_profiler.ProfileGroup")
           << "Expected (exprs, device, <stream_ids>, <warmup>, <exec>, <repeat>)";
       Array<Expr> exprs = args[0];
       Device device = args[1];
-      Array<Integer> stream_ids = (args.size() >= 3) ? args[2] : Array<Integer>();
+      Array<Integer> stream_ids_container = (args.size() >= 3) ? args[2] : Array<Integer>();
+      std::vector<int> stream_ids;
+      for (auto stream_id : stream_ids_container) {
+        stream_ids.push_back(stream_id.IntValue());
+      }
+
       int warmup = (args.size() >= 4) ? args[3] : 10;
       int exec_number = (args.size() >= 5) ? args[4] : 10;
       int repeat = (args.size() == 6) ? args[5] : 1;
@@ -375,8 +380,7 @@ RAF_REGISTER_GLOBAL("raf.op_profiler.ProfileGroup")
       Map<String, ObjectRef> results;
       Array<FloatImm> lat_results;
       auto lat_and_workspace_size = profiler->ProfileOpGroup(
-          std::vector<Expr>(exprs.begin(), exprs.end()),
-          std::vector<int>(stream_ids.begin(), stream_ids.end()), warmup, exec_number, repeat);
+          std::vector<Expr>(exprs.begin(), exprs.end()), stream_ids, warmup, exec_number, repeat);
       for (auto lat : lat_and_workspace_size.first) {
         lat_results.push_back(FloatImm(DataType::Float(32), lat));
       }

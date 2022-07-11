@@ -144,7 +144,7 @@ class InplaceUpdateMutator : public MixedModeMutator {
       if (finplace.count(opn)) {
         ExprShareMap share;
         for (auto it : finplace[opn]) {
-          auto arg = Downcast<Var>(call->args[it.first]);
+          auto arg = Downcast<Var>(call->args[it.first.IntValue()]);
           if (var_tuple_map_.count(arg)) {
             auto tnode = var_tuple_map_[arg].as<TupleNode>();
             // Two tuples share the same storage. The two tuples should have the same
@@ -158,7 +158,7 @@ class InplaceUpdateMutator : public MixedModeMutator {
             if (var && var->may_share.defined()) {
               arg = GetLatestVar(var->may_share);
             }
-            share.emplace(it.second, arg);
+            share.emplace(it.second.IntValue(), arg);
           }
         }
         expr_share_map_.emplace(post, share);
