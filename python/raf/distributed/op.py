@@ -131,7 +131,7 @@ def reduce_scatter(x, computation="sum", rank_list=None):
 
     Parameters
     ----------
-    x : List[Tensor]
+    x : Tensor or List[Tensor]
         A list of tensors of equal shape
         replica i receives reduction of x[i] over all replicas
     computation: string
@@ -151,6 +151,8 @@ def reduce_scatter(x, computation="sum", rank_list=None):
         reduction result of x[rank] over all replicas,
         where rank represents rank number of the current process
     """
+    if isinstance(x, (tuple, list)):
+        x = sym.concatenate(x, axis=0)
     return sym._reduce_scatter(x, computation, rank_list=rank_list)
 
 
