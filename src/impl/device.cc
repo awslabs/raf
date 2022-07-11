@@ -30,8 +30,8 @@ using DeviceThreadLocalStore = dmlc::ThreadLocalStore<DeviceThreadLocalEntry>;
 
 Device Device::make(Integer device_type_value, Integer device_id) {
   ObjectPtr<DeviceObj> n = make_object<DeviceObj>();
-  n->device_type = DevType(device_type_value);
-  n->device_id = device_id;
+  n->device_type = DevType(device_type_value.IntValue());
+  n->device_id = device_id.IntValue();
   return Device(n);
 }
 

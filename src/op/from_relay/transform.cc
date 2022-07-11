@@ -33,8 +33,10 @@ RAF_OP_FROM_RELAY("repeat", "raf.op.repeat",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
                     Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<RepeatAttrs>();
-                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->repeats)));
-                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    raf_args.push_back(
+                        MakeConstant(ScalarValue::make(relay_attrs->repeats.IntValue())));
+                    raf_args.push_back(
+                        MakeConstant(ScalarValue::make(relay_attrs->axis.IntValue())));
                     return raf_args;
                   });
 
@@ -42,7 +44,8 @@ RAF_OP_FROM_RELAY("take", "raf.op.take",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
                     Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<TakeAttrs>();
-                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    raf_args.push_back(
+                        MakeConstant(ScalarValue::make(relay_attrs->axis.IntValue())));
                     raf_args.push_back(MakeConstant(StringValue::make(relay_attrs->mode)));
                     return raf_args;
                   });
@@ -60,7 +63,8 @@ RAF_OP_FROM_RELAY("reverse", "raf.op.reverse",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
                     Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<ReverseAttrs>();
-                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    raf_args.push_back(
+                        MakeConstant(ScalarValue::make(relay_attrs->axis.IntValue())));
                     return raf_args;
                   });
 
@@ -68,8 +72,10 @@ RAF_OP_FROM_RELAY("reverse_sequence", "raf.op.reverse_sequence",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
                     Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<ReverseSequenceAttrs>();
-                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->seq_axis)));
-                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->batch_axis)));
+                    raf_args.push_back(
+                        MakeConstant(ScalarValue::make(relay_attrs->seq_axis.IntValue())));
+                    raf_args.push_back(
+                        MakeConstant(ScalarValue::make(relay_attrs->batch_axis.IntValue())));
                     return raf_args;
                   });
 
@@ -129,7 +135,8 @@ RAF_OP_FROM_RELAY("stack", "raf.op.stack",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
                     Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<StackAttrs>();
-                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    raf_args.push_back(
+                        MakeConstant(ScalarValue::make(relay_attrs->axis.IntValue())));
                     return raf_args;
                   });
 
@@ -160,7 +167,8 @@ RAF_OP_FROM_RELAY("gather", "raf.op.gather",
 
                     // Relay args are (data, indices) and RAF args are (data, axis, indices).
                     raf_args.push_back(args[0]);
-                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    raf_args.push_back(
+                        MakeConstant(ScalarValue::make(relay_attrs->axis.IntValue())));
                     raf_args.push_back(args[1]);
                     return raf_args;
                   });
@@ -252,7 +260,8 @@ RAF_OP_FROM_RELAY("cumsum", "raf.op.cumsum",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
                     Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<ScanopAttrs>();
-                    raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->axis)));
+                    raf_args.push_back(
+                        MakeConstant(ScalarValue::make(relay_attrs->axis.IntValue())));
                     raf_args.push_back(MakeConstant(
                         StringValue::make(tvm::runtime::DLDataType2String(relay_attrs->dtype))));
 
