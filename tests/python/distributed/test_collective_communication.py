@@ -359,7 +359,7 @@ def test_reduce_scatter_input_single_tensor(computation):
     n_inp = np.concatenate([n_x, n_y])
     m_inp = raf.array(n_inp, device=device)
     model.to(device=device)
-    m_out = run_model(model, m_inp, device)
+    m_out = run_model(model, [m_inp], device)
     if rank == 0:
         if computation == "sum":
             n_out = n_ones * sum(range(1, total_rank + 1))
