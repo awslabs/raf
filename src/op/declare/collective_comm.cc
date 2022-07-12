@@ -129,8 +129,7 @@ void ReduceScatter(const CallValues& call) {
   int size;
   if (args->rank_list.defined()) {
     size = Communicator::Get("void", args->rank_list)->size;
-  }
-  else {
+  } else {
     size = GetGlobalCommunicator()->size;
   }
   CHECK(shape[0] % size == 0);
