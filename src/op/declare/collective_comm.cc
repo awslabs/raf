@@ -124,9 +124,7 @@ RAF_OP_DECLARE("raf.op._group_allgather", GroupAllGather)
 void ReduceScatter(const CallValues& call) {
   const auto* args = call->args.as<ReduceScatterArgs>();
   CHECK(args != nullptr);
-  BaseTensorValue tvs = args->x;
-  CHECK_GE(tvs.size(), 1U);
-  const DLTensor* x = tvs;
+  const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   int size = GetGlobalCommunicator()->size;
   CHECK(shape[0] % size == 0);
