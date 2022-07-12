@@ -115,14 +115,11 @@ else ()
   set(CMAKE_CUDA_ARCHITECTURES ${RAF_CUDA_ARCH})
   set(RAF_CXX_FLAGS ${RAF_CXX_FLAGS} -DRAF_USE_CUDA)
 
-  set(RAF_CUDA_FLAGS ${RAF_CUDA_FLAGS} -DRAF_USE_CUDA)
-  foreach(ARCH ${RAF_CUDA_ARCH_LIST})
-    set(CODES)
-    list(APPEND CODES sm_${ARCH})
-    list(APPEND CODES compute_${ARCH})
-    list(JOIN CODES "," CODES_STR)
-    list(APPEND RAF_CUDA_FLAGS -gencode=arch=compute_${ARCH},code=[${CODES_STR}])
-  endforeach()
+  set(RAF_CUDA_ARCH_LIST ${RAF_CUDA_ARCH})
+  foreach(ARCH IN LISTS RAF_CUDA_ARCH_LIST)
+      string(APPEND CUDA_ARCH_FLAGS "-gencode=arch=compute_${ARCH},code=sm_${ARCH}) ")
+  endforeach() 
+  set(RAF_CUDA_FLAGS ${RAF_CUDA_FLAGS} -DRAF_USE_CUDA ${CUDA_ARCH_FLAGS})
 
   file(GLOB_RECURSE RAF_CUDA_SOURCE_FILES
     ${CMAKE_CURRENT_LIST_DIR}/src/device_api/cuda/*.cc
