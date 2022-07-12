@@ -303,27 +303,13 @@ class NCCLReduceScatter : public NCCLOpEnv {
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
     auto comm_ref = GetRef<Communicator>(reinterpret_cast<CommunicatorObj*>(communicator));
     ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(comm_ref)->nccl_comm;
-    size_t offset = 0;
     DLTensor* out = output;
     DType dtype;
 
-    auto tv = Downcast<value::TupleValue>(inputs[0]);
-    if (tv->fields.size() == 1) {
-      DLTensor* x = tv->fields[0];
-      dtype = x->dtype;
-      NCCL_CALL(ncclReduceScatter(x->data, out->data, size, dtype, compute, nccl_comm,
-                                  (cudaStream_t)stream));
-    } else {
-      for (int i = 0; i < tv->fields.size(); ++i) {
-        DLTensor* x = tv->fields[i];
-        void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(in_buffer) + size_in_bytes * i;
-        cudaMemcpyAsync(buffer_data_at_offset, x->data, size_in_bytes, cudaMemcpyDeviceToDevice,
-                        (cudaStream_t)stream);
-        dtype = x->dtype;
-      }
-      NCCL_CALL(ncclReduceScatter(in_buffer, out->data, size, dtype, compute, nccl_comm,
-                                  (cudaStream_t)stream));
-    }
+    DLTensor* x = inputs[0];
+    dtype = x->dtype;
+    NCCL_CALL(ncclReduceScatter(x->data, out->data, size, dtype, compute, nccl_comm,
+                                (cudaStream_t)stream));
   }
 
   static OpEnv* make(const CallValues& cv) {

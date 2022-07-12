@@ -662,8 +662,7 @@ def test_reduce_scatter_single_tensor(computation):
 
         @raf.model.trace
         def forward(self, x):
-            z = Symbol.make_tuple([x])
-            out = raf.reduce_scatter(z, computation=computation)
+            out = raf.reduce_scatter(x, computation=computation)
             return out
 
     if computation == "avg" and raf.build.with_nccl() < 21000:

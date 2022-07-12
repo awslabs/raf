@@ -124,20 +124,13 @@ RAF_OP_DECLARE("raf.op._group_allgather", GroupAllGather)
 void ReduceScatter(const CallValues& call) {
   const auto* args = call->args.as<ReduceScatterArgs>();
   CHECK(args != nullptr);
-  std::vector<BaseTensorValue> tvs = args->x;
+  BaseTensorValue tvs = args->x;
   CHECK_GE(tvs.size(), 1U);
-  const DLTensor* x = tvs[0];
+  const DLTensor* x = tvs;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  if (tvs.size() == 1) {
-    int size = GetGlobalCommunicator()->size;
-    CHECK(shape[0] % size == 0);
-    shape[0] = shape[0] / size;
-  } else {
-    for (const auto& tv : tvs) {
-      const DLTensor* x = tv;
-      CHECK(shape == std::vector<int64_t>(x->shape, x->shape + x->ndim));
-    }
-  }
+  int size = GetGlobalCommunicator()->size;
+  CHECK(shape[0] % size == 0);
+  shape[0] = shape[0] / size;
   call->device = x->device;
   call->out = TensorValue::Assemble(/*ctx=*/x->device,
                                     /*dtype=*/x->dtype,
