@@ -240,9 +240,6 @@ install(
 install(TARGETS raf
       LIBRARY DESTINATION lib)
 
-################# Apps #################
-add_subdirectory(${PROJECT_SOURCE_DIR}/apps/include_raf/)
-
 ################# Tests #################
 if (${RAF_USE_GTEST} STREQUAL "ON")
   add_subdirectory(${PROJECT_SOURCE_DIR}/tests/cpp)
