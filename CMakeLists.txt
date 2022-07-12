@@ -121,7 +121,7 @@ else ()
     list(APPEND CODES sm_${ARCH})
     list(APPEND CODES compute_${ARCH})
     list(JOIN CODES "," CODES_STR)
-    list(APPEND RAF_CUDA_ARCH_LIST -gencode=arch=compute_${ARCH},code=[${CODES_STR}])
+    list(APPEND RAF_CUDA_FLAGS -gencode=arch=compute_${ARCH},code=[${CODES_STR}])
   endforeach()
 
   file(GLOB_RECURSE RAF_CUDA_SOURCE_FILES
