@@ -573,6 +573,35 @@ def test_broadcast():
     check(y, target_y)
 
 
+@pytest.mark.skipif(skip_dist_test(min_rank_num=4), reason=SKIP_REASON)
+@pytest.mark.parametrize("rank_list", [[0, 1], [0, 3]])
+def test_broadcast_with_rank_list(rank_list):
+    """Testing broadcast with a 1d group as tensor list."""
+    class TestModel(raf.Model):
+        def build(self, root):
+            self.root = root
+
+        @raf.model.trace
+        def forward(self, x, rank_list=None):
+            res = raf.broadcast(x, self.root, rank_list)
+            return res
+
+    model = TestModel(root=0)
+    _, rank, local_rank = get_dist_comm_info(verbose=True)
+    device = f"cuda({local_rank})"
+    x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    x = raf.array(x, device=device)
+    model.to(device=device)
+    y = run_model(model, [x], device)
+
+    if rank in rank_list:
+        target_y = np.ones(shape=(4, 4), dtype="float32")
+    else:
+        target_y = np.ones(shape=(4, 4), dtype="float32")
+    check(y, target_y)
+
+
+
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("axis", [0])
 def test_group_allgather(axis):

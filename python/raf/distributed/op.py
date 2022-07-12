@@ -173,7 +173,7 @@ def group_reduce_scatter(tensor_list, computation="sum"):
     return sym._group_reduce_scatter(tensor_list, computation)
 
 
-def broadcast(x, root):
+def broadcast(x, root, rank_list=None):
     """Performs broadcast
 
     Parameters
@@ -182,6 +182,8 @@ def broadcast(x, root):
         A list of tensors on rank root to broadcast
     root : int
         root rank
+    rank_list : List[int]
+        A group within which broadcast performs
 
     Returns
     -------
@@ -190,7 +192,7 @@ def broadcast(x, root):
     """
     if not isinstance(x, (tuple, list)):
         x = [x]
-    return sym._broadcast(x, root)
+    return sym._broadcast(x, root, rank_list)
 
 
 def all_to_all(x, group_use_memcpy=False):
