@@ -192,7 +192,7 @@ def broadcast(x, root, rank_list=None):
     """
     if not isinstance(x, (tuple, list)):
         x = [x]
-    return sym._broadcast(x, root, rank_list)
+    return sym._broadcast(x, root, [rank_list])
 
 
 def all_to_all(x, group_use_memcpy=False):
