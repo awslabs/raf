@@ -251,7 +251,6 @@ RAF_REGISTER_DIALECT_OP(nccl, _group_allgather, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._group_allgather", NCCLGroupAllGather::make);
 
 class NCCLReduceScatter : public NCCLOpEnv {
-  void* in_buffer;
   size_t size_in_bytes;
   size_t size;
   ncclRedOp_t compute;
@@ -281,10 +280,6 @@ class NCCLReduceScatter : public NCCLOpEnv {
       LOG(FATAL) << "Invalid computation " << args->computation;
     }
 
-    const DLTensor* out = cv->out;
-    size_in_bytes = BytesCompactTensor(*out);
-    size = size_in_bytes / (out->dtype.bits / 8);
-    RequestWorkspace(&in_buffer, cv->device, size_in_bytes * GetGlobalCommunicator()->size);
   }
 
  public:
