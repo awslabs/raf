@@ -126,27 +126,9 @@ void ReduceScatter(const CallValues& call) {
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  int size = 0;
+  int size;
   if (args->rank_list.defined()) {
-    int rank = GetGlobalCommunicator()->rank;
-    int group_num = Communicator::Get("void", args->rank_list)->size;
-    auto group_list = Communicator::Get("void", args->rank_list)->data;
-    for (int i = 0; i < group_num; ++i) {
-      int group_size = Communicator::Get("void", group_list[i])->size;
-      auto group_data = Communicator::Get("void", group_list[i])->data;
-      for (int j = 0; j < group_size; ++j) {
-        if (args->group_data[j] == rank) {
-          size = group_size;
-          break;
-        }
-      }
-      if (size != 0) {
-        break;
-      }
-    }
-    if (size == 0) {
-      size = 1;
-    }
+    size = Communicator::Get("void", args->rank_list)->size;
   }
   else {
     size = GetGlobalCommunicator()->size;
