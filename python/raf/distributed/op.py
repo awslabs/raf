@@ -167,7 +167,7 @@ def reduce_scatter(x, computation="sum", rank_list=None):
         assert length % size == 0
         single_shape = sym.shape(x[0])
         for tensor in x:
-            assert sym.shape(tensor) == single_shape
+            assert sym.equal(sym.shape(tensor), single_shape)
         x = sym.concatenate(x, axis=0)
     else:
         length = sym.shape(x)[0]
