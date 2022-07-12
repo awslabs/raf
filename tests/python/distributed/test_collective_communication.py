@@ -577,6 +577,7 @@ def test_broadcast():
 @pytest.mark.parametrize("rank_list", [[0, 1], [0, 3]])
 def test_broadcast_with_rank_list(rank_list):
     """Testing broadcast with a 1d group as tensor list."""
+
     class TestModel(raf.Model):
         def build(self, root):
             self.root = root
