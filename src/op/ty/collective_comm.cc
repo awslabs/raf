@@ -46,23 +46,15 @@ Type ReduceScatterInfer(const CallValues& value) {
 
   const auto* args = value->args.as<ReduceScatterArgs>();
   CHECK(args != nullptr);
-  CHECK_GE(args->x.size(), 1U);
-  const auto& ty = GetType(args->x[0]);
-  if (args->x.size() == 1) {
-    int size = GetGlobalCommunicator()->size;
-    auto tpn = ty.as<TensorTypeNode>();
-    auto shape = tpn->shape;
-    auto old_size = shape[0].as<IntImmNode>()->value;
-    CHECK(old_size % size == 0);
-    auto new_size = old_size / size;
-    shape.Set(0, Integer(new_size));
-    return TensorType(shape, DataType(tpn->dtype));
-  } else {
-    for (const auto& x : args->x) {
-      (*structural_equal)(GetType(x), ty, true, true);
-    }
-    return ty;
-  }
+  const auto& ty = GetType(args->x);
+  int size = GetGlobalCommunicator()->size;
+  auto tpn = ty.as<TensorTypeNode>();
+  auto shape = tpn->shape;
+  auto old_size = shape[0].as<IntImmNode>()->value;
+  CHECK(old_size % size == 0);
+  auto new_size = old_size / size;
+  shape.Set(0, Integer(new_size));
+  return TensorType(shape, DataType(tpn->dtype));
 }
 
 RAF_OP_TYPE("raf.op._reduce_scatter", "NCCLReduceScatter", ReduceScatterInfer);
