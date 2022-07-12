@@ -583,8 +583,8 @@ def test_broadcast_with_rank_list(rank_list):
             self.root = root
 
         @raf.model.trace
-        def forward(self, x, rank_list=None):
-            res = raf.broadcast(x, self.root, rank_list)
+        def forward(self, x):
+            res = raf.broadcast(x, self.root, rank_list=rank_list)
             return res
 
     model = TestModel(root=0)
