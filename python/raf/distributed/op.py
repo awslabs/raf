@@ -151,8 +151,28 @@ def reduce_scatter(x, computation="sum", rank_list=None):
         reduction result of x[rank] over all replicas,
         where rank represents rank number of the current process
     """
+    comm = get_communicator()
+    if rank_list:
+        for group in rank_list:
+            if comm.rank in group:
+                size = len(group)
+                break
+        else:
+            size = 1
+    else:
+        size = comm.size
+
     if isinstance(x, (tuple, list)):
+        length = len(x)
+        assert length % size == 0
+        single_shape = x[0].shape
+        for tensor in x:
+            assert tensor.shape == single_shape
         x = sym.concatenate(x, axis=0)
+    else:
+        length = x.shape[0]
+        assert length % size == 0
+
     return sym._reduce_scatter(x, computation, rank_list=rank_list)
 
 
