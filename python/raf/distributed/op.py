@@ -192,7 +192,7 @@ def broadcast(x, root, rank_list=None):
     """
     if not isinstance(x, (tuple, list)):
         x = [x]
-    return sym._broadcast(x, root, rank_list)
+    return sym._broadcast(x, root, [rank_list])
 
 
 def send(x, peer, token=None):
