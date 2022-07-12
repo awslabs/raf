@@ -601,7 +601,6 @@ def test_broadcast_with_rank_list(rank_list):
     check(y, target_y)
 
 
-
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("axis", [0])
 def test_group_allgather(axis):
