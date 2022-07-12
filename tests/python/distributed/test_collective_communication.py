@@ -573,8 +573,8 @@ def test_broadcast():
     check(y, target_y)
 
 
-@pytest.mark.skipif(skip_dist_test(min_rank_num=4), reason=SKIP_REASON)
-@pytest.mark.parametrize("rank_list", [[0, 1], [0, 3]])
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.parametrize("rank_list", [[0, 1], [0]])
 def test_broadcast_with_rank_list(rank_list):
     """Testing broadcast with a 1d group as tensor list."""
 
@@ -595,6 +595,7 @@ def test_broadcast_with_rank_list(rank_list):
     model.to(device=device)
     y = run_model(model, [x], device)
 
+    print(y)
     if rank in rank_list:
         target_y = np.ones(shape=(4, 4), dtype="float32")
     else:
