@@ -129,10 +129,12 @@ void ReduceScatter(const CallValues& call) {
   int size = 0;
   if (args->rank_list.defined()) {
     int rank = GetGlobalCommunicator()->rank;
-    for (int i = 0; i < args->rank_list.size(); ++i) {
-      for (int j = 0; j < args->rank_list[i].size(); ++j) {
+    int group_num = Communicator::Get("void", args->rank_list)->size;
+    for (int i = 0; i < group_num; ++i) {
+      int group_size = Communicator::Get("void", args->rank_list[i])->size;
+      for (int j = 0; j < group_size; ++j) {
         if (args->rank_list[i][j] == rank) {
-          size = args->rank_list[i].size();
+          size = group_size;
           break;
         }
       }
