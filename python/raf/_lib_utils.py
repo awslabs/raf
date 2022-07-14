@@ -4,6 +4,7 @@
 import os
 import sys
 
+
 def find_lib_path(name=None, search_path=None):
     """Find dynamic library files.
 
