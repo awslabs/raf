@@ -35,7 +35,7 @@ def set_tvm_lib_path():
     os.environ["TVM_LIBRARY_PATH"] = lib_path
 
 
-# pylint: disable=unused-import
+# pylint: disable=unused-import, wrong-import-position
 
 # Set the TVM library path before importing.
 set_tvm_lib_path()
@@ -95,7 +95,7 @@ from tvm.relay.dataflow_pattern import (
 )
 from tvm.contrib import random
 
-# pylint: enable=unused-import
+# pylint: enable=unused-import, wrong-import-position
 
 # Load RAF APIs.
 _LIB, _LIB_NAME = _load_lib()
