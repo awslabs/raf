@@ -4,21 +4,16 @@
 
 set -ex
 
-if [ "$#" -lt 2 ]; then
-    echo "Usage: ubuntu_install_torch.sh <cpu|cu113> <nightly|pinned|version>"
+if [ "$#" -lt 1 ]; then
+    echo "Usage: ubuntu_install_torch.sh <cpu|cu113>"
     exit 1
 fi
 PLATFORM=$1
-VERSION=$2
 
-# Install PyTorch
-if [ "$VERSION" == "nightly" ]; then
-    # Nightly build
-    python3 -m pip install --force-reinstall --pre torch torchvision -f https://download.pytorch.org/whl/nightly/$PLATFORM/torch_nightly.html
-elif [ "$VERSION" == "pinned" ]; then
-    python3 -m pip install --force-reinstall --pre torch==$PINNED_NIGHTLY_VERSION+$PLATFORM torchvision -f https://download.pytorch.org/whl/nightly/$PLATFORM/torch_nightly.html
-else
-    # Stable build
-    python3 -m pip install --force-reinstall torch==$VERSION+$PLATFORM torchvision -f https://download.pytorch.org/whl/$PLATFORM/torch_stable.html
-fi
+PT_VERSION=1.12.0
+TV_VERSION=0.13.0
+
+# Install PyTorch and torchvision
+python3 -m pip install --force-reinstall torch==$PT_VERSION+$PLATFORM torchvision==$TV_VERSION+$PLATFORM \
+    -f https://download.pytorch.org/whl/$PLATFORM/torch_stable.html
 
