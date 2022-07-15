@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 import pytest
 
-import raf
 from raf import distributed as dist
 
 
