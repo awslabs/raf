@@ -9,6 +9,7 @@ set -o pipefail
 export RAF_HOME=$(pwd)
 export PYTHONPATH=$RAF_HOME/python/
 export PYTHONPATH=$RAF_HOME/3rdparty/tvm/python:$PYTHONPATH
+export TVM_LIBRARY_PATH=$RAF_HOME/build/lib/
 export TVM_FFI=cython
 
 if [[ -z ${CUDA_HOME+x} ]]; then
