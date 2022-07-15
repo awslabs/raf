@@ -57,7 +57,7 @@ for _ in range(10):
     run_vm_executor(executor, record, args, "cuda")
 
 # Clean the existing profiled stats and enable latency profiler.
-raf.utils.profiler.get()
+raf.utils.profiler.clear()
 raf.utils.profiler.start()
 
 # Run the model with profiler.
@@ -69,9 +69,10 @@ raf.utils.profiler.stop()
 result = raf.utils.profiler.get()
 with open("profile.json", "w") as filep:
     json.dump(result, filep, indent=4)
+raf.utils.profiler.clear()
 ```
 
-Note that the API `raf.utils.profiler.get()` will collect all the profiling results and clear the cache. The profiling results will be stored in memory in JSON format. You can either save it to a JSON file or directly call `raf.utils.profiler.dump(filename:str)`. Here is a snippet of the dumped JSON log. In short, each executed op will have two entries in the log with the start and end timestamps, and other information.
+Note that the API `raf.utils.profiler.get()` will collect all the profiling results and keep the cache for potential access. Call the API `raf.utils.profiler.clear()` explicitly to clear the cache. The profiling results will be stored in memory in JSON format. You can either save it to a JSON file or directly call `raf.utils.profiler.dump(filename:str)`. Here is a snippet of the dumped JSON log. In short, each executed op will have two entries in the log with the start and end timestamps, and other information.
 
 ```
 {

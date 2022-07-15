@@ -37,6 +37,9 @@ std::string Profiler::GetProfile() {
   ss << "{" << std::endl;
   ss << "    \"traceEvents\": [" << std::endl;
 
+  if (profile_stats_.opr_exec_stats_->size_approx() == 0 && !helpers_.empty()) {
+    CollectStat();
+  }
   ProfileStat* stat;
   int stat_count = 0;
   while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
@@ -60,13 +63,20 @@ std::vector<ProfileStat> Profiler::GetProfileStats() {
   std::lock_guard<std::recursive_mutex> lock{this->m_};
   std::vector<ProfileStat> results;
 
+  if (profile_stats_.opr_exec_stats_->size_approx() == 0 && !helpers_.empty()) {
+    CollectStat();
+  }
   ProfileStat* stat;
   while (profile_stats_.opr_exec_stats_->try_dequeue(stat)) {
     CHECK_NOTNULL(stat);
     results.push_back(*stat);
   }
-
   return results;
+}
+
+void Profiler::ClearProfile() {
+  std::lock_guard<std::recursive_mutex> lock{this->m_};
+  helpers_.clear();
 }
 
 DeviceStats::~DeviceStats() {
@@ -139,10 +149,15 @@ std::string GetProfile() {
   return Profiler::Get()->GetProfile();
 }
 
+void ClearProfile() {
+  Profiler::Get()->ClearProfile();
+}
+
 RAF_REGISTER_GLOBAL("raf.profiler.EnableProfiler").set_body_typed(EnableProfiler);
 RAF_REGISTER_GLOBAL("raf.profiler.DisableProfiler").set_body_typed(DisableProfiler);
 RAF_REGISTER_GLOBAL("raf.profiler.CollectBaseProfile").set_body_typed(CollectBaseProfile);
 RAF_REGISTER_GLOBAL("raf.profiler.GetProfile").set_body_typed(GetProfile);
+RAF_REGISTER_GLOBAL("raf.profiler.ClearProfile").set_body_typed(ClearProfile);
 
 }  // namespace profiler
 }  // namespace raf

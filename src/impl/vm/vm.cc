@@ -522,6 +522,7 @@ void VirtualMachine::RunLoop(VMContext& ctx) {
   CHECK(ctx->code);
 #ifdef RAF_USE_CUDA
   if (use_cuda_ && profiler::Profiler::Get()->IsProfiling(1)) {
+    profiler::CudaProfiler::Get()->ClearCudaStat();
     profiler::CudaProfiler::Get()->start();
   }
 #endif

@@ -29,6 +29,15 @@ class DistConfig(Object):
         ffi.ZeroOpt(value)
 
     @property
+    def enable_auto_dp_profiling(self):
+        return self.enable_auto_dp_profiling
+
+    @enable_auto_dp_profiling.setter
+    def enable_auto_dp_profiling(self, value):
+        self.enable_auto_dp_profiling_ = value
+        ffi.EnableAutoDPProfiling(value)
+
+    @property
     def auto_dp_profiling_start_iter(self):
         return self.auto_dp_profiling_start_iter_
 
@@ -50,6 +59,7 @@ class DistConfig(Object):
         attr_keys = [
             "enable_data_parallel",
             "zero_opt_level",
+            "enable_auto_dp_profiling",
             "auto_dp_profiling_start_iter",
             "auto_dp_profiling_end_iter",
         ]
