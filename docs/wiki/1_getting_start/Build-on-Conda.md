@@ -79,7 +79,6 @@ export CUDA_HOME=/usr/local/cuda
 export RAF_HOME=$HOME/Projects/raf-dev
 export TVM_HOME=$RAF_HOME/3rdparty/tvm
 export PYTHONPATH=$RAF_HOME/python/:$TVM_HOME/python
-export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 export CUDNN_HOME=$CONDA_PREFIX
 export NCCL_DIR=$CONDA_PREFIX
 export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
@@ -90,7 +89,6 @@ echo "CUDA_HOME = $CUDA_HOME"
 echo "RAF_HOME = $RAF_HOME"
 echo "TVM_HOME = $TVM_HOME"
 echo "PYTHONPATH = $PYTHONPATH"
-echo "TVM_LIBRARY_PATH = $TVM_LIBRARY_PATH"
 echo "CUDNN_HOME = $CUDNN_HOME"
 echo "NCCL_DIR = $NCCL_DIR"
 ```

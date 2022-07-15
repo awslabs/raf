@@ -1,0 +1,55 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Wheel-Manylinux-Nightly
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    strategy:
+      matrix:
+        # matrix of build configs
+        config:
+          - platform: 'cpu'
+          - cuda: 'cu113'          
+
+    runs-on: ubuntu-latest
+    container:
+        image: metaprojdev/raf:package-cu113
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0 # Checkout all branches and history.
+        submodules: 'recursive'
+    - name: Build
+      env:
+        PLATFORM: ${{ matrix.config.platform }}
+      run: |
+        export RAF_BUILD_VERSION=nightly
+        export RAF_BUILD_PLATFORM=$PLATFORM
+        bash scripts/wheel/build_wheel_manylinux.sh
+    - name: Wheel-Deploy
+      if: github.ref == 'refs/heads/main'
+      env:
+        GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
+      run: |
+        python3 -m pip install github3.py requests
+        python3 scripts/wheel/upload_wheel.py --tag nightly --path 3rdparty/tvm/python/repaired_wheels/ --prune
+        python3 scripts/wheel/upload_wheel.py --tag nightly --path python/repaired_wheels/
+
+  update-pypi-index:
+    needs: [build-and-publish]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Update PyPI index
+      if: github.ref == 'refs/heads/main'
+      env:
+        GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
+      run: |
+        python3 scripts/wheel/gen_pypi_index.py --tag nightly        
