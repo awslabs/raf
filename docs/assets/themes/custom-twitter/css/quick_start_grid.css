@@ -1,6 +1,6 @@
 .quick-starts .selected,
 .quick-starts .selected.option:hover {
-  background-color: #3587ea;
+  background-color: #FFC265;
 }
 
 .quick-starts :not(.selected).option:hover {
