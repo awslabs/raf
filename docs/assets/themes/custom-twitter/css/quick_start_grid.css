@@ -1,0 +1,525 @@
+.quick-starts .selected,
+.quick-starts .selected.option:hover {
+  background-color: #3587ea;
+}
+
+.quick-starts :not(.selected).option:hover {
+  background-color: #f1f0f0;
+  color: #6c6c6d;
+}
+
+
+.quick-starts p {
+  font-size: 1.125rem;
+  line-height: 1.75rem
+}
+
+.quick-start-guides {
+  font-size: 1.5rem;
+  letter-spacing: 0.25px;
+  line-height: 2.25rem;
+  color: #a5a5a5
+}
+
+.quick-start-guides .step-counter {
+  margin-bottom: .1875rem
+}
+
+.quick-start-guides ul {
+  list-style-type: none;
+  padding-left: 0
+}
+
+.quick-start-guides ul li {
+  margin-bottom: 0;
+  font-size: 1.125rem
+}
+
+@media screen and (min-width: 768px) {
+  .quick-start-guides ul li {
+    margin-bottom: .75rem
+  }
+
+  .quick-start-guides ul li:last-of-type {
+    margin-bottom: 0
+  }
+}
+
+.quick-start-guides ul li.selected {
+  color: #FF9900
+}
+
+.quick-start-guides ul li.selected:before {
+  content: "\2022";
+  position: absolute;
+  left: 0
+}
+
+@media screen and (min-width: 768px) {
+  .quick-start-guides ul li.selected:before {
+    left: -5px
+  }
+}
+
+.quick-start-guides .select-instructions {
+  color: #262626;
+  border-bottom: 2px solid #a5a5a5;
+  margin-bottom: 1rem;
+  font-size: 1.125rem;
+  display: inline-block
+}
+
+@media screen and (min-width: 768px) {
+  .quick-start-guides .select-instructions {
+    margin-bottom: 0
+  }
+}
+
+.get-started .quick-start-module .option, .get-started .quick-start-module #command {
+  border: 2px solid #fff;
+  background: #f3f4f7
+}
+
+.get-started .quick-start-module .title-block {
+  border: 2px solid #fff
+}
+
+.get-started .quick-start-module .selected {
+  background-color: #FF9900
+}
+
+.get-started .quick-start-module h1 {
+  font-size: 2rem;
+  letter-spacing: 1.78px;
+  line-height: 2.5rem;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem
+}
+
+.get-started .nav-menu-wrapper {
+  background-color: #f3f4f7
+}
+
+.get-started .navbar-nav {
+  -webkit-box-orient: horizontal;
+  -webkit-box-direction: normal;
+  -ms-flex-direction: row;
+  flex-direction: row
+}
+
+.get-started .quick-starts .row.ptbuild, .get-started .quick-starts .row.os, .get-started .quick-starts .row.package, .get-started .quick-starts .row.language, .get-started .quick-starts .row.cuda {
+  margin-bottom: 1.25rem
+}
+
+@media screen and (min-width: 768px) {
+  .get-started .quick-starts .row.ptbuild, .get-started .quick-starts .row.os, .get-started .quick-starts .row.package, .get-started .quick-starts .row.language, .get-started .quick-starts .row.cuda {
+    margin-bottom: 0
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1239px) {
+  .get-started .quick-starts {
+    -webkit-box-flex: 0;
+    -ms-flex: 0 0 100%;
+    flex: 0 0 100%;
+    max-width: 100%
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .get-started .quick-starts {
+    margin-bottom: 2.5rem
+  }
+
+  .get-started .quick-starts .row {
+    margin-bottom: 0
+  }
+}
+
+@media screen and (min-width: 1240px) {
+  .get-started .quick-starts {
+    margin-bottom: 0
+  }
+}
+
+.title-block, .ecosystem .quick-starts #command, .ecosystem .quick-starts .option, .ecosystem .quick-starts .cloud-option {
+  border-color: #ecedf1
+}
+
+.get-started .quick-start-module {
+  padding-bottom: 0;
+  padding-top: 0;
+  background-color: #fff
+}
+
+.get-started .quick-start-module .option, .get-started .quick-start-module #command {
+  border: 2px solid #fff;
+  background: #f3f4f7
+}
+
+.get-started .quick-start-module .title-block {
+  border: 2px solid #fff
+}
+
+.get-started .quick-start-module .selected {
+  background-color: #FF9900
+}
+
+.get-started .quick-start-module h1 {
+  font-size: 2rem;
+  letter-spacing: 1.78px;
+  line-height: 2.5rem;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem
+}
+
+.get-started .quick-starts .row.ptbuild, .get-started .quick-starts .row.os, .get-started .quick-starts .row.package, .get-started .quick-starts .row.language, .get-started .quick-starts .row.cuda {
+  margin-bottom: 1.25rem
+}
+
+@media screen and (min-width: 768px) {
+  .get-started .quick-starts .row.ptbuild, .get-started .quick-starts .row.os, .get-started .quick-starts .row.package, .get-started .quick-starts .row.language, .get-started .quick-starts .row.cuda {
+    margin-bottom: 0
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1239px) {
+  .get-started .quick-starts {
+    -webkit-box-flex: 0;
+    -ms-flex: 0 0 100%;
+    flex: 0 0 100%;
+    max-width: 100%
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .get-started .quick-starts {
+    margin-bottom: 2.5rem
+  }
+
+  .get-started .quick-starts .row {
+    margin-bottom: 0
+  }
+}
+
+@media screen and (min-width: 1240px) {
+  .get-started .quick-starts {
+    margin-bottom: 0
+  }
+}
+
+.ecosystem .quick-starts .title-block, .ecosystem .quick-starts #command, .ecosystem .quick-starts .option, .ecosystem .quick-starts .cloud-option {
+  border-color: #ecedf1
+}
+
+
+.quick-starts .col-md-2-4 {
+  position: relative;
+  width: 100%;
+  min-height: 1px;
+  padding-right: 15px;
+  padding-left: 15px
+}
+
+@media (min-width: 768px) {
+  .quick-starts .col-md-2-4 {
+    -webkit-box-flex: 0;
+    -ms-flex: 0 0 20%;
+    flex: 0 0 20%;
+    max-width: 20%
+  }
+}
+
+.quick-starts .start-locally-col {
+  margin-bottom: 1.25rem
+}
+
+.quick-starts .start-locally-col .row.ptbuild, .quick-starts .start-locally-col .row.os, .quick-starts .start-locally-col .row.package, .quick-starts .start-locally-col .row.language, .quick-starts .start-locally-col .row.cuda {
+  margin-bottom: 1.25rem
+}
+
+@media screen and (min-width: 768px) {
+  .quick-starts .start-locally-col .row.ptbuild, .quick-starts .start-locally-col .row.os, .quick-starts .start-locally-col .row.package, .quick-starts .start-locally-col .row.language, .quick-starts .start-locally-col .row.cuda {
+    margin-bottom: 0
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1239px) {
+  .quick-starts .start-locally-col {
+    -webkit-box-flex: 0;
+    -ms-flex: 0 0 100%;
+    flex: 0 0 100%;
+    max-width: 100%
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .quick-starts .start-locally-col {
+    margin-bottom: 2.5rem
+  }
+
+  .quick-starts .start-locally-col .row {
+    margin-bottom: 0
+  }
+}
+
+@media screen and (min-width: 1240px) {
+  .quick-starts .start-locally-col {
+    margin-bottom: 0
+  }
+}
+
+.quick-starts .start-locally-col pre {
+  font-size: 80% !important;
+  background-color: #ffffff !important
+}
+
+.quick-starts .start-locally-col .prev-versions-btn {
+  margin-top: 30px
+}
+
+@media (min-width: 768px) and (max-width: 1239px) {
+  .quick-starts .cloud-options-col {
+    -webkit-box-flex: 0;
+    -ms-flex: 0 0 100%;
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-left: 0;
+    margin-top: 1.25rem
+  }
+}
+
+.quick-starts p {
+  font-size: 1.125rem;
+  line-height: 1.75rem
+}
+
+.quick-starts .card-body {
+  -webkit-box-flex: 1;
+  -ms-flex: 1 1 auto;
+  flex: 1 1 auto
+}
+
+.quick-starts .option {
+  border: 2px solid #f3f4f7;
+  font-size: 1rem;
+  color: #6c6c6d;
+  letter-spacing: -0.22px;
+  line-height: 1.25rem;
+  background: #fff;
+  cursor: pointer
+}
+
+.quick-starts .option:hover {
+  background-color: #FF9900;
+  color: #fff
+}
+
+.quick-starts .selected {
+  background-color: #FF9900;
+  color: #fff
+}
+
+.quick-starts .block {
+  margin-bottom: .0625rem;
+  height: 2.5rem;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center
+}
+
+.quick-starts .title-block {
+  margin: .0625rem;
+  height: 2.5rem;
+  border: 2px solid #f3f4f7;
+  font-size: 1rem;
+  color: #6c6c6d;
+  line-height: 1.25rem;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center
+}
+
+.quick-starts .title-block:before {
+  display: block;
+  content: ".";
+  color: transparent;
+  border-left: 2px solid #CCCDD1;
+  height: 100%;
+  position: absolute;
+  left: 0
+}
+
+.quick-starts #command {
+  color: #4a4a4a;
+  background-color: #fff;
+  padding: .9375rem;
+  border: 2px solid #f3f4f7;
+  word-wrap: break-word;
+  display: table-cell;
+  vertical-align: middle
+}
+
+.quick-starts #command a {
+  font-size: 125%
+}
+
+@media screen and (min-width: 768px) {
+  .quick-starts #command a:hover {
+    color: #FF9900
+  }
+}
+
+.quick-starts #command pre {
+  word-break: break-all;
+  white-space: normal
+}
+
+.quick-starts .command-container {
+  display: table;
+  width: 100%
+}
+
+@media screen and (min-width: 768px) {
+  .quick-starts .command-container {
+    min-height: 5.25rem
+  }
+}
+
+.quick-starts .command-container pre {
+  margin-bottom: 0px;
+  padding: 0px;
+  font-size: 75%;
+  background-color: #f3f4f7
+}
+
+.quick-starts .command-block {
+  height: 5.25rem;
+  word-wrap: break-word;
+  color: #6c6c6d
+}
+
+.quick-starts .command-block:before {
+  border-left: 2px solid #000
+}
+
+.quick-starts .quick-start-link {
+  color: #6c6c6d
+}
+
+.quick-starts .mobile-heading {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  font-weight: 400
+}
+
+@media screen and (min-width: 768px) {
+  .quick-starts .mobile-heading {
+    display: none
+  }
+}
+
+.quick-starts .command-mobile-heading {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  font-weight: 400;
+  color: #000
+}
+
+@media screen and (min-width: 768px) {
+  .quick-starts .command-mobile-heading {
+    display: none
+  }
+}
+
+.quick-starts .headings {
+  display: none
+}
+
+@media screen and (min-width: 768px) {
+  .quick-starts .headings {
+    display: block
+  }
+}
+
+.quick-starts .cloud-options-col {
+  margin-top: 1.25rem
+}
+
+@media screen and (min-width: 768px) {
+  .quick-starts .cloud-options-col {
+    margin-top: 0
+  }
+}
+
+@media (max-width: 978px) {
+  .quick-starts .os-text {
+    margin-top: 0
+  }
+}
+
+.quick-start-guides {
+  font-size: 1.125rem;
+  letter-spacing: 0.25px;
+  line-height: 2.25rem;
+  color: #CCCDD1
+}
+
+.quick-start-guides .select-instructions {
+  color: #262626;
+  border-bottom: 2px solid #CCCDD1;
+  margin-bottom: 1rem;
+  display: inline-block
+}
+
+@media screen and (min-width: 768px) {
+  .quick-start-guides .select-instructions {
+    margin-bottom: 0
+  }
+}
+
+.quick-start-module {
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem
+}
+
+.quick-start-module .option-module {
+  float: right
+}
+
+@media screen and (min-width: 768px) {
+  .quick-start-module {
+    padding-top: 4rem;
+    padding-bottom: 4.125rem
+  }
+}
+
+.quick-start-module p {
+  color: #6c6c6d;
+  font-size: 1.125em;
+  letter-spacing: 0.25px;
+  padding-bottom: .9375rem;
+  margin-bottom: 1.4rem
+}
+
+.quick-start-module h3 {
+  font-size: 1.5rem;
+  letter-spacing: 1.33px;
+  line-height: 2rem;
+  text-transform: uppercase;
+  margin-bottom: 2.1rem
+}

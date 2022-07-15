@@ -1,0 +1,31 @@
+# This is the default format.
+# For more see: http://jekyllrb.com/docs/permalinks/
+permalink: /:categories/:year/:month/:day/:title
+
+exclude: [".rvmrc", ".rbenv-version", "README.md", "Rakefile", "changelog.md"]
+
+highlighter: rouge
+markdown: kramdown
+
+
+# Themes are encouraged to use these universal variables
+# so be sure to set them if your theme uses them.
+#
+title :  "RAF Accelerates deep learning Frameworks"
+tagline:
+author :
+  name :
+
+#
+production_url : https://https://awslabs.github.io/raf
+
+
+# All Jekyll-Bootstrap specific configurations are namespaced into this hash
+#
+JB :
+  version : 0.3.0
+
+  BASE_PATH : https://awslabs.github.io/raf
+
+  sharing :
+    provider : false
