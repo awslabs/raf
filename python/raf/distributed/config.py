@@ -30,7 +30,7 @@ class DistConfig(Object):
 
     @property
     def enable_auto_dp_profiling(self):
-        return self.enable_auto_dp_profiling
+        return self.enable_auto_dp_profiling_
 
     @enable_auto_dp_profiling.setter
     def enable_auto_dp_profiling(self, value):
