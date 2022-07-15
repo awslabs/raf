@@ -26,4 +26,3 @@ python3 -m pip install mxnet==1.6.0
 python3 -m pip install gluoncv==0.10.1
 python3 -m pip install datasets==1.15.1
 python3 -m pip install transformers==4.17
-python3 -m pip install torchvision --no-deps
