@@ -1001,8 +1001,8 @@ TVM_REGISTER_PASS_CONFIG_OPTION("raf.remat.use_gflops_cost", IntImm);
 
 Pass Rematerialization() {
   PassContext pass_ctx = PassContext::Current();
-  Integer memory_budget =
-      pass_ctx->GetConfig("raf.memory_budget", Integer(static_cast<int>(0))).value();
+  int64_t memory_budget =
+      pass_ctx->GetConfig("raf.memory_budget", Integer(static_cast<int>(0))).value().IntValue();
   // Turn profiler on by default. With caching it is pretty fast now.
   bool use_profiler = !(pass_ctx->GetConfig("raf.remat.use_gflops_cost", Bool(false)).value());
   TypedPackedFunc<Function(Function, IRModule, PassContext)> pass_func = [=](Function f, IRModule m,

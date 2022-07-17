@@ -273,7 +273,7 @@ class CUDNNDType final : public EnumBase<CUDNNDType, 7, int32_t, cudnnDataType_t
 inline int64_t GetTensorTypeDim(ir::TensorType tt, int i) {
   int n = tt->shape.size();
   CHECK(0 <= i && i < n) << "Get dim out of bound!";
-  auto res = tvm::Downcast<ir::Integer>(tt->shape[i]);
+  auto res = tvm::Downcast<ir::Integer>(tt->shape[i]).IntValue();
   return res;
 }
 
@@ -304,7 +304,7 @@ inline cudnnTensorDescriptor_t NormalizeTensorType(ir::TensorType tt) {
 
   std::vector<int64_t> shape(tt->shape.size());
   for (int i = 0, n = shape.size(); i < n; ++i) {
-    shape[i] = tvm::Downcast<ir::Integer>(tt->shape[i]);
+    shape[i] = tvm::Downcast<ir::Integer>(tt->shape[i]).IntValue();
   }
 
   std::vector<int> padded_shape = common::shape_utils::PadDims<int, int64_t>(shape, 4);

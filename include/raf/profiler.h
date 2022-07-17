@@ -196,6 +196,7 @@ class Profiler {
                          uint64_t end_time, const std::vector<std::string>& args);
   std::string GetProfile();
   std::vector<ProfileStat> GetProfileStats();
+  void ClearProfile();
 
   inline bool IsProfiling(int level) {
     return profile_level_ >= level;
@@ -205,7 +206,6 @@ class Profiler {
     for (int i = 0; i < helpers_.size(); i++) {
       helpers_[i].collect();
     }
-    helpers_.clear();
   }
 
   inline int profile_level() const {

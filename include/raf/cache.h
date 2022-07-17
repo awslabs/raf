@@ -101,7 +101,7 @@ class HashKey {
       if (v->shape.as<ir::AnyNode>()) {
         dim_i = -1;
       } else {
-        dim_i = ir::Downcast<ir::Integer>(v->shape[i]);
+        dim_i = ir::Downcast<ir::Integer>(v->shape[i]).IntValue();
       }
       RAF_APPEND_BYTES(int64_t, 8, dim_i);
     }
