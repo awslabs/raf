@@ -5,6 +5,9 @@
 """Collective communication operators"""
 from .._op import sym
 from .communicator import get_communicator
+from .._core.ndarray import Symbol
+from .._core.module import IRModule
+from raf._ffi.pass_ import ExtractBinding, InferType
 
 
 def allreduce(x, computation="sum", rank_list=None):
@@ -165,9 +168,15 @@ def reduce_scatter(x, computation="sum", rank_list=None):
     if isinstance(x, (tuple, list)):
         length = len(x)
         assert length == size
-        single_shape = sym.shape(x[0])
-        for tensor in x:
-            assert sym.equal(sym.shape(tensor), single_shape)
+        body = Symbol.make_tuple(x)._Symbol__handle
+        body = ExtractBinding(body, [])
+        mod = IRModule.from_expr(body)
+        mod = InferType()(mod)
+        ret_list = mod["main"].checked_type.ret_type
+        single_tensor = ret_list.fields[0]
+        print(type(ret_list.fields))
+        for tensor in ret_list.fields:
+            assert single_tensor == tensor
         x = sym.concatenate(x, axis=0)
 
     return sym._reduce_scatter(x, computation, rank_list=rank_list)
