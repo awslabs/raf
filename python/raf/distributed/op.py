@@ -192,6 +192,8 @@ def broadcast(x, root, rank_list=None):
     """
     if not isinstance(x, (tuple, list)):
         x = [x]
+    if rank_list:
+        rank_list = [rank_list]
 
     return sym._broadcast(x, root, rank_list)
 

@@ -574,7 +574,7 @@ def test_broadcast():
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
-@pytest.mark.parametrize("rank_list", [[[0, 1]], [[1]]])
+@pytest.mark.parametrize("rank_list", [[0, 1], [0]])
 def test_broadcast_with_rank_list(rank_list):
     """Testing broadcast with a 1d group as tensor list."""
 
