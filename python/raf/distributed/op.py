@@ -7,7 +7,7 @@ from .._op import sym
 from .communicator import get_communicator
 from .._core.ndarray import Symbol
 from .._core.module import IRModule
-from raf._ffi.pass_ import ExtractBinding, InferType
+from .._ffi.pass_ import ExtractBinding, InferType
 
 
 def allreduce(x, computation="sum", rank_list=None):
