@@ -479,6 +479,57 @@ def test_reduce(computation):
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.parametrize("rank_list", [[0], [0, 1]])
+@pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
+def test_reduce_with_rank_list(computation, rank_list):
+    """Testing reduce with rank list"""
+
+    class TestModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x):
+            x = raf.reduce(x, 0, computation=computation, rank_list=rank_list)
+            return x
+
+    if computation == "avg" and raf.build.with_nccl() < 21000:
+        pytest.skip("avg is not supported in NCCL < 2.10")
+    model = TestModel()
+    _, rank, local_rank = get_dist_comm_info(verbose=True)
+    total_rank = len(rank_list)
+    device = f"cuda({local_rank})"
+    x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    x = raf.array(x, device=device)
+    if rank == 0:
+        print(f"{rank} - X: ", x)
+    model.to(device=device)
+    y = model(x)
+    vx = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    vx = raf.array(vx, device=device)
+    vy = run_vm_model(model, device, [vx])
+    if rank == 0:
+        ones = np.ones(shape=(4, 4), dtype="float32")
+        if computation == "sum":
+            target_y = ones * sum(range(1, total_rank + 1))
+        elif computation == "prod":
+            target_y = ones * np.prod(range(1, total_rank + 1))
+        elif computation == "min":
+            target_y = ones
+        elif computation == "max":
+            target_y = ones * total_rank
+        elif computation == "avg":
+            target_y = ones * sum(range(1, total_rank + 1))
+            target_y = target_y / total_rank
+        else:
+            assert False, "Invalid computation"
+        print(f"{rank} - Y: ", y)
+        print(f"{rank} - T: ", target_y)
+        check(y, target_y)
+        check(y, vy)
+
+
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
 def test_reduce_list(computation):
     """Testing reduce with list of tensor"""
