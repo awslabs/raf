@@ -388,7 +388,7 @@ Value CreateDummyValueFromType(const tvm::Type& type, Device device) {
     for (auto v : tensor_type->shape) {
       const auto* int_imm = v.as<tvm::IntImmNode>();
       CHECK(int_imm != nullptr) << "Only supports creating dummy tensor value with static shape.";
-      shape.push_back(tvm::Integer(GetRef<tvm::IntImm>(int_imm)));
+      shape.push_back(tvm::Integer(GetRef<tvm::IntImm>(int_imm)).IntValue());
     }
     int64_t nbytes = tensor_type->dtype.bytes();
     for (auto v : shape) {

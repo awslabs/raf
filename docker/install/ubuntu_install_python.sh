@@ -1,29 +1,28 @@
 #!/bin/bash
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
+
 set -e
 set -u
 set -o pipefail
 
 apt-get update
-apt-get install -y python-dev python3-dev
-apt-get install -y python-pip python3-pip
-pip3 install pip --upgrade
-pip3 install cmake
-pip3 install scikit-build==0.11.1
-pip3 install pylint==2.4.3 cpplint black==22.3.0
-pip3 install six numpy pytest cython decorator scipy tornado typed_ast pytest mypy orderedset \
-             antlr4-python3-runtime attrs requests Pillow packaging psutil dataclasses pycparser \
-             pydot
-pip3 install torch==1.10.1+cu113 torchvision==0.11.2+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
-pip3 install transformers==4.3
-pip3 install mxnet==1.6.0
-pip3 install gluoncv==0.10.1
+apt-get install -y build-essential
+apt-get install -y python3 python3-dev python3-pip
+apt-get install -y python3.7 python3.7-dev python3.7-venv
+rm /usr/bin/python3
+ln -s /usr/bin/python3.7 /usr/bin/python3
 
-if [[ "$1" == "gpu" ]]; then
-    apt-get install -y ninja-build
-    git clone https://github.com/szhengac/apex --branch lans
-    cd apex
-    pip3 install -v --disable-pip-version-check --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
-    cd ..
-fi
+python3 -m pip install -U --force-reinstall pip
+python3 -m pip install cmake
+python3 -m pip install scikit-build==0.11.1
+python3 -m pip install pylint==2.4.3 cpplint black==22.3.0
+python3 -m pip install six numpy pytest cython decorator scipy tornado typed_ast \
+                       pytest mypy orderedset antlr4-python3-runtime attrs requests \
+                       Pillow packaging psutil dataclasses pycparser pydot filelock
+python3 -m pip install astunparse numpy ninja pyyaml mkl mkl-include setuptools cffi \
+                       typing_extensions future glob2 pygithub boto3
+python3 -m pip install mxnet==1.6.0
+python3 -m pip install gluoncv==0.10.1
+python3 -m pip install datasets==1.15.1
+python3 -m pip install transformers==4.17

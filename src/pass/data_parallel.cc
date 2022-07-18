@@ -146,6 +146,8 @@ struct DataParallel {
     // Store the running time of all ops.
     static std::vector<std::pair<std::string, int64_t> > op_running_time;
     if (dcfg->iteration < dcfg->auto_dp_profiling_start_iter) {
+      Profiler::Get()->GetProfileStats();
+      Profiler::Get()->ClearProfile();
       Profiler::Get()->set_profile_level(0);  // Disable profiling to warm up
     } else if (dcfg->iteration <= dcfg->auto_dp_profiling_end_iter) {
       Profiler::Get()->set_profile_level(1);  // Profiling the execution
@@ -162,6 +164,7 @@ struct DataParallel {
             }
           }
         }
+        Profiler::Get()->ClearProfile();
       } else {
         int op_count = 0;
         for (auto& item : Profiler::Get()->GetProfileStats()) {
@@ -173,6 +176,7 @@ struct DataParallel {
             op_count++;
           }
         }
+        Profiler::Get()->ClearProfile();
       }
     } else if (dcfg->iteration == dcfg->auto_dp_profiling_end_iter + 1) {
       Profiler::Get()->set_profile_level(prof_level);  // Enbale user's config
@@ -329,7 +333,9 @@ struct DataParallel {
       LOG(FATAL) << "Return of backward IR must be Var or tuple of Vars in Data Parallel Pass.";
     }
 
-    dcfg->iteration++;
+    if (dcfg->enable_auto_dp_profiling) {
+      dcfg->iteration++;
+    }
 
     bp_n = bp_ell->vars.size();
     if (new_bp_rt.size() == 1) {

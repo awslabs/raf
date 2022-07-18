@@ -221,6 +221,34 @@ def broadcast(x, root):
     return sym._broadcast(x, root)
 
 
+def all_to_all(x, group_use_memcpy=False):
+    """Performs an all-to-all communication across all ranks.
+
+    Parameters
+    ----------
+    x : Tensor or List[Tensor]
+        The tensor(s) to perform all-to-all on. The input tensor is evenly split
+        into n chunks at axis 0, and chunk[i] is sent to rank i. If the input is a
+        list of tensors, the result is equivalent to calling all-to-all on each tensor
+        individually, but only one grouped all-to-all call will be launched.
+    group_use_memcpy: bool
+        Whether to use memory copy for a grouped all-to-all call. If set to true,
+        data of different input tensors will be copied to a single contiguous buffer
+        before communication and copied back afterwards. This parameter is only relevant
+        when x is a list of tensors. Default is false.
+
+    Returns
+    -------
+    ret: Tensor or List[Tensor]
+        all-to-all results. The received tensors from each rank are concatenated at
+        axis 0 to form a single tensor (with the same size as input).
+    """
+    if not isinstance(x, (tuple, list)):
+        x = [x]
+
+    return sym._all_to_all(x, group_use_memcpy)
+
+
 def send(x, peer, token=None):
     """Send x to peer.
     This operation is blocking for GPU.
