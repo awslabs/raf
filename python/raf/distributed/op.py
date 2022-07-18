@@ -104,7 +104,7 @@ def group_allgather(tensor_list, axis, out):
     return sym._group_allgather(tensor_list, axis, out)
 
 
-def reduce(x, root, computation="sum"):
+def reduce(x, root, computation="sum", rank_list=None):
     """Performs reduce operation. Collect data to root rank
 
     Parameters
@@ -123,7 +123,9 @@ def reduce(x, root, computation="sum"):
     """
     if not isinstance(x, (tuple, list)):
         x = [x]
-    return sym._reduce(x, root, computation)
+    if rank_list:
+        rank_list = [rank_list]
+    return sym._reduce(x, root, computation, rank_list)
 
 
 def reduce_scatter(x, computation="sum", rank_list=None):
