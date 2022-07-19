@@ -166,17 +166,15 @@ def reduce_scatter(x, computation="sum", rank_list=None):
         size = comm.size
 
     if isinstance(x, (tuple, list)):
-        length = len(x)
-        assert length == size
+        assert len(x) == size, "Invalid size of tensor list"
         body = Symbol.make_tuple(x)._Symbol__handle
         body = ExtractBinding(body, [])
         mod = IRModule.from_expr(body)
         mod = InferType()(mod)
         ret_list = mod["main"].checked_type.ret_type
-        single_tensor = ret_list.fields[0]
-        print(type(ret_list.fields))
-        for tensor in ret_list.fields:
-            assert single_tensor == tensor
+        single_tensor_type = ret_list.fields[0]
+        for tensor_type in ret_list.fields:
+            assert single_tensor_type == tensor_type, "Invalid tensor shape"
         x = sym.concatenate(x, axis=0)
 
     return sym._reduce_scatter(x, computation, rank_list=rank_list)
