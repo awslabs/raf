@@ -898,12 +898,12 @@ class NCCLGather : public NCCLOpEnv {
     CHECK_EQ(comm_ref->size, nccl_num_ranks)
         << "NCCL communicator world size does not match with RAF Communicator.";
     NCCL_CALL(ncclGroupStart());
-    NCCL_CALL(ncclSend(send_buffer, size_per_rank, DType(x->dtype), root,
-                       nccl_comm, (cudaStream_t)stream));
+    NCCL_CALL(ncclSend(send_buffer, size_per_rank, DType(x->dtype), root, nccl_comm,
+                       (cudaStream_t)stream));
     if (nccl_user_rank == root) {
       for (size_t i = 0; i < nccl_num_ranks; i++) {
-        NCCL_CALL(ncclRecv(recv_buffer + i * byte_per_rank, size_per_rank, DType(x->dtype),
-                           i, nccl_comm, (cudaStream_t)stream));
+        NCCL_CALL(ncclRecv(recv_buffer + i * byte_per_rank, size_per_rank, DType(x->dtype), i,
+                           nccl_comm, (cudaStream_t)stream));
       }
     }
     NCCL_CALL(ncclGroupEnd());
