@@ -221,7 +221,7 @@ def all_to_all(x, group_use_memcpy=False):
     return sym._all_to_all(x, group_use_memcpy)
 
 
-def comm_gather(x, root):
+def gather(x, root):
     """Performs a gather communication across all ranks.
 
     Parameters

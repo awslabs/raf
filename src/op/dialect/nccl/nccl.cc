@@ -856,8 +856,6 @@ RAF_REGISTER_DIALECT_OP(nccl, _reduce, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._reduce", NCCLReduce::make);
 
 class NCCLGather : public NCCLOpEnv {
-  void* stream;
-  void* communicator;
   int root;
   explicit NCCLGather(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._gather");
@@ -886,27 +884,29 @@ class NCCLGather : public NCCLOpEnv {
     auto comm_ref = GetRef<Communicator>(reinterpret_cast<CommunicatorObj*>(communicator));
     ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(comm_ref)->nccl_comm;
     auto input_x = Downcast<value::TupleValue>(inputs[0]);
-    DLTensor* x = input_x->fields[0];
+    const DLTensor* x = input_x->fields[0];
     DLTensor* out = output;
+    char* send_buffer = (char*)x->data;
+    char* recv_buffer = (char*)out->data;
 
     int nccl_num_ranks;
     int nccl_user_rank;
+    int byte_per_rank = BytesCompactTensor(*x);
+    int size_per_rank = byte_per_rank / GetSizeInBytes(x->dtype);
     NCCL_CALL(ncclCommCount(nccl_comm, &nccl_num_ranks));
     NCCL_CALL(ncclCommUserRank(nccl_comm, &nccl_user_rank));
-    NCCL_CALL(ncclGroupStart());
     CHECK_EQ(comm_ref->size, nccl_num_ranks)
         << "NCCL communicator world size does not match with RAF Communicator.";
-
-    NCCL_CALL(ncclSend(x->data, BytesCompactTensor(*x) / (x->dtype.bits / 8), DType(x->dtype), root,
+    NCCL_CALL(ncclGroupStart());
+    NCCL_CALL(ncclSend(send_buffer, size_per_rank, DType(x->dtype), root,
                        nccl_comm, (cudaStream_t)stream));
     if (nccl_user_rank == root) {
-      int size_per_rank = BytesCompactTensor(*x) / (x->dtype.bits / 8);
-      int byte_per_rank = size_per_rank * GetSizeInBytes(x->dtype);
-      char* recv_buffer = (char*)out->data;
       for (size_t i = 0; i < nccl_num_ranks; i++) {
         NCCL_CALL(ncclRecv(recv_buffer + i * byte_per_rank, size_per_rank, DType(x->dtype),
                            i, nccl_comm, (cudaStream_t)stream));
       }
+    } else {
+      memset(recv_buffer, 0, byte_per_rank * nccl_num_ranks);
     }
     NCCL_CALL(ncclGroupEnd());
   }
