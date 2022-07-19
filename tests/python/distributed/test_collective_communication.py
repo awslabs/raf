@@ -781,7 +781,7 @@ def test_all_to_all_with_tensor_list(split_axis, concat_axis, group_use_memcpy, 
     for d in range(total_rank):
         x1_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (rank * total_rank + d))
         x2_slices.append(
-            np.ones(shape=(4, 4), dtype=dtype) * (total_rank**2 + rank * total_rank + d)
+            np.ones(shape=(4, 4), dtype=dtype) * (total_rank ** 2 + rank * total_rank + d)
         )
     x1_np = np.concatenate(x1_slices, axis=split_axis)
     x2_np = np.concatenate(x2_slices, axis=split_axis)
@@ -804,7 +804,7 @@ def test_all_to_all_with_tensor_list(split_axis, concat_axis, group_use_memcpy, 
     for s in range(total_rank):
         target_y1_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (s * total_rank + rank))
         target_y2_slices.append(
-            np.ones(shape=(4, 4), dtype=dtype) * (total_rank**2 + s * total_rank + rank)
+            np.ones(shape=(4, 4), dtype=dtype) * (total_rank ** 2 + s * total_rank + rank)
         )
     target_y1 = np.concatenate(target_y1_slices, axis=concat_axis)
     target_y2 = np.concatenate(target_y2_slices, axis=concat_axis)
