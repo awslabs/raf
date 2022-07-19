@@ -905,8 +905,6 @@ class NCCLGather : public NCCLOpEnv {
         NCCL_CALL(ncclRecv(recv_buffer + i * byte_per_rank, size_per_rank, DType(x->dtype),
                            i, nccl_comm, (cudaStream_t)stream));
       }
-    } else {
-      memset(recv_buffer, 0, byte_per_rank * nccl_num_ranks);
     }
     NCCL_CALL(ncclGroupEnd());
   }
