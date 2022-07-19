@@ -695,9 +695,11 @@ def test_reduce_scatter_single_tensor(computation):
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.parametrize("split_axis", [0, 1])
+@pytest.mark.parametrize("concat_axis", [0, 1])
 @pytest.mark.parametrize("group_use_memcpy", [True, False])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-def test_all_to_all_with_tensor(group_use_memcpy, dtype):
+def test_all_to_all_with_tensor_and_rank_list(split_axis, concat_axis, group_use_memcpy, dtype):
     """Testing all_to_all with a single tensor as input."""
 
     class TestModel(raf.Model):
@@ -706,7 +708,9 @@ def test_all_to_all_with_tensor(group_use_memcpy, dtype):
 
         @raf.model.trace
         def forward(self, x):
-            x = raf.all_to_all(x, group_use_memcpy)
+            x = raf.all_to_all(
+                x, split_axis=split_axis, concat_axis=concat_axis, group_use_memcpy=group_use_memcpy
+            )
             return x
 
     if raf.build.with_nccl() < 20700:
@@ -720,7 +724,7 @@ def test_all_to_all_with_tensor(group_use_memcpy, dtype):
     x_slices = []
     for d in range(total_rank):
         x_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (rank * total_rank + d))
-    x_np = np.concatenate(x_slices, axis=0)
+    x_np = np.concatenate(x_slices, axis=split_axis)
     x = raf.array(x_np, device=device)
     model.to(device=device)
     y = model(x)
@@ -734,7 +738,7 @@ def test_all_to_all_with_tensor(group_use_memcpy, dtype):
     target_y_slices = []
     for s in range(total_rank):
         target_y_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (s * total_rank + rank))
-    target_y = np.concatenate(target_y_slices, axis=0)
+    target_y = np.concatenate(target_y_slices, axis=concat_axis)
     if rank == 0:
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
@@ -742,9 +746,11 @@ def test_all_to_all_with_tensor(group_use_memcpy, dtype):
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.parametrize("split_axis", [0, 1])
+@pytest.mark.parametrize("concat_axis", [0, 1])
 @pytest.mark.parametrize("group_use_memcpy", [True, False])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-def test_all_to_all_with_tensor_list(group_use_memcpy, dtype):
+def test_all_to_all_with_tensor_list(split_axis, concat_axis, group_use_memcpy, dtype):
     """Testing all_to_all with a list of tensors as input."""
 
     class TestModel(raf.Model):
@@ -753,7 +759,7 @@ def test_all_to_all_with_tensor_list(group_use_memcpy, dtype):
 
         @raf.model.trace
         def forward(self, x1, x2):
-            x = raf.all_to_all([x1, x2], group_use_memcpy)
+            x = raf.all_to_all([x1, x2], split_axis=split_axis, concat_axis=concat_axis, group_use_memcpy=group_use_memcpy)
             return x
 
     if raf.build.with_nccl() < 20700:
@@ -772,8 +778,8 @@ def test_all_to_all_with_tensor_list(group_use_memcpy, dtype):
         x2_slices.append(
             np.ones(shape=(4, 4), dtype=dtype) * (total_rank ** 2 + rank * total_rank + d)
         )
-    x1_np = np.concatenate(x1_slices, axis=0)
-    x2_np = np.concatenate(x2_slices, axis=0)
+    x1_np = np.concatenate(x1_slices, axis=split_axis)
+    x2_np = np.concatenate(x2_slices, axis=split_axis)
     x1 = raf.array(x1_np, device=device)
     x2 = raf.array(x2_np, device=device)
     model.to(device=device)
@@ -795,8 +801,8 @@ def test_all_to_all_with_tensor_list(group_use_memcpy, dtype):
         target_y2_slices.append(
             np.ones(shape=(4, 4), dtype=dtype) * (total_rank ** 2 + s * total_rank + rank)
         )
-    target_y1 = np.concatenate(target_y1_slices, axis=0)
-    target_y2 = np.concatenate(target_y2_slices, axis=0)
+    target_y1 = np.concatenate(target_y1_slices, axis=concat_axis)
+    target_y2 = np.concatenate(target_y2_slices, axis=concat_axis)
     if rank == 0:
         print(f"{rank} - Y1: ", y1)
         print(f"{rank} - Y2: ", y2)
@@ -804,6 +810,59 @@ def test_all_to_all_with_tensor_list(group_use_memcpy, dtype):
         print(f"{rank} - T2: ", target_y2)
     check(y1, target_y1)
     check(y2, target_y2)
+
+
+@pytest.mark.skipif(skip_dist_test(min_rank_num=4, require_exact_rank=True), reason=SKIP_REASON)
+@pytest.mark.parametrize("rank_list", [[[0, 1], [2, 3]]])
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
+def test_all_to_all_with_rank_list(rank_list, dtype):
+    """Testing all_to_all with rank_list."""
+
+    class TestModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x):
+            x = raf.all_to_all(x, rank_list=rank_list)
+            return x
+
+    if raf.build.with_nccl() < 20700:
+        pytest.skip("all_to_all is not supported in NCCL < 2.7")
+
+    model = TestModel()
+    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
+    device = f"cuda({local_rank})"
+    # each src rank s sends a tensor with shape (2,4) and
+    # value (s * group_size + d) to dst rank d
+    x_slices = []
+    for group in rank_list:
+        if rank not in group:
+            continue
+        size = len(group)
+        for s in group:
+            x_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (rank * size + s))
+    x_np = np.concatenate(x_slices, axis=0)
+    x = raf.array(x_np, device=device)
+    model.to(device=device)
+    y = model(x)
+
+    vx = raf.array(x_np, device=device)
+    vy = run_vm_model(model, device, [vx])
+    check(y, vy)
+
+    target_y_slices = []
+    for group in rank_list:
+        if rank not in group:
+            continue
+        size = len(group)
+        for s in group:
+            target_y_slices.append(np.ones(shape=(2, 4), dtype=dtype) * (s * size + rank))
+    target_y = np.concatenate(target_y_slices, axis=0)
+    if rank % 2 == 0:
+        print(f"{rank} - Y: ", y)
+        print(f"{rank} - T: ", target_y)
+    check(y, target_y)
 
 
 if __name__ == "__main__":

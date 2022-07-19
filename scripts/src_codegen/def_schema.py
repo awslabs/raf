@@ -741,6 +741,9 @@ SCHEMAS = {
     ],
     "communication.h::all_to_all": [
         Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+        Arg(name="split_axis", cxx_type="int", cxx_default=0),
+        Arg(name="concat_axis", cxx_type="int", cxx_default=0),
+        Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
         Arg(name="group_use_memcpy", cxx_type="bool", cxx_default=False),
     ],
     "communication.h::send": [

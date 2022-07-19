@@ -520,8 +520,8 @@ class NCCLAllToAll : public raf::op::OpEnv {
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-    RequestDistributed(&communicator, "nccl", NullValue<Value>());
     auto args = cv->args.as<raf::op::schema::AllToAllArgs>();
+    RequestDistributed(&communicator, "nccl", args->rank_list);
     group_use_memcpy = args->group_use_memcpy;
     auto& tv = args->x;
     for (int i = 0; i < tv.size(); ++i) {
