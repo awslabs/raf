@@ -254,15 +254,20 @@ RAF_OP_DECLARE("raf.op._recv", Recv)
 void Gather(const CallValues& call) {
   const auto* args = call->args.as<CommGatherArgs>();
   CHECK(args != nullptr);
-  ir::Array<Value> ret;
   const DLTensor* x = args->x[0];
   size_t size = GetGlobalCommunicator()->size;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   shape[0] = shape[0] * size;
   call->device = x->device;
-  call->out = TensorValue::Assemble(/*ctx=*/x->device,
-                                    /*dtype=*/x->dtype,
-                                    /*shape=*/shape);
+  if (GetGlobalCommunicator()->rank == args->root) {
+    call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                      /*dtype=*/x->dtype,
+                                      /*shape=*/shape);
+  } else {
+    call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                      /*dtype=*/x->dtype,
+                                      /*shape=*/std::vector<int64_t>{});
+  }
 }
 
 RAF_OP_DECLARE("raf.op._gather", Gather)
