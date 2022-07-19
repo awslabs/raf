@@ -258,7 +258,7 @@ void Gather(const CallValues& call) {
   const DLTensor* x = args->x[0];
   size_t size = GetGlobalCommunicator()->size;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  shape[0] *= size;
+  shape[0] = shape[0] * size;
   call->device = x->device;
   call->out = TensorValue::Assemble(/*ctx=*/x->device,
                                     /*dtype=*/x->dtype,
