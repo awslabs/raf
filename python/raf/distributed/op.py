@@ -221,6 +221,26 @@ def all_to_all(x, group_use_memcpy=False):
     return sym._all_to_all(x, group_use_memcpy)
 
 
+def comm_gather(x, root):
+    """Performs a gather communication across all ranks.
+
+    Parameters
+    ----------
+    x : Tensor
+        The tensor to be gathered. Tensors from each rank should be
+        of the same shape.
+    root : int
+        The root rank.
+
+    Returns
+    ----------
+    ret : Tensor
+    """
+    if not isinstance(x, (tuple, list)):
+        x = [x]
+    return sym._gather(x, root)
+
+
 def send(x, peer, token=None):
     """Send x to peer.
     This operation is blocking for GPU.

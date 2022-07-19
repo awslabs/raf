@@ -251,6 +251,24 @@ RAF_OP_DECLARE("raf.op._recv", Recv)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<TRAFCollective>("TRAFCollective", true);
 
+void Gather(const CallValues& call) {
+  const auto* args = call->args.as<CommGatherArgs>();
+  CHECK(args != nullptr);
+  ir::Array<Value> ret;
+  const DLTensor* x = args->x[0];
+  size_t size = GetGlobalCommunicator()->size;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  shape[0] *= size;
+  call->device = x->device;
+  call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+}
+
+RAF_OP_DECLARE("raf.op._gather", Gather)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TRAFCollective>("TRAFCollective", true);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace raf

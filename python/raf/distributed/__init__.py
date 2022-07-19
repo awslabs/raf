@@ -14,6 +14,7 @@ from .op import (
     group_allgather,
     group_reduce_scatter,
     all_to_all,
+    comm_gather,
 )
 from .config import DistConfig, get_config
 from .communicator import get_communicator, set_default_communicator
