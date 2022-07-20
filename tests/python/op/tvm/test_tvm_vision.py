@@ -179,6 +179,7 @@ def test_nms(device):
         np_indices_result,
     )
 
+
 @pytest.mark.xfail(reason="See apache/tvm#12126")
 @pytest.mark.parametrize(
     "config",
