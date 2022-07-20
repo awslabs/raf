@@ -180,6 +180,7 @@ def test_nms(device):
     )
 
 
+@pytest.mark.xfail(reason="See apache/tvm#12126")
 @pytest.mark.parametrize(
     "config",
     [((1, 4, 16, 16), (32, 5), (7, 7), 1.0, -1), ((4, 4, 16, 16), (32, 5), (7, 7), 0.5, 2)],
