@@ -217,14 +217,12 @@ class GradientPartitioner : public ExprMutator {
    * // if NCCL version is >= 2.10
    * let %1 = op(%0);       // A backward op to generate gradient
    * let %2 = pad(%1, ...); // %1 is the complete local gradient
-   * let %3 = Tuple(%2);
-   * let %4 = reduce_scatter(%3, avg);
+   * let %3 = reduce_scatter(%2, avg);
    * // else NCCL version is < 2.10
    * let %1 = op(%0);       // A backward op to generate gradient
    * let %2 = pad(%1, ...); // %1 is the complete local gradient
-   * let %3 = Tuple(%2);
-   * let %4 = reduce_scatter(%3, sum);
-   * let %5 = divide(%4, ...)
+   * let %3 = reduce_scatter(%2, sum);
+   * let %4 = divide(%3, ...)
    * The desired IR for ZeRO-2 is if bucket_size_ > 2, which means group reduce_scatter:
    * // if NCCL version is >= 2.10
    * let %1 = op(%0);       // A backward op to generate gradient
@@ -272,7 +270,6 @@ class GradientPartitioner : public ExprMutator {
       grad_var = GenPadCall(scope, grad_var);
       if (bucket_size_ < 2) {
         // Do not group redcue_scatter
-        grad_var = scope->Push(Tuple({grad_var}));
         auto reduce_scatter_var = scope->Push(Call(reduce_scatter_op, {grad_var, compute}));
         if (divide_expr.defined()) {
           // update the divide op args

@@ -282,15 +282,14 @@ def test_allgather_with_subcomm(axis, rank_list):
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max"])
-def test_reduce_scatter(computation):
+def test_reduce_scatter_tensor_list(computation):
     class TestModel(raf.Model):
         def build(self):
             pass
 
         @raf.model.trace
         def forward(self, x, y):
-            z = Symbol.make_tuple([x, y])
-            out = raf.reduce_scatter(z, computation=computation)
+            out = raf.reduce_scatter([x, y], computation=computation)
             return out
 
     if computation == "avg" and raf.build.with_nccl() < 21000:
@@ -345,8 +344,7 @@ def test_reduce_scatter_with_rank_list(computation, rank_list):
 
         @raf.model.trace
         def forward(self, x, y):
-            z = Symbol.make_tuple([x, y])
-            out = raf.reduce_scatter(z, computation=computation, rank_list=rank_list)
+            out = raf.reduce_scatter([x, y], computation=computation, rank_list=rank_list)
             return out
 
     if computation == "avg" and raf.build.with_nccl() < 21000:
@@ -662,8 +660,7 @@ def test_reduce_scatter_single_tensor(computation):
 
         @raf.model.trace
         def forward(self, x):
-            z = Symbol.make_tuple([x])
-            out = raf.reduce_scatter(z, computation=computation)
+            out = raf.reduce_scatter(x, computation=computation)
             return out
 
     if computation == "avg" and raf.build.with_nccl() < 21000:
