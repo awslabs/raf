@@ -104,7 +104,7 @@ def group_allgather(tensor_list, axis, out):
     return sym._group_allgather(tensor_list, axis, out)
 
 
-def reduce(x, root, computation="sum"):
+def reduce(x, root, computation="sum", rank_list=None):
     """Performs reduce operation. Collect data to root rank
 
     Parameters
@@ -123,7 +123,9 @@ def reduce(x, root, computation="sum"):
     """
     if not isinstance(x, (tuple, list)):
         x = [x]
-    return sym._reduce(x, root, computation)
+    if rank_list:
+        rank_list = [rank_list]
+    return sym._reduce(x, root, computation, rank_list)
 
 
 def reduce_scatter(x, computation="sum", rank_list=None):
@@ -173,7 +175,7 @@ def group_reduce_scatter(tensor_list, computation="sum"):
     return sym._group_reduce_scatter(tensor_list, computation)
 
 
-def broadcast(x, root):
+def broadcast(x, root, rank_list=None):
     """Performs broadcast
 
     Parameters
@@ -182,6 +184,8 @@ def broadcast(x, root):
         A list of tensors on rank root to broadcast
     root : int
         root rank
+    rank_list : List[int]
+        A group within which broadcast performs
 
     Returns
     -------
@@ -190,7 +194,10 @@ def broadcast(x, root):
     """
     if not isinstance(x, (tuple, list)):
         x = [x]
-    return sym._broadcast(x, root)
+    if rank_list:
+        rank_list = [rank_list]
+
+    return sym._broadcast(x, root, rank_list)
 
 
 def all_to_all(x, group_use_memcpy=False):
