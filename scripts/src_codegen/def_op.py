@@ -208,6 +208,7 @@ OPS = [
     Op(name="_group_reduce_scatter", schema_name="group_reduce_scatter"),
     Op(name="_broadcast", schema_name="broadcast"),
     Op(name="_all_to_all", schema_name="all_to_all"),
+    Op(name="_gather", schema_name="comm_gather"),
     Op(name="_send", schema_name="send"),
     Op(name="_recv", schema_name="recv"),
     # VM ops
