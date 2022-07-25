@@ -123,7 +123,7 @@ def reduce(x, root, computation="sum", rank_list=None):
     ret: Tensor
         reduction result
     """
-    if rank_list != None:
+    if rank_list is not None:
         assert root in rank_list, "Invalid root and rank_list"
         rank_list = [rank_list]
 
@@ -194,7 +194,7 @@ def broadcast(x, root, rank_list=None):
     ret: Tensor
         broadcast-ed results
     """
-    if rank_list != None:
+    if rank_list is not None:
         assert root in rank_list, "Invalid root and rank_list"
         rank_list = [rank_list]
 
