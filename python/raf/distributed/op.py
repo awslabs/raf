@@ -109,22 +109,24 @@ def reduce(x, root, computation="sum", rank_list=None):
 
     Parameters
     ----------
-    x : Tensor or list of Tensor
-        Tensor(s) to be reduced
+    x : Tensor
+        Tensor to be reduced
     root: int
         The root rank
     computation: string
         The reduction operation, default is sum
+    rank_list: List[int]
+        The list of ranks to reduce
 
     Returns
     -------
     ret: Tensor
         reduction result
     """
-    if not isinstance(x, (tuple, list)):
-        x = [x]
-    if rank_list:
+    if rank_list != None:
+        assert root in rank_list, "Invalid root and rank_list"
         rank_list = [rank_list]
+
     return sym._reduce(x, root, computation, rank_list)
 
 
@@ -180,21 +182,20 @@ def broadcast(x, root, rank_list=None):
 
     Parameters
     ----------
-    x : List[Tensor]
-        A list of tensors on rank root to broadcast
+    x : Tensor
+        A tensor on rank root to broadcast
     root : int
         root rank
     rank_list : List[int]
-        A group within which broadcast performs
+        The list of ranks to broadcast
 
     Returns
     -------
-    ret: List[Tensor]
+    ret: Tensor
         broadcast-ed results
     """
-    if not isinstance(x, (tuple, list)):
-        x = [x]
-    if rank_list:
+    if rank_list != None:
+        assert root in rank_list, "Invalid root and rank_list"
         rank_list = [rank_list]
 
     return sym._broadcast(x, root, rank_list)
