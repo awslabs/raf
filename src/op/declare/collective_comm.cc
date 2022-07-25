@@ -132,7 +132,8 @@ void ReduceScatter(const CallValues& call) {
   } else {
     size = GetGlobalCommunicator()->size;
   }
-  CHECK(shape[0] % size == 0);
+  CHECK(shape[0] % size == 0) << "Input tensor with first dim shape " << shape[0] << 
+                                 " cannot be scattered to " << size << "devices evenly";
   shape[0] = shape[0] / size;
   call->device = x->device;
   call->out = TensorValue::Assemble(/*ctx=*/x->device,
