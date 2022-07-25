@@ -648,7 +648,9 @@ def test_broadcast_with_rank_list(rank_list):
 
     if rank in rank_list:
         target_y = np.ones(shape=(4, 4), dtype="float32")
-        check(y, target_y)
+    else:
+        target_y = x
+    check(y, target_y)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
