@@ -449,8 +449,8 @@ class NCCLBroadcast : public NCCLOpEnv {
     DLTensor* out = output;
     size_t total_size = BytesCompactTensor(*x);
     size_t dtype_size = GetSizeInBytes(x->dtype);
-    NCCL_CALL(ncclBroadcast(x->data, out->data, total_size / dtype_size, DType(x->dtype), root, nccl_comm,
-                            (cudaStream_t)stream));
+    NCCL_CALL(ncclBroadcast(x->data, out->data, total_size / dtype_size, DType(x->dtype), root,
+                            nccl_comm, (cudaStream_t)stream));
   }
 
   static OpEnv* make(const CallValues& cv) {
@@ -603,8 +603,8 @@ class NCCLReduce : public NCCLOpEnv {
     DLTensor* out = output;
     size_t total_size = BytesCompactTensor(*x);
     size_t dtype_size = GetSizeInBytes(x->dtype);
-    NCCL_CALL(ncclReduce(x->data, out->data, total_size / dtype_size, DType(x->dtype), compute, root,
-                         nccl_comm, (cudaStream_t)stream));
+    NCCL_CALL(ncclReduce(x->data, out->data, total_size / dtype_size, DType(x->dtype), compute,
+                         root, nccl_comm, (cudaStream_t)stream));
   }
 
   static OpEnv* make(const CallValues& cv) {
