@@ -535,15 +535,15 @@ def test_broadcast():
 
     # pylint: disable=attribute-defined-outside-init
     class TestModel(raf.Model):
-        def build(self, root):
-            self.root = root
+        def build(self):
+            pass
 
         @raf.model.trace
         def forward(self, x):
-            res = raf.broadcast(x, self.root)
+            res = raf.broadcast(x, 0)
             return res
 
-    model = TestModel(root=0)
+    model = TestModel()
     _, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
@@ -564,15 +564,15 @@ def test_broadcast_with_rank_list(rank_list):
     """Testing broadcast with a 1d group as tensor list."""
 
     class TestModel(raf.Model):
-        def build(self, root):
-            self.root = root
+        def build(self):
+            pass
 
         @raf.model.trace
         def forward(self, x):
-            res = raf.broadcast(x, self.root, rank_list=rank_list)
+            res = raf.broadcast(x, 0, rank_list=rank_list)
             return res
 
-    model = TestModel(root=0)
+    model = TestModel()
     _, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
