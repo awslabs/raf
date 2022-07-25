@@ -245,38 +245,38 @@ def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None, group_use_memcpy=
 
     if split_axis == 0 and concat_axis == 0:
         if not is_list:
-            input = [x]
+            inp_x = [x]
         else:
-            input = x
+            inp_x = x
     elif not is_list:
         x = sym.split(x, indices_or_sections=size, axis=split_axis)
         x = sym.concatenate(x)
-        input = [x]
+        inp_x = [x]
     else:
-        input = []
+        inp_x = []
         length = len(x)
-        for iter in range(length):
-            tensor = x[iter]
+        for i in range(length):
+            tensor = x[i]
             tensor = sym.split(tensor, indices_or_sections=size, axis=split_axis)
             tensor = sym.concatenate(tensor)
-            input.append(tensor)
+            inp_x.append(tensor)
 
-    y = sym._all_to_all(input, rank_list=rank_list, group_use_memcpy=group_use_memcpy)
+    y = sym._all_to_all(inp_x, rank_list=rank_list, group_use_memcpy=group_use_memcpy)
 
     if split_axis == 0 and concat_axis == 0:
-        output = y
+        out_y = y
     elif not is_list:
-        output = sym.split(y, indices_or_sections=size)
-        output = sym.concatenate(output, axis=concat_axis)
+        out_y = sym.split(y, indices_or_sections=size)
+        out_y = sym.concatenate(out_y, axis=concat_axis)
     else:
-        output = []
-        for iter in range(length):
-            tensor = y.__getitem__(iter)
+        out_y = []
+        for i in range(length):
+            tensor = y.__getitem__(i)
             tensor = sym.split(tensor, indices_or_sections=size)
             tensor = sym.concatenate(tensor, axis=concat_axis)
-            output.append(tensor)
+            out_y.append(tensor)
 
-    return output
+    return out_y
 
 
 def send(x, peer, token=None):
