@@ -48,6 +48,8 @@ jobs:
           echo "::set-output name=ref::${ref}"
           repo=$(head -n 1 artifact/repo.txt)
           echo "::set-output name=repo::${repo}"
+          lint=${{ github.event.workflow_run.conclusion }}
+          echo "Linting result: ${lint}"
       - name: Parse PR job info
         id: pr_job_info
         continue-on-error: true
