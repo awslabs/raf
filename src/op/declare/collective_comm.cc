@@ -213,8 +213,6 @@ void AllToAll(const CallValues& call) {
   CHECK(args != nullptr);
   ir::Array<Value> ret;
   auto& tv = args->x;
-  auto split_axis = args->split_axis;
-  auto concat_axis = args->concat_axis;
   const DLTensor* x = tv[0];
   call->device = x->device;
   size_t size;
@@ -226,8 +224,6 @@ void AllToAll(const CallValues& call) {
   for (int i = 0; i < tv.size(); ++i) {
     const DLTensor* x = tv[i];
     std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-    shape[split_axis] /= size;
-    shape[concat_axis] *= size;
     ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
                                         /*dtype=*/x->dtype,
                                         /*shape=*/shape));
