@@ -224,8 +224,8 @@ void AllToAll(const CallValues& call) {
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
   CHECK(shape[0] % size == 0);
   call->out = TensorValue::Assemble(/*dev=*/x->device,
-                                      /*dtype=*/x->dtype,
-                                      /*shape=*/shape);
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
 }
 
 RAF_OP_DECLARE("raf.op._all_to_all", AllToAll)

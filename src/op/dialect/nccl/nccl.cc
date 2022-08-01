@@ -581,9 +581,9 @@ class NCCLAllToAll : public raf::op::OpEnv {
     if (size != 0) {
       for (size_t i = 0; i < nccl_num_ranks; i++) {
         NCCL_CALL(ncclSend(send_buffer + i * per_rank_bytes, size_per_rank, dtype, i, nccl_comm,
-                            (cudaStream_t)stream));
+                           (cudaStream_t)stream));
         NCCL_CALL(ncclRecv(recv_buffer + i * per_rank_bytes, size_per_rank, dtype, i, nccl_comm,
-                            (cudaStream_t)stream));
+                           (cudaStream_t)stream));
       }
     }
     NCCL_CALL(ncclGroupEnd());
