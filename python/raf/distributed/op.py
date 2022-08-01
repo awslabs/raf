@@ -231,7 +231,7 @@ def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None, group_use_memcpy=
     """
 
     is_list = isinstance(x, (tuple, list))
-    assert is_list == False, "Invalid Input Type"
+    assert is_list is False, "Invalid Input Type"
 
     comm = get_communicator()
     if rank_list:
