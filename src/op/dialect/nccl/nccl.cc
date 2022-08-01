@@ -895,11 +895,11 @@ class NCCLGather : public NCCLOpEnv {
     if (nccl_user_rank == root) {
       for (size_t i = 0; i < out->fields.size(); i++) {
         DLTensor* tmp_out = out->fields[i];
-        NCCL_CALL(ncclRecv(tmp_out->data, size_per_rank, DType(x->dtype), i, nccl_comm,
-                           (cudaStream_t)stream));
+        NCCL_CALL(ncclRecv(tmp_out->data, size_per_rank, DType(x->dtype), i, nccl_comm, (cudaStream_t)stream));
       }
     }
-    NCCL_CALL(ncclSend(x->data, size_per_rank, DType(x->dtype), root, nccl_comm, (cudaStream_t)stream));
+    NCCL_CALL(
+        ncclSend(x->data, size_per_rank, DType(x->dtype), root, nccl_comm, (cudaStream_t)stream));
     NCCL_CALL(ncclGroupEnd());
   }
 
@@ -949,7 +949,8 @@ class NCCLScatter : public NCCLOpEnv {
     if (nccl_user_rank == root) {
       for (size_t i = 0; i < tv->fields.size(); i++) {
         DLTensor* x = tv->fields[i];
-        NCCL_CALL(ncclSend(x->data, size_per_rank, DType(x->dtype), i, nccl_comm, (cudaStream_t)stream));
+        NCCL_CALL(
+            ncclSend(x->data, size_per_rank, DType(x->dtype), i, nccl_comm, (cudaStream_t)stream));
       }
     }
     NCCL_CALL(ncclRecv(out->data, size_per_rank, DType(out->dtype), root, nccl_comm,
