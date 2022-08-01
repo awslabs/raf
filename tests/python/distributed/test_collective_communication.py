@@ -764,7 +764,7 @@ def test_all_to_all_with_rank_list(rank_list, dtype):
         pytest.skip("all_to_all is not supported in NCCL < 2.7")
 
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
+    _, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     # each src rank s sends a tensor with shape (2,4) and
     # value (s * group_size + d) to dst rank d
