@@ -246,7 +246,7 @@ def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None, group_use_memcpy=
 
     if split_axis == 0 and concat_axis == 0:
         inp_x = [x]
-    else is_list:
+    else:
         x = sym.split(x, indices_or_sections=size, axis=split_axis)
         x = sym.concatenate(x)
         inp_x = [x]
