@@ -20,6 +20,7 @@ from raf.testing import check, get_dist_comm_info, skip_dist_test, run_vm_model,
 
 SKIP_REASON = "Distribution is not enabled or #rank is not expected"
 
+
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
@@ -877,7 +878,6 @@ def test_scatter():
     print(f"{rank} - Y: ", y)
     print(f"{rank} - T: ", target_y)
     check(y, target_y)
-
 
 
 if __name__ == "__main__":
