@@ -238,7 +238,29 @@ def gather(x, root):
     """
     if not isinstance(x, (tuple, list)):
         x = [x]
-    return sym._gather(x, root)
+    out = sym._gather(x, root)
+    out = sym.concatenate(out, axis=0)
+    return out
+
+
+def scatter(x, root):
+    """Performs a scatter communication across all ranks.
+
+    Parameters
+    ----------
+    x : Tensor
+        The tensor to be scattered.
+    root : int
+        The root rank.
+
+    Returns
+    ----------
+    ret : Tensor
+    """
+    comm = get_communicator()
+    size = comm.size
+    x = sym.split(x, indices_or_sections=size, axis=0)
+    return sym._scatter(x, root)
 
 
 def send(x, peer, token=None):

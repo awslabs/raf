@@ -41,6 +41,7 @@ RAF_OP_TYPE("raf.op._all_to_all", "NCCLAllToAll", IdentityType<AllToAllArgs>);
 RAF_OP_TYPE("raf.op._broadcast", "NCCLBroadcast", IdentityType<BroadcastArgs>);
 RAF_OP_TYPE("raf.op._reduce", "NCCLReduce", IdentityType<CommReduceArgs>);
 RAF_OP_TYPE("raf.op._gather", "NCCLGather", IdentityType<CommGatherArgs>);
+RAF_OP_TYPE("raf.op._scatter", "NCCLScatter", IdentityType<CommScatterArgs>);
 
 Type ReduceScatterInfer(const CallValues& value) {
   static auto* structural_equal = tvm::runtime::Registry::Get("node.StructuralEqual");

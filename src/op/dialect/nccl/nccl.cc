@@ -885,27 +885,22 @@ class NCCLGather : public NCCLOpEnv {
     ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(comm_ref)->nccl_comm;
     auto input_x = Downcast<value::TupleValue>(inputs[0]);
     const DLTensor* x = input_x->fields[0];
-    DLTensor* out = output;
-    char* send_buffer = (char*)x->data;
-    char* recv_buffer = (char*)out->data;
-
-    int nccl_num_ranks;
-    int nccl_user_rank;
+    auto out = Downcast<value::TupleValue>(output);
     int byte_per_rank = BytesCompactTensor(*x);
     int size_per_rank = byte_per_rank / GetSizeInBytes(x->dtype);
-    NCCL_CALL(ncclCommCount(nccl_comm, &nccl_num_ranks));
+
+    int nccl_user_rank;
     NCCL_CALL(ncclCommUserRank(nccl_comm, &nccl_user_rank));
-    CHECK_EQ(comm_ref->size, nccl_num_ranks)
-        << "NCCL communicator world size does not match with RAF Communicator.";
     NCCL_CALL(ncclGroupStart());
-    NCCL_CALL(ncclSend(send_buffer, size_per_rank, DType(x->dtype), root, nccl_comm,
-                       (cudaStream_t)stream));
     if (nccl_user_rank == root) {
-      for (size_t i = 0; i < nccl_num_ranks; i++) {
-        NCCL_CALL(ncclRecv(recv_buffer + i * byte_per_rank, size_per_rank, DType(x->dtype), i,
+      for (size_t i = 0; i < out->fields.size(); i++) {
+        DLTensor* tmp_out = out->fields[i];
+        NCCL_CALL(ncclRecv(tmp_out->data, size_per_rank, DType(x->dtype), i,
                            nccl_comm, (cudaStream_t)stream));
       }
     }
+    NCCL_CALL(ncclSend(x->data, size_per_rank, DType(x->dtype), root, nccl_comm,
+                       (cudaStream_t)stream));
     NCCL_CALL(ncclGroupEnd());
   }
 
@@ -916,6 +911,61 @@ class NCCLGather : public NCCLOpEnv {
 
 RAF_REGISTER_DIALECT_OP(nccl, _gather, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._gather", NCCLGather::make);
+
+class NCCLScatter : public NCCLOpEnv {
+  int root;
+  explicit NCCLScatter(const CallValues& cv) : NCCLOpEnv(cv) {
+    auto op = ir::Op::Get("raf.op._scatter");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    auto args = cv->args.as<raf::op::schema::CommScatterArgs>();
+    this->arg_indices = {fschema_index[op]("x")};
+    RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
+    RequestDistributed(&communicator, "nccl", NullValue<Value>());
+    root = args->root;
+  }
+
+ public:
+  ~NCCLScatter() {
+  }
+
+  std::string name() const override {
+    return TruncateName(GetUniqueName("raf.op.nccl._scatter"));
+  }
+
+  void Execute(const CallValues& cv) {
+    auto args = cv->args.as<raf::op::schema::CommScatterArgs>();
+    Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
+  }
+
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) {
+    auto comm_ref = GetRef<Communicator>(reinterpret_cast<CommunicatorObj*>(communicator));
+    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(comm_ref)->nccl_comm;
+    auto tv = Downcast<value::TupleValue>(inputs[0]);
+    DLTensor* out = output;
+
+    int nccl_user_rank;
+    NCCL_CALL(ncclCommUserRank(nccl_comm, &nccl_user_rank));
+    int size_per_rank = BytesCompactTensor(*out) / GetSizeInBytes(out->dtype);
+    NCCL_CALL(ncclGroupStart());
+    if (nccl_user_rank == root) {
+      for (size_t i = 0; i < tv->fields.size(); i++) {
+        DLTensor* x = tv->fields[i];
+        NCCL_CALL(ncclSend(x->data, size_per_rank, DType(x->dtype), i,
+                           nccl_comm, (cudaStream_t)stream));
+      }
+    }
+    NCCL_CALL(ncclRecv(out->data, size_per_rank, DType(out->dtype), root, nccl_comm,
+                       (cudaStream_t)stream));
+    NCCL_CALL(ncclGroupEnd());
+  }
+
+  static OpEnv* make(const CallValues& cv) {
+    return new NCCLScatter(cv);
+  }
+};
+
+RAF_REGISTER_DIALECT_OP(nccl, _scatter, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._scatter", NCCLScatter::make);
 }  // namespace nccl
 }  // namespace communication
 }  // namespace op

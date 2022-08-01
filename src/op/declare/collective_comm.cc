@@ -254,23 +254,37 @@ RAF_OP_DECLARE("raf.op._recv", Recv)
 void Gather(const CallValues& call) {
   const auto* args = call->args.as<CommGatherArgs>();
   CHECK(args != nullptr);
+  ir::Array<Value> ret;
   const DLTensor* x = args->x[0];
+  call->device = x->device;
   size_t size = GetGlobalCommunicator()->size;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  shape[0] = shape[0] * size;
-  call->device = x->device;
-  if (GetGlobalCommunicator()->rank == args->root) {
-    call->out = TensorValue::Assemble(/*ctx=*/x->device,
-                                      /*dtype=*/x->dtype,
-                                      /*shape=*/shape);
-  } else {
-    call->out = TensorValue::Assemble(/*ctx=*/x->device,
-                                      /*dtype=*/x->dtype,
-                                      /*shape=*/std::vector<int64_t>{});
+  for (int i = 0; i < size; ++i) {
+    ret.push_back(TensorValue::Assemble(/*ctx=*/x->device,
+                                        /*dtype=*/x->dtype,
+                                        /*shape=*/shape));
   }
+  call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
 }
 
 RAF_OP_DECLARE("raf.op._gather", Gather)
+    .set_attr<TOpPattern>("TOpPattern", kOpaque)
+    .set_attr<TRAFCollective>("TRAFCollective", true);
+
+void Scatter(const CallValues& call) {
+  const auto* args = call->args.as<CommScatterArgs>();
+  CHECK(args != nullptr);
+  auto& tv = args->x;
+  const DLTensor* x = tv[0];
+  size_t size = GetGlobalCommunicator()->size;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->device = x->device;
+  call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+}
+
+RAF_OP_DECLARE("raf.op._scatter", Scatter)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<TRAFCollective>("TRAFCollective", true);
 
