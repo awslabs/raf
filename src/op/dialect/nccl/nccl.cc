@@ -558,95 +558,35 @@ class NCCLAllToAll : public raf::op::OpEnv {
     ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(comm_ref)->nccl_comm;
     auto input_x = Downcast<value::TupleValue>(inputs[0]);
 
-    if (input_x->fields.size() == 1 || !group_use_memcpy) {
-      int nccl_num_ranks;
-      NCCL_CALL(ncclCommCount(nccl_comm, &nccl_num_ranks));
-      CHECK_EQ(comm_ref->size, nccl_num_ranks)
-          << "NCCL communicator world size does not match with RAF Communicator.";
+    int nccl_num_ranks;
+    NCCL_CALL(ncclCommCount(nccl_comm, &nccl_num_ranks));
+    CHECK_EQ(comm_ref->size, nccl_num_ranks)
+        << "NCCL communicator world size does not match with RAF Communicator.";
 
-      NCCL_CALL(ncclGroupStart());
-      for (int input_idx = 0; input_idx < input_x->fields.size(); input_idx++) {
-        DLTensor* x = input_x->fields[input_idx];
-        DLTensor* out;
-        if (input_x->fields.size() == 1) {
-          out = output;
-        } else {
-          out = Downcast<value::TupleValue>(output)->fields[input_idx];
-        }
+    NCCL_CALL(ncclGroupStart());
+    DLTensor* x = input_x->fields[0];
+    DLTensor* out = output;
 
-        int64_t size = 1;
-        for (int i = 0; i < x->ndim; ++i) {
-          size *= x->shape[i];
-        }
-        CHECK(size % nccl_num_ranks == 0) << "Cannot evenly distribute input tensor to all ranks.";
-        int64_t dtype_size_in_bytes = GetSizeInBytes(x->dtype);
+    int64_t size = 1;
+    for (int i = 0; i < x->ndim; ++i) {
+      size *= x->shape[i];
+    }
+    CHECK(size % nccl_num_ranks == 0) << "Cannot evenly distribute input tensor to all ranks.";
+    int64_t dtype_size_in_bytes = GetSizeInBytes(x->dtype);
 
-        size_t per_rank_bytes = size * dtype_size_in_bytes / nccl_num_ranks;
-        size_t size_per_rank = per_rank_bytes / dtype_size_in_bytes;
-        char* send_buffer = (char*)x->data;
-        char* recv_buffer = (char*)out->data;
-        if (size != 0) {
-          for (size_t i = 0; i < nccl_num_ranks; i++) {
-            NCCL_CALL(ncclSend(send_buffer + i * per_rank_bytes, size_per_rank, dtype, i, nccl_comm,
-                               (cudaStream_t)stream));
-            NCCL_CALL(ncclRecv(recv_buffer + i * per_rank_bytes, size_per_rank, dtype, i, nccl_comm,
-                               (cudaStream_t)stream));
-          }
-        }
-      }
-      NCCL_CALL(ncclGroupEnd());
-    } else {
-      int nccl_num_ranks;
-      NCCL_CALL(ncclCommCount(nccl_comm, &nccl_num_ranks));
-      CHECK_EQ(comm_ref->size, nccl_num_ranks)
-          << "NCCL communicator world size does not match with RAF Communicator.";
-
-      // fuse-reorder tensors into a buffer
-      size_t offset = 0;
-      size_t itvl = total_input_size / nccl_num_ranks;
-      for (int i = 0; i < input_x->fields.size(); ++i) {
-        DLTensor* x = input_x->fields[i];
-        size_t size_per_rank = tuple_sizes[i] / nccl_num_ranks;
-        for (int j = 0; j < nccl_num_ranks; ++j) {
-          void* in = reinterpret_cast<uint8_t*>(in_buffer) + offset + j * itvl;
-          void* x_ = reinterpret_cast<uint8_t*>(x->data) + j * size_per_rank;
-          CUDA_CALL(cudaMemcpyAsync(in, x_, size_per_rank, cudaMemcpyDeviceToDevice,
-                                    (cudaStream_t)stream));
-        }
-        offset += size_per_rank;
-      }
-
-      // all2all
-      DType dtype = ((DLTensor*)input_x->fields[0])->dtype;
-      int64_t dtype_size_in_bytes = GetSizeInBytes(dtype);
-      size_t total_per_rank_bytes = total_input_size / nccl_num_ranks;
-      size_t total_size_per_rank = total_per_rank_bytes / dtype_size_in_bytes;
-      char* send_buffer = (char*)in_buffer;
-      char* recv_buffer = (char*)out_buffer;
-      NCCL_CALL(ncclGroupStart());
+    size_t per_rank_bytes = size * dtype_size_in_bytes / nccl_num_ranks;
+    size_t size_per_rank = per_rank_bytes / dtype_size_in_bytes;
+    char* send_buffer = (char*)x->data;
+    char* recv_buffer = (char*)out->data;
+    if (size != 0) {
       for (size_t i = 0; i < nccl_num_ranks; i++) {
-        NCCL_CALL(ncclSend(send_buffer + i * total_per_rank_bytes, total_size_per_rank, dtype, i,
-                           nccl_comm, (cudaStream_t)stream));
-        NCCL_CALL(ncclRecv(recv_buffer + i * total_per_rank_bytes, total_size_per_rank, dtype, i,
-                           nccl_comm, (cudaStream_t)stream));
-      }
-      NCCL_CALL(ncclGroupEnd());
-
-      // defuse-reorder tensors
-      auto& of = Downcast<value::TupleValue>(output)->fields;
-      offset = 0;
-      for (int i = 0; i < of.size(); ++i) {
-        DLTensor* x = of[i];
-        size_t size_per_rank = tuple_sizes[i] / nccl_num_ranks;
-        for (int j = 0; j < nccl_num_ranks; ++j) {
-          void* out = reinterpret_cast<uint8_t*>(out_buffer) + offset + j * itvl;
-          void* x_ = reinterpret_cast<uint8_t*>(x->data) + j * size_per_rank;
-          CUDA_CALL(cudaMemcpyAsync(x_, out, size_per_rank, cudaMemcpyDeviceToDevice,
-                                    (cudaStream_t)stream));
-        }
-        offset += size_per_rank;
+        NCCL_CALL(ncclSend(send_buffer + i * per_rank_bytes, size_per_rank, dtype, i, nccl_comm,
+                            (cudaStream_t)stream));
+        NCCL_CALL(ncclRecv(recv_buffer + i * per_rank_bytes, size_per_rank, dtype, i, nccl_comm,
+                            (cudaStream_t)stream));
       }
     }
+    NCCL_CALL(ncclGroupEnd());
   }
 
   static OpEnv* make(const CallValues& cv) {

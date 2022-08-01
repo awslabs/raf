@@ -198,7 +198,7 @@ def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None, group_use_memcpy=
 
     Parameters
     ----------
-    x : Tensor or List[Tensor]
+    x : Tensor
         The tensor(s) to perform all-to-all on. The input tensor is evenly split
         into n chunks at split_axis, and chunk[i] is sent to rank i. If the input is a
         list of tensors, the result is equivalent to calling all-to-all on each tensor
@@ -225,12 +225,13 @@ def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None, group_use_memcpy=
 
     Returns
     -------
-    ret: Tensor or List[Tensor]
+    ret: Tensor
         all-to-all results. The received tensors from each rank are concatenated at
         concat_axis to form a single tensor (with the same size as input).
     """
 
     is_list = isinstance(x, (tuple, list))
+    assert is_list == False, "Invalid Input Type"
 
     comm = get_communicator()
     if rank_list:
@@ -244,37 +245,19 @@ def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None, group_use_memcpy=
         size = comm.size
 
     if split_axis == 0 and concat_axis == 0:
-        if not is_list:
-            inp_x = [x]
-        else:
-            inp_x = x
-    elif not is_list:
+        inp_x = [x]
+    else is_list:
         x = sym.split(x, indices_or_sections=size, axis=split_axis)
         x = sym.concatenate(x)
         inp_x = [x]
-    else:
-        inp_x = []
-        length = len(x)
-        for i in range(length):
-            tensor = x[i]
-            tensor = sym.split(tensor, indices_or_sections=size, axis=split_axis)
-            tensor = sym.concatenate(tensor)
-            inp_x.append(tensor)
 
     y = sym._all_to_all(inp_x, rank_list=rank_list, group_use_memcpy=group_use_memcpy)
 
     if split_axis == 0 and concat_axis == 0:
         out_y = y
-    elif not is_list:
+    else:
         out_y = sym.split(y, indices_or_sections=size)
         out_y = sym.concatenate(out_y, axis=concat_axis)
-    else:
-        out_y = []
-        for i in range(length):
-            tensor = y.__getitem__(i)
-            tensor = sym.split(tensor, indices_or_sections=size)
-            tensor = sym.concatenate(tensor, axis=concat_axis)
-            out_y.append(tensor)
 
     return out_y
 

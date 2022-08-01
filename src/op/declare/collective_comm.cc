@@ -221,18 +221,11 @@ void AllToAll(const CallValues& call) {
   } else {
     size = GetGlobalCommunicator()->size;
   }
-  for (int i = 0; i < tv.size(); ++i) {
-    const DLTensor* x = tv[i];
-    std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-    ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
-                                        /*dtype=*/x->dtype,
-                                        /*shape=*/shape));
-  }
-  if (ret.size() == 1) {
-    call->out = ret[0];
-  } else {
-    call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
-  }
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  CHECK(shape[0] % size == 0);
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                      /*dtype=*/x->dtype,
+                                      /*shape=*/shape);
 }
 
 RAF_OP_DECLARE("raf.op._all_to_all", AllToAll)
