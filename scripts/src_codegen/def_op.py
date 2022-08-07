@@ -192,6 +192,8 @@ OPS = [
     Op(name="upper_bound.argwhere", schema_name="argwhere"),
     Op(name="roi_align", schema_name="roi_align"),
     Op(name="roi_align_dx", schema_name="roi_align_dx"),
+    # Sharding ops
+    Op(name="_reshard", schema_name="unary"),
     # Stream ops
     Op(name="set_stream", schema_name="set_stream"),
     Op(name="add_event", schema_name="event"),
