@@ -1,7 +1,11 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /*!
- * Copyright (c) 2021 by Contributors
  * \file sharding.h
- * \brief RAF Sharding System
+ * \brief Definition of sharding specifications
  */
 #pragma once
 #include "./value.h"
@@ -15,7 +19,8 @@ using namespace raf::value;
 
 class BaseShardSpecObj : public ValueObj {
  public:
-  void VisitAttrs(tvm::AttrVisitor* v) {}
+  void VisitAttrs(tvm::AttrVisitor* v) {
+  }
   static constexpr const uint32_t _type_index = ir::TypeIndex::kDynamic;
   static constexpr const char* _type_key = "raf.sharding.BaseShardSpec";
   RAF_BASE_OBJECT(BaseShardSpecObj, ValueObj);
@@ -55,8 +60,8 @@ class ShardSpecObj final : public BaseShardSpecObj {
   }
 
   bool SEqualReduce(const ShardSpecObj* other, tvm::SEqualReducer equal) const {
-    return equal(ranks, other->ranks) && equal(phy_shape, other->phy_shape)
-      && equal(subgroup_shape, other->subgroup_shape) && equal(mutable_, other->mutable_);
+    return equal(ranks, other->ranks) && equal(phy_shape, other->phy_shape) &&
+           equal(subgroup_shape, other->subgroup_shape) && equal(mutable_, other->mutable_);
   }
   void SHashReduce(tvm::SHashReducer hash_reduce) const {
     hash_reduce(ranks);
@@ -73,14 +78,16 @@ class ShardSpecObj final : public BaseShardSpecObj {
 
 class ShardSpec final : public BaseShardSpec {
  public:
-  static ShardSpec make(Array<Integer> ranks, Array<Integer> phy_shape, Array<Integer> subgroup_shape, bool mutable_);
+  static ShardSpec make(Array<Integer> ranks, Array<Integer> phy_shape,
+                        Array<Integer> subgroup_shape, bool mutable_);
   static int64_t GetRankIdx(Array<Integer> ranks);
   RAF_OBJECT_REF(ShardSpec, BaseShardSpec, ShardSpecObj);
 };
 
 class UnsetShardSpecObj final : public BaseShardSpecObj {
  public:
-  void VisitAttrs(tvm::AttrVisitor* v) {}
+  void VisitAttrs(tvm::AttrVisitor* v) {
+  }
 
   bool SEqualReduce(const UnsetShardSpecObj* other, tvm::SEqualReducer equal) const {
     return true;

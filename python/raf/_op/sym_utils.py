@@ -40,7 +40,7 @@ def to_tensor(a):
 
     if isinstance(a, ndarray):
         return a._ndarray__handle  # pylint: disable=protected-access
-    
+
     if isinstance(a, BaseShardSpec):
         return Value.as_const_expr(a)
 

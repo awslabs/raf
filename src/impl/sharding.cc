@@ -1,7 +1,11 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /*!
- * Copyright (c) 2021 by Contributors
  * \file src/impl/sharding.cc
- * \brief RAF Sharding System underlying implementation
+ * \brief Description of RAF sharding specifications
  */
 #include <tvm/runtime/data_type.h>
 #include "raf/ir.h"
@@ -37,7 +41,8 @@ int64_t ShardSpec::GetRankIdx(Array<Integer> ranks) {
   return -1;
 }
 
-ShardSpec ShardSpec::make(Array<Integer> ranks, Array<Integer> phy_shape, Array<Integer> subgroup_shape, bool mutable_) {
+ShardSpec ShardSpec::make(Array<Integer> ranks, Array<Integer> phy_shape,
+                          Array<Integer> subgroup_shape, bool mutable_) {
   CHECK_EQ(phy_shape.size(), subgroup_shape.size());
   auto ndim = phy_shape.size();
   auto subgroup_index = std::vector<Integer>(ndim);
@@ -46,7 +51,7 @@ ShardSpec ShardSpec::make(Array<Integer> ranks, Array<Integer> phy_shape, Array<
   auto logic_shape = std::vector<Integer>(ndim);
   auto rank_idx = ShardSpec::GetRankIdx(ranks);
   int64_t nshard = 1, ngroup = 1;
-  
+
   auto t1 = rank_idx;
   for (int64_t i = ndim - 1; i >= 0; --i) {
     phy_index[i] = t1 % phy_shape[i]->value;
@@ -167,7 +172,8 @@ TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
       if (r->nshard_ == 1) {
         p->stream << "ShardSpec(Replicated)";
       } else {
-        p->stream << "ShardSpec(" << "[";
+        p->stream << "ShardSpec("
+                  << "[";
         for (size_t i = 0; i < ndim; ++i) {
           auto nshard_on_dim = r->logic_shape[i]->value;
           auto ngroup_on_dim = r->subgroup_shape[i]->value;
