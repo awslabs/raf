@@ -86,6 +86,12 @@ def trace_model(model, shape_dict):
             if input_type.startswith("int64"):
                 max_val = 10000 if len(input_info) == 2 else input_info[2]
                 input_data = torch.randint(max_val + 1, input_shape, device=device)
+            # when the dtype is bf16/fp16, we make up a float32 input to do the
+            # tracing in cpu with Ratex
+            elif input_type in ("bfloat16", "float16"):
+                input_data = torch.randn(
+                    input_shape, dtype=torch.float32, device=device
+                )
             elif input_type.startswith("float"):
                 input_data = torch.randn(
                     input_shape, dtype=getattr(torch, input_type), device=device
