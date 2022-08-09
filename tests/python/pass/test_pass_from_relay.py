@@ -854,7 +854,6 @@ def test_raf_conv2d_trans(xshape, wshape, stride_output_padding, dilation, paddi
 
 
 # FIXME(@XIAO-XIA): Re-enable once dropout/dropout_dx can be dispatched to CuDNN.
-@pytest.mark.xfail
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [(8, 3, 32, 32)])
 @pytest.mark.parametrize("p", [0.3, 0.7])
