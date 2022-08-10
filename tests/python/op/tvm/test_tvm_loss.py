@@ -57,8 +57,12 @@ def test_smooth_l1_loss(device, shape):
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("n", [3, 7])
 @pytest.mark.parametrize("c", [2, 6])
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
 @pytest.mark.parametrize("one_hot_label", [True, False])
-def test_nll_loss(device, n, c, one_hot_label):
+def test_nll_loss(device, n, c, dtype, one_hot_label):
+    if device == "cpu" and dtype == "float16":
+        pytest.skip("PyTorch nll_loss does not support float16 when using CPU.")
+
     class TestModel(raf.Model):
         def build(self):
             pass
@@ -68,10 +72,10 @@ def test_nll_loss(device, n, c, one_hot_label):
             return raf.nll_loss(y_true=y_true, y_pred=y_pred)
 
     model = TestModel()
-    m_pred, t_pred = randn_torch((n, c), device=device, requires_grad=True)
+    m_pred, t_pred = randn_torch((n, c), dtype=dtype, device=device, requires_grad=True)
     m_true, np_true = randint((n,), low=0, high=c, device=device, dtype="int64")
     if not one_hot_label:
-        m_true = np.zeros((n, c), dtype="float32")
+        m_true = np.zeros((n, c), dtype=dtype)
         for i in range(n):
             m_true[i, np_true[i]] = 1
         m_true = raf.array(m_true, device=device)
@@ -83,10 +87,12 @@ def test_nll_loss(device, n, c, one_hot_label):
     check(m_loss, t_loss)
     check(v_loss, t_loss)
     # backward
-    m_dy, t_dy = randn_torch((), device=device)
+    m_dy, t_dy = randn_torch((), device=device, dtype=dtype)
     t_loss.backward(t_dy)
     m_loss.backward(m_dy)
-    check(m_pred.grad, t_pred.grad)
+    rtol = 1e-5 if dtype == "float32" else 1e-3
+    atol = 1e-5 if dtype == "float32" else 1e-3
+    check(m_pred.grad, t_pred.grad, rtol=rtol, atol=atol)
 
 
 @pytest.mark.parametrize("device", ["cpu"])

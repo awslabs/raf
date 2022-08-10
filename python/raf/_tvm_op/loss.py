@@ -83,13 +83,16 @@ _reg.register_broadcast_schedule("raf.op.tvm.smooth_l1_loss_dtrue")
 def nll_loss_compute(attrs, inputs, output_type):  # pylint: disable=unused-argument
     true, pred = inputs
     n, c = pred.shape
+    dtype = pred.dtype
+    if dtype == "float16":
+        pred = pred.astype("float32")
 
     if true.ndim == 1:  # one-host label encoding
 
         def fcompute_one_hot(i):  # pylint: disable=unused-argument
             return -pred[i, true[i]] / n
 
-        loss = _tvm.te.compute((n,), fcompute_one_hot)
+        loss = _tvm.te.compute((n,), fcompute_one_hot, tag=_tvm.topi.tag.INJECTIVE)
         loss = _topi.sum(loss, axis=[0], keepdims=True)
     else:  # sparse label encoding
 
@@ -98,12 +101,12 @@ def nll_loss_compute(attrs, inputs, output_type):  # pylint: disable=unused-argu
             redc = _tvm.te.reduce_axis((0, c), name="rc")
             return _tvm.te.sum(-pred[redn, redc] * true[redn, redc] / n, axis=[redc, redn])
 
-        loss = _tvm.te.compute((1,), fcompute_sparse)
+        loss = _tvm.te.compute((1,), fcompute_sparse, tag=_tvm.topi.tag.COMM_REDUCE)
 
-    return [loss]
+    return [loss.astype(dtype)]
 
 
-_reg.register_injective_schedule("raf.op.tvm.nll_loss")
+_reg.register_reduce_schedule("raf.op.tvm.nll_loss")
 
 
 @register_compute("raf.op.tvm.nll_loss_dpred")
