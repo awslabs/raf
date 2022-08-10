@@ -90,7 +90,9 @@ def test_nll_loss(device, n, c, dtype, one_hot_label):
     m_dy, t_dy = randn_torch((), device=device, dtype=dtype)
     t_loss.backward(t_dy)
     m_loss.backward(m_dy)
-    check(m_pred.grad, t_pred.grad, atol=1e-3, rtol=1e-3)
+    rtol = 1e-5 if dtype == "float32" else 1e-3
+    atol = 1e-5 if dtype == "float32" else 1e-3
+    check(m_pred.grad, t_pred.grad, rtol=rtol, atol=atol)
 
 
 @pytest.mark.parametrize("device", ["cpu"])
