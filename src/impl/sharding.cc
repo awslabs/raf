@@ -17,7 +17,6 @@
 #include "raf/communicator.h"
 #include "../op/ty/utils.h"
 #include "../op/schema/ufunc.h"
-#include "../op/schema/sharding.h"
 #include "../op/dialect/tvm/tvm_utils.h"
 #include "../op/dialect/tvm/tvm_attrs.h"
 #include <string>
@@ -95,7 +94,7 @@ Attrs ShardOpCallAttrs::make(Array<BaseShardSpec> sin, Array<BaseShardSpec> sout
 }
 
 void Reshard(const CallValues& call) {
-  const auto* args = call->args.as<ShardUnaryArgs>();
+  const auto* args = call->args.as<UnaryArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
