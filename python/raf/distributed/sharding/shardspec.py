@@ -3,7 +3,6 @@
 
 # pylint: disable=invalid-name, unused-argument
 """Definition of RAF sharding specifications and attributes."""
-from typing import List
 from raf._core.core_utils import register_node
 from raf._ffi.sharding import _make
 from raf._core.value import Value

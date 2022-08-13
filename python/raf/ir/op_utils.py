@@ -6,8 +6,8 @@
 from numbers import Number
 
 from raf._lib import relay
-from .constant import const
 from raf.distributed.sharding import BaseShardSpec
+from .constant import const
 
 
 def to_any(a):
