@@ -724,7 +724,7 @@ SCHEMAS = {
         ),
     ],
     "communication.h::reduce_scatter": [
-        Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
         Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],

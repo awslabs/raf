@@ -5,6 +5,9 @@
 """Collective communication operators"""
 from .._op import sym
 from .communicator import get_communicator
+from .._core.ndarray import Symbol
+from .._core.module import IRModule
+from .._ffi.pass_ import ExtractBinding, InferType
 
 
 def allreduce(x, computation="sum", rank_list=None):
@@ -135,7 +138,7 @@ def reduce_scatter(x, computation="sum", rank_list=None):
 
     Parameters
     ----------
-    x : List[Tensor]
+    x : Tensor or List[Tensor]
         A list of tensors of equal shape
         replica i receives reduction of x[i] over all replicas
     computation: string
@@ -155,6 +158,29 @@ def reduce_scatter(x, computation="sum", rank_list=None):
         reduction result of x[rank] over all replicas,
         where rank represents rank number of the current process
     """
+    comm = get_communicator()
+    if rank_list:
+        for group in rank_list:
+            if comm.rank in group:
+                size = len(group)
+                break
+        else:
+            size = 1
+    else:
+        size = comm.size
+
+    if isinstance(x, (tuple, list)):
+        assert len(x) == size, "Invalid size of tensor list"
+        body = Symbol.make_tuple(x)._Symbol__handle
+        body = ExtractBinding(body, [])
+        mod = IRModule.from_expr(body)
+        mod = InferType()(mod)
+        ret_list = mod["main"].checked_type.ret_type
+        single_tensor_type = ret_list.fields[0]
+        for tensor_type in ret_list.fields:
+            assert single_tensor_type == tensor_type, "Invalid tensor shape"
+        x = sym.concatenate(x, axis=0)
+
     return sym._reduce_scatter(x, computation, rank_list=rank_list)
 
 
