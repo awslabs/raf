@@ -274,28 +274,6 @@ def test_reduce():
     assert bytecode.count("alloc_tensor") == 0
 
 
-def test_reduce_with_list():
-    shape = (4, 4)
-    device = "cpu"
-
-    class Model(raf.Model):
-        def build(self):
-            pass
-
-        @raf.model.trace
-        def forward(self, x, y):
-            a = raf.add(x, y)
-            b = raf.subtract(x, y)
-            out = raf.reduce((a, b), 0)
-            return out[0], out[1]
-
-    model = Model()
-    x, _ = randn(shape, device=device)
-    y, _ = randn(shape, device=device)
-    bytecode = compile_vm_model(model, device, [x, y])
-    assert bytecode.count("alloc_tensor") == 2
-
-
 def test_allreduce():
     shape = (4, 4)
     device = "cpu"
