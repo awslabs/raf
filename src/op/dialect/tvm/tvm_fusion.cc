@@ -288,7 +288,7 @@ OpEnv* FusedFuncBuild(const op::CallValues& call) {
     te_compiler->Clear();
     try {
       auto cached_key = tvm::relay::tec::CCacheKey(func, target);
-      auto cached_func = te_compiler->Lower(cached_key, [](String name) { return name; });
+      auto cached_func = te_compiler->Lower(cached_key);
       auto mod = tvm::build(cached_func->funcs, cached_key->target, Target(nullptr));
       entry = TVMModuleCacheEntry(mod, cached_func->prim_fn_var->name_hint);
       cache->Set(key.byte_vector, entry);
