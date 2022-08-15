@@ -202,6 +202,8 @@ RAF_OP_FROM_RELAY("nn.dropout", "raf.op._contrib_dropout",
                     Array<Expr> raf_args = args;
                     const auto* relay_attrs = attrs.as<DropoutAttrs>();
                     raf_args.push_back(MakeConstant(ScalarValue::make(relay_attrs->rate)));
+                    // We make up a NULL in_states argument which is required by raf but not pytorch
+                    raf_args.push_back(MakeNull());
                     return raf_args;
                   });
 
