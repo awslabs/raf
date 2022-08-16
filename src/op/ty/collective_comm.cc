@@ -48,7 +48,12 @@ Type ReduceScatterInfer(const CallValues& value) {
   const auto* args = value->args.as<ReduceScatterArgs>();
   CHECK(args != nullptr);
   const auto& ty = GetType(args->x);
-  int size = GetGlobalCommunicator()->size;
+  int size;
+  if (args->rank_list.defined()) {
+    size = Communicator::Get("void", args->rank_list)->size;
+  } else {
+    size = GetGlobalCommunicator()->size;
+  }
   auto tpn = ty.as<TensorTypeNode>();
   auto shape = tpn->shape;
   auto old_size = shape[0].as<IntImmNode>()->value;
