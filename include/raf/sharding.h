@@ -33,16 +33,63 @@ class BaseShardSpec : public Value {
 
 class ShardSpecObj final : public BaseShardSpecObj {
  public:
+  /*!
+   * \brief When this flag is False, it disallows Sharding Propagation Pass to reshard this tensor.
+   * During the propagation, it is likely to reshard an intermediate variable to get more
+   * opportunities of finding a new sharding solution. It is recommended to make the specs
+   * of inputs and outputs immutable to get an sharding solution with expected input and
+   * output shape.
+   */
   bool mutable_;
+
+  /*! \brief Number of dimensions. */
   int64_t ndim_;
+
+  /*! \brief Number of shards. */
   int64_t nshard_;
+
+  /*! \brief Number of subgroups. */
   int64_t ngroup_;
+
+  /*!
+   * \brief The list of ranks that participate in the computation. When ranks is set to an integer
+   * N, it is equivalent to [0...N-1]. By default, it will utilize all available devices specified
+   * by the launcher (e.g. mpirun).
+   */
   Array<Integer> ranks;
+
+  /*!
+   * \brief The shape of the logical subgroup grid. For example, for a 2D tensor, if there are 4
+   * devices in total, phy_shape is set to [2, 2], subgroup_shape is set to [1, 2], the subgroup g0,
+   * g1, the subgroup grid will be [[d0, d1]], [[d2, d3]], [[g0], [g1]] respectively, and the tensor
+   * will be partitioned into [[x0], [x1]], where g0 will hold x0, and g1 will hold x1
+   * correspondingly.
+   */
   Array<Integer> logic_shape;
+
+  /*! \brief The index of current rank in the logical subgroup grid. */
   Array<Integer> logic_index_;
+
+  /*!
+   * \brief The shape of the physical device mesh. For example, for a 2D tensor, if there are 4
+   * devices in total and phy_shape is set to [2, 2] (subgrouping is not enabled), the tensor will
+   * be partitioned into [[x0, x1], [x2, x3]], where the device 0-4 will hold x0-4 respectively.
+   */
   Array<Integer> phy_shape;
+
+  /*! \brief The index of current rank in the physical device mesh. */
   Array<Integer> phy_index_;
+
+  /*!
+   * \brief The shape of the subgroup. For example, for a 2D tensor, if there are 4 devices
+   * in total, phy_shape is set to [2, 2], subgroup_shape is set to [1, 2], the subgroup g0, g1,
+   * the subgroup grid will be [[d0, d1]], [[d2, d3]], [[g0], [g1]] respectively,
+   * and the tensor will be partitioned into [[x0], [x1]]. Since the data shard will be
+   * replicated within the subgroup, d0, d1 will hold x0 and d2, d3 will hold x1 correspondingly.
+   */
   Array<Integer> subgroup_shape;
+
+  /*! \brief The index of current rank in the subgroup. */
   Array<Integer> subgroup_index_;
 
   void VisitAttrs(tvm::AttrVisitor* v) {
@@ -80,7 +127,6 @@ class ShardSpec final : public BaseShardSpec {
  public:
   static ShardSpec make(Array<Integer> ranks, Array<Integer> phy_shape,
                         Array<Integer> subgroup_shape, bool mutable_);
-  static int64_t GetRankIdx(Array<Integer> ranks);
   RAF_OBJECT_REF(ShardSpec, BaseShardSpec, ShardSpecObj);
 };
 

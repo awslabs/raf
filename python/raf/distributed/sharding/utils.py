@@ -20,13 +20,16 @@ def make_shard_spec(
     phy_shape : List[int]
         The shape of the physical device mesh. For example, for a 2D tensor, if there are 4 devices
         in total and phy_shape is set to [2, 2] (subgrouping is not enabled), the tensor will be
-        partitioned into [[x0, x1], [x2, x3]], where the device 0-4 will hold x0-4 respectively.
+        partitioned into [[x0, x1], [x2, x3]], where the device 0-3 will hold x0-3 respectively.
 
     subgroup_shape : Optional[List[int]]
-        The shape of the physical device mesh. For example, for a 2D tensor, if there are 4 devices
-        in total, phy_shape is set to [4, 1], subgroup_shape is set to [4, 1] the tensor will be
-        partitioned into [[x0]], where every device will hold x0. To help you better understand,
-        it is recommended to use raf._ffi.sharding.PrintAllocTable to print out the data layout.
+        The shape of the subgroup. For example, for a 2D tensor, if there are 4 devices
+        in total, phy_shape is set to [2, 2], subgroup_shape is set to [1, 2], the subgroup g0, g1,
+        the subgroup grid will be [[d0, d1]], [[d2, d3]], [[g0], [g1]] respectively,
+        and the tensor will be partitioned into [[x0], [x1]]. Since the data shard will be
+        replicated within the subgroup, d0, d1 will hold x0 and d2, d3 will hold x1. To help you
+        better understand this feature, it is recommended to use raf._ffi.sharding.PrintAllocTable
+        to print out the detailed information of the data layout.
 
     ranks : Optional[Union[int, List[int]]]
         The list of ranks that participate in the computation. When ranks is set to an integer N,

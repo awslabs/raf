@@ -31,7 +31,8 @@ using namespace raf::value;
 using namespace raf::distributed;
 using namespace raf::distributed::communicator;
 
-int64_t ShardSpec::GetRankIdx(Array<Integer> ranks) {
+static inline int64_t GetRankIdx(Array<Integer> ranks) {
+  // returns: the index of the current rank in the given rank array
   for (int64_t i = 0; i < ranks.size(); ++i) {
     if (GetGlobalCommunicator()->rank == ranks[i]->value) {
       return i;
@@ -48,7 +49,7 @@ ShardSpec ShardSpec::make(Array<Integer> ranks, Array<Integer> phy_shape,
   auto phy_index = std::vector<Integer>(ndim);
   auto logic_index = std::vector<Integer>(ndim);
   auto logic_shape = std::vector<Integer>(ndim);
-  auto rank_idx = ShardSpec::GetRankIdx(ranks);
+  auto rank_idx = GetRankIdx(ranks);
   int64_t nshard = 1, ngroup = 1;
 
   auto t1 = rank_idx;
