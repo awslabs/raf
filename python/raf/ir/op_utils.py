@@ -6,6 +6,7 @@
 from numbers import Number
 
 from raf._lib import relay
+from raf.distributed.sharding import BaseShardSpec
 from .constant import const
 
 
@@ -37,6 +38,9 @@ def to_any(a):
 def to_tensor(a):
     if isinstance(a, relay.Expr):
         return a
+
+    if isinstance(a, BaseShardSpec):
+        return const(a)
 
     if a is None:
         return const(None)
