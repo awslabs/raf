@@ -6,7 +6,6 @@ import pytest
 import tvm
 
 import raf
-from raf.ir import PassContext
 from raf._ffi.pass_ import AnnotateCollectiveOps
 from raf.testing import with_dialect
 from raf._core.ir_ext import extended_var
