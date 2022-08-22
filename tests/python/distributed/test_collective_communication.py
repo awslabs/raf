@@ -707,9 +707,7 @@ def test_all_to_all_with_tensor_and_axis(split_axis, concat_axis, dtype):
 
         @raf.model.trace
         def forward(self, x):
-            x = raf.all_to_all(
-                x, split_axis=split_axis, concat_axis=concat_axis
-            )
+            x = raf.all_to_all(x, split_axis=split_axis, concat_axis=concat_axis)
             return x
 
     if raf.build.with_nccl() < 20700:
