@@ -42,7 +42,7 @@ RAF_OP_TYPE("raf.op._reduce", "NCCLReduce", IdentityType<CommReduceArgs>);
 
 template <typename T>
 Type TensorIdentityType(const CallValues& value) {
-    const auto* args = value->args.as<T>();
+  const auto* args = value->args.as<T>();
   CHECK(args != nullptr);
   return GetType(args->x);
 }
