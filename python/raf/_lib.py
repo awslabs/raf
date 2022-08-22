@@ -1,14 +1,46 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
-
-"""The Python package of RAF is a trivial extension to TVM's.
-"""
-# pylint: disable=unused-import
+"""The Python package of RAF is a trivial extension to TVM's."""
 import ctypes
 import os
-import readline
-import sys
+from raf._lib_utils import find_lib_path
 
+
+def _load_lib():
+    lib_path = find_lib_path()
+    lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_GLOBAL)
+    lib.TVMGetLastError.restype = ctypes.c_char_p
+
+    return lib, os.path.basename(lib_path[0])
+
+
+def _get_apis():
+    apis = {}
+
+    for name in _list_global_func_names():
+        if not name.startswith("raf."):
+            continue
+        func = _get_global_func(name)
+        func.is_global = True
+        func.__name__ = name
+        func.__doc__ = "TVM PackedFunc %s. " % name
+        apis[name] = func
+
+    return apis
+
+
+def set_tvm_lib_path():
+    """Set the TVM library path to use the RAF comppatible one."""
+    lib_path = os.path.dirname(find_lib_path()[0])
+    os.environ["TVM_LIBRARY_PATH"] = lib_path
+
+
+# pylint: disable=unused-import, wrong-import-position
+
+# Set the TVM library path before importing.
+set_tvm_lib_path()
+
+# Load TVM APIs.
 import tvm.topi as topi
 import tvm
 import tvm.relay as relay
@@ -63,119 +95,9 @@ from tvm.relay.dataflow_pattern import (
 )
 from tvm.contrib import random
 
-# pylint: enable=unused-import
+# pylint: enable=unused-import, wrong-import-position
 
-
-def find_lib_path(name=None, search_path=None):
-    """Find dynamic library files.
-
-    Parameters
-    ----------
-    name : list of str
-        List of names to be found.
-    search_path : str
-        Root path to search.
-
-    Returns
-    -------
-    lib_path : list(string)
-        List of all found path to the libraries
-    """
-    package_dir = os.path.dirname(os.path.realpath(os.path.expanduser(__file__)))
-    ffi_dir = os.path.dirname(os.path.realpath(os.path.expanduser(__file__)))
-    source_dir = os.path.join(ffi_dir, "..", "..")
-    install_lib_dir = os.path.join(ffi_dir, "..", "..", "..")
-
-    dll_path = []
-
-    if os.environ.get("RAF_LIBRARY_PATH", None):
-        dll_path.append(os.environ["RAF_LIBRARY_PATH"])
-
-    if sys.platform.startswith("linux") and os.environ.get("LD_LIBRARY_PATH", None):
-        dll_path.extend([p.strip() for p in os.environ["LD_LIBRARY_PATH"].split(":")])
-    elif sys.platform.startswith("darwin") and os.environ.get("DYLD_LIBRARY_PATH", None):
-        dll_path.extend([p.strip() for p in os.environ["DYLD_LIBRARY_PATH"].split(":")])
-
-    # Package data directory when pip installed
-    dll_path.append(package_dir)
-    # Pip lib directory
-    dll_path.append(os.path.join(ffi_dir, ".."))
-    # Default cmake build directory
-    dll_path.append(os.path.join(source_dir, "build"))
-    dll_path.append(os.path.join(source_dir, "build", "lib"))
-    dll_path.append(os.path.join(source_dir, "build", "Release"))
-    # Default make build directory
-    dll_path.append(os.path.join(source_dir, "lib"))
-    dll_path.append(install_lib_dir)
-
-    dll_path = [os.path.realpath(x) for x in dll_path]
-
-    if search_path is not None:
-        if not isinstance(search_path, list):
-            search_path = [search_path]
-        dll_path.extend(search_path)
-
-    if name is not None:
-        if not isinstance(name, list):
-            name = [name]
-        lib_dll_path = [os.path.join(p, n) for n in name for p in dll_path]
-    else:
-        if sys.platform.startswith("win32"):
-            lib_dll_path = [os.path.join(p, "libraf.dll") for p in dll_path] + [
-                os.path.join(p, "raf.dll") for p in dll_path
-            ]
-        elif sys.platform.startswith("darwin"):
-            lib_dll_path = [os.path.join(p, "libraf.dylib") for p in dll_path]
-        else:
-            lib_dll_path = [os.path.join(p, "libraf.so") for p in dll_path]
-
-    lib_found = [p for p in lib_dll_path if os.path.exists(p) and os.path.isfile(p)]
-
-    if not lib_found:
-        message = (
-            "Cannot find the files.\n" + "List of candidates:\n" + str("\n".join(lib_dll_path))
-        )
-        raise RuntimeError(message)
-
-    return lib_found
-
-
-def _load_lib():
-    lib_path = find_lib_path()
-    lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_GLOBAL)
-    lib.TVMGetLastError.restype = ctypes.c_char_p
-
-    return lib, os.path.basename(lib_path[0])
-
-
-def _get_apis():
-    apis = {}
-
-    for name in _list_global_func_names():
-        if not name.startswith("raf."):
-            continue
-        func = _get_global_func(name)
-        func.is_global = True
-        func.__name__ = name
-        func.__doc__ = "TVM PackedFunc %s. " % name
-        apis[name] = func
-
-    return apis
-
-
-def _init_api_prefix(module_name, prefix):
-    module = sys.modules[module_name]
-
-    for name, func in _APIS.items():
-        if not name.startswith(prefix):
-            continue
-        name = name[len(prefix) + 1 :]
-
-        if "." in name:
-            continue
-        setattr(module, func.__name__, func)
-
-
+# Load RAF APIs.
 _LIB, _LIB_NAME = _load_lib()
 _APIS = _get_apis()
 
