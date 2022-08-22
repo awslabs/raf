@@ -233,4 +233,3 @@ constexpr const char* kPatternName = "PatternName";
 #define RAF_REGISTER_OBJECT_NO_REFLECT(TypeName) TVM_REGISTER_OBJECT_TYPE(TypeName)
 
 #define RAF_REGISTER_OBJECT_REFLECT(TypeName) TVM_REGISTER_NODE_TYPE(TypeName)
-
