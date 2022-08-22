@@ -194,7 +194,7 @@ target_include_directories(raf_objs PRIVATE ${RAF_INCLUDE_DIRS})
 target_include_directories(raf_objs SYSTEM PRIVATE ${RAF_BACKEND_INCLUDE_DIRS})
 target_include_directories(raf_objs SYSTEM PRIVATE "3rdparty/tvm/3rdparty/compiler-rt")
 target_compile_options(raf_objs PRIVATE ${RAF_CXX_FLAGS})
-target_compile_features(raf_objs PRIVATE cxx_std_14)
+target_compile_features(raf_objs PRIVATE cxx_std_17)
 target_compile_definitions(raf_objs PRIVATE DMLC_USE_LOGGING_LIBRARY=<tvm/runtime/logging.h>)
 
 if (${RAF_USE_CUDA} STREQUAL "OFF")
@@ -205,7 +205,7 @@ else()
   target_include_directories(raf_cuda_objs SYSTEM PRIVATE ${RAF_BACKEND_INCLUDE_DIRS})
   target_include_directories(raf_cuda_objs SYSTEM PRIVATE "3rdparty/tvm/3rdparty/compiler-rt")
   target_compile_options(raf_cuda_objs PRIVATE ${RAF_CUDA_FLAGS})
-  target_compile_features(raf_cuda_objs PRIVATE cxx_std_14)
+  target_compile_features(raf_cuda_objs PRIVATE cxx_std_17)
   target_compile_definitions(raf_cuda_objs PRIVATE DMLC_USE_LOGGING_LIBRARY=<tvm/runtime/logging.h>)
 
   add_library(raf $<TARGET_OBJECTS:raf_objs> $<TARGET_OBJECTS:raf_cuda_objs>)
@@ -213,7 +213,7 @@ endif()
 
 target_compile_options(raf PRIVATE ${RAF_CXX_FLAGS})
 target_link_libraries(raf PRIVATE ${RAF_LINK_LIBS} ${RAF_BACKEND_LINK_LIBS})
-target_compile_features(raf PRIVATE cxx_std_14)
+target_compile_features(raf PRIVATE cxx_std_17)
 
 set_target_properties(raf PROPERTIES
   CXX_STANDARD 14
