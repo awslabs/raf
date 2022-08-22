@@ -12,7 +12,7 @@
 #include <stack>
 #include "raf/op.h"
 #include "raf/cache.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/type.h"
 #include "raf/value.h"
 #include "raf/pass.h"

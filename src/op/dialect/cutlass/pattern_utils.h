@@ -15,7 +15,7 @@
 #include <cutlass/library/operation_table.h>
 #include <cutlass_ext/library/library_ext.h>
 
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/value.h"
 #include "raf/registry.h"
 #include "raf/op.h"

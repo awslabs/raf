@@ -8,7 +8,7 @@
  * \brief Add memory copy ops to pipeline memory copies in multi-tensor collective ops.
  */
 #include "raf/device.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/ir_ext.h"
 #include "raf/dist_config.h"
 #include "raf/pass.h"

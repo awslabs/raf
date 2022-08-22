@@ -8,7 +8,7 @@
  * \brief Base class of all stream scheduler.
  */
 #pragma once
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "./let_list.h"
 
 namespace raf {

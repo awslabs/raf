@@ -8,7 +8,7 @@
  * \brief Enforce synchronization between ops in multiple streams.
  */
 #include "raf/device.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/ir_ext.h"
 #include "raf/dist_config.h"
 #include "raf/pass.h"

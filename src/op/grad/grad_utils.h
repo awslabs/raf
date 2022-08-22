@@ -8,7 +8,7 @@
  * \brief Helper functions for gradients
  */
 #pragma once
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/op.h"
 
 namespace raf {

@@ -13,6 +13,7 @@
 #include <vector>
 #include <unordered_map>
 
+#include "./dataflow_pattern.h"
 #include "./ir.h"
 #include "./registry.h"
 

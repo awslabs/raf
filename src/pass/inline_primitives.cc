@@ -7,7 +7,7 @@
  * \file inline_primitives.cc
  * \brief Ensure that primitives only appear in the call position.
  */
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/ir_ext.h"
 #include "raf/pass.h"
 

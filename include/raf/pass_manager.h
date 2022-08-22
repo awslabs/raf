@@ -13,7 +13,7 @@
 #include <tvm/ir/transform.h>
 
 #include "raf/op.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/ir_ext.h"
 
 namespace raf {

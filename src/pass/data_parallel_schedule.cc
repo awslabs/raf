@@ -10,7 +10,7 @@
 #include <queue>
 #include <unordered_set>
 #include <relay/transforms/pass_utils.h>
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/ir_ext.h"
 #include "raf/op.h"
 #include "raf/op_utils.h"

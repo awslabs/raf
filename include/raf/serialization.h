@@ -11,7 +11,7 @@
 #include <tvm/node/structural_hash.h>
 #include <tvm/runtime/object.h>
 #include <string>
-#include "./ir.h"
+#include "./ir_ext.h"
 #include "./value.h"
 
 namespace raf {

@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/registry.h"
 #include "raf/value.h"
 

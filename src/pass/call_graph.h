@@ -15,7 +15,7 @@
 #include <tvm/node/structural_equal.h>
 #include <tvm/node/structural_hash.h>
 #include "raf/op.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/pass.h"
 #include "./common.h"
 
