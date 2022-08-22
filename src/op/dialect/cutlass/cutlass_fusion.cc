@@ -14,7 +14,7 @@
 #include "raf/profiler.h"
 #include "raf/registry.h"
 #include "raf/op.h"
-#include "raf/ir_ext.h"
+#include "raf/ir.h"
 #include "raf/ir_ext.h"
 #include "raf/pass.h"
 #include "tvm/ir/type_functor.h"

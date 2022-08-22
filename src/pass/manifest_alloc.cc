@@ -13,7 +13,7 @@
 #include "raf/device.h"
 #include "raf/op.h"
 #include "raf/op_utils.h"
-#include "raf/ir_ext.h"
+#include "raf/ir.h"
 #include "raf/ir_ext.h"
 #include "raf/value.h"
 #include "raf/pass.h"
