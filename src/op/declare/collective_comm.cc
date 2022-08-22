@@ -212,8 +212,7 @@ void AllToAll(const CallValues& call) {
   const auto* args = call->args.as<AllToAllArgs>();
   CHECK(args != nullptr);
   ir::Array<Value> ret;
-  auto& tv = args->x;
-  const DLTensor* x = tv[0];
+  const DLTensor* x = args->x;
   call->device = x->device;
   size_t size;
   if (args->rank_list.defined()) {

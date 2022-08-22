@@ -193,7 +193,7 @@ def broadcast(x, root):
     return sym._broadcast(x, root)
 
 
-def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None, group_use_memcpy=False):
+def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None):
     """Performs an all-to-all communication across all ranks.
 
     Parameters
@@ -217,11 +217,6 @@ def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None, group_use_memcpy=
         collective, which means ranks, whether they are in the rank_list or not,
         must invoke this along with other ranks. The rank not in the rank_list
         will run in standalone mode.
-    group_use_memcpy : bool
-        Whether to use memory copy for a grouped all-to-all call. If set to true,
-        data of different input tensors will be copied to a single contiguous buffer
-        before communication and copied back afterwards. This parameter is only relevant
-        when x is a list of tensors. Default is false.
 
     Returns
     -------
@@ -244,22 +239,15 @@ def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None, group_use_memcpy=
     else:
         size = comm.size
 
-    if split_axis == 0 and concat_axis == 0:
-        inp_x = [x]
-    else:
-        x = sym.split(x, indices_or_sections=size, axis=split_axis)
-        x = sym.concatenate(x)
-        inp_x = [x]
+    x = sym.split(x, indices_or_sections=size, axis=split_axis)
+    x = sym.concatenate(x)
 
-    y = sym._all_to_all(inp_x, rank_list=rank_list, group_use_memcpy=group_use_memcpy)
+    y = sym._all_to_all(x, rank_list=rank_list)
 
-    if split_axis == 0 and concat_axis == 0:
-        out_y = y
-    else:
-        out_y = sym.split(y, indices_or_sections=size)
-        out_y = sym.concatenate(out_y, axis=concat_axis)
+    y = sym.split(y, indices_or_sections=size)
+    y = sym.concatenate(y, axis=concat_axis)
 
-    return out_y
+    return y
 
 
 def send(x, peer, token=None):

@@ -509,11 +509,6 @@ class NCCLAllToAll : public raf::op::OpEnv {
   void* stream;
   void* communicator;
   DType dtype;
-  void* in_buffer;
-  void* out_buffer;
-  bool group_use_memcpy = false;
-  size_t total_input_size = 0;
-  std::vector<size_t> tuple_sizes;
 
   explicit NCCLAllToAll(const CallValues& cv) {
     auto op = ir::Op::Get("raf.op._all_to_all");
@@ -522,21 +517,9 @@ class NCCLAllToAll : public raf::op::OpEnv {
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     auto args = cv->args.as<raf::op::schema::AllToAllArgs>();
     RequestDistributed(&communicator, "nccl", args->rank_list);
-    group_use_memcpy = args->group_use_memcpy;
-    auto& tv = args->x;
-    for (int i = 0; i < tv.size(); ++i) {
-      DLTensor* x = tv[i];
-      size_t size = BytesCompactTensor(*x);
-      tuple_sizes.push_back(size);
-      total_input_size += size;
-      dtype = x->dtype;
-    }
 #if NCCL_VERSION_CODE < 20700
     LOG(FATAL) << "AllToAll is not supported in NCCL < 2.7.0";
 #endif
-    if (tv.size() == 1 || !group_use_memcpy) return;
-    RequestWorkspace(&in_buffer, cv->device, total_input_size);
-    RequestWorkspace(&out_buffer, cv->device, total_input_size);
   }
 
  public:
@@ -550,13 +533,14 @@ class NCCLAllToAll : public raf::op::OpEnv {
 
   void Execute(const CallValues& cv) override {
     auto args = cv->args.as<raf::op::schema::AllToAllArgs>();
-    Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
+    Execute({args->x}, cv->out);
   }
 
   void Execute(const std::vector<Value>& inputs, value::Value output) {
     auto comm_ref = GetRef<Communicator>(reinterpret_cast<CommunicatorObj*>(communicator));
     ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(comm_ref)->nccl_comm;
-    auto input_x = Downcast<value::TupleValue>(inputs[0]);
+    DLTensor* x = inputs[0];
+    DLTensor* out = output;
 
     int nccl_num_ranks;
     NCCL_CALL(ncclCommCount(nccl_comm, &nccl_num_ranks));
@@ -564,8 +548,6 @@ class NCCLAllToAll : public raf::op::OpEnv {
         << "NCCL communicator world size does not match with RAF Communicator.";
 
     NCCL_CALL(ncclGroupStart());
-    DLTensor* x = input_x->fields[0];
-    DLTensor* out = output;
 
     int64_t size = 1;
     for (int i = 0; i < x->ndim; ++i) {

@@ -699,7 +699,7 @@ def test_reduce_scatter_single_tensor(computation):
 @pytest.mark.parametrize("concat_axis", [0, 1])
 @pytest.mark.parametrize("group_use_memcpy", [True, False])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-def test_all_to_all_with_tensor_and_rank_list(split_axis, concat_axis, group_use_memcpy, dtype):
+def test_all_to_all_with_tensor_and_axis(split_axis, concat_axis, group_use_memcpy, dtype):
     """Testing all_to_all with a single tensor as input."""
 
     class TestModel(raf.Model):
