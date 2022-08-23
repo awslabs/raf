@@ -1,7 +1,12 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /*!
  * Copyright (c) 2021 by Contributors
- * \file  init_shardspec.cc
- * \brief Gradient operator input selection pass
+ * \file  sharding.cc
+ * \brief Sharding-related Passes (C++ Side)
  */
 #include <sstream>
 #include "raf/op.h"
@@ -51,36 +56,11 @@ class ShardOpCallExpander : public ExprMutator {
     if (attrs.defined() && op->IsInstance<OpNode>() && attrs->IsInstance<ShardOpCallAttrs>()) {
       auto call = GetRef<Call>(node);
       Expr new_expr = (*f)(call);
-      // return call.same_as(new_expr) ? new_expr : ExprMutator::VisitExpr(new_expr);
       return new_expr;
     }
     return ExprMutator::VisitExpr_(node);
   }
 };
-
- // // Step 1: Propagate ShardSpec
-      // Array<BaseShardSpec> sin;
-      // for (int64_t i = 0; i < sattr->sin.size(); ++i) {
-      //   if (sattr->sin[i]->IsInstance<UnsetShardSpecObj>()) {
-      //     LOG(INFO) << i << " is unset shardspec";
-      //     bool flag_unchanged = true;
-      //     if (args[i]->IsInstance<CallNode>()) {
-      //       // Copy ShardSpec from previous output
-      //       LOG(INFO) << i << " is call";
-      //       const auto pcall = Downcast<Call>(args[i]);
-      //       if (pcall->attrs->IsInstance<ShardOpCallAttrs>()) {
-      //         const auto pattr = pcall->attrs.as<ShardOpCallAttrs>();
-      //         sin.push_back(pattr->sout[0]);
-      //         flag_unchanged = false;
-      //       }
-      //     } 
-      //     if (flag_unchanged) {
-      //       // sin[i] = ShardSpec::make()
-      //     }
-      //   } else {
-      //     sin.push_back(sattr->sin[i]);
-      //   }
-      // }
 
 class ShardSpecPropagator : public ExprMutator {
  public:

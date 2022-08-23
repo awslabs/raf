@@ -1,28 +1,36 @@
-# pylint: disable=invalid-name, unused-argument
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# pylint: disable=invalid-name, unused-argument, missing-function-docstring
 """Implementaion of Infer Hints"""
-from ctypes import Union
-import functools
-import numpy as np
-import raf
-import tvm
 from queue import PriorityQueue
-from typing import Callable, List, Tuple
+from typing import Callable, List
 
 from raf._ffi.sharding._make import ShardOpCallAttrs
 from raf._ffi.op import GetOp
 from raf._lib import _register_func, relay
-from raf.distributed.sharding.shardspec import BaseShardSpec, ShardSpec, UnsetShardSpec
+from raf.distributed.sharding.shardspec import BaseShardSpec, UnsetShardSpec
 from raf.distributed.sharding.utils import make_replicated_spec
-from raf._core.value import Value
-from raf import distributed as dist
-from raf.ir.anf_builder import ANFBuilder
-from tvm.relay import Call, Expr
-from tvm.ir import Op
 
-from .expandrule import ShardInfo, all_satisfied, always_apply, expand_opcall, is_same_spec, is_sharded
+from .expandrule import (
+    ShardInfo,
+    always_apply,
+    expand_opcall,
+    is_same_spec,
+    is_sharded,
+)
 from .expandrule import register_expansion_rule as register_infer_hint
 
+
 def try_when(cond: Callable[[ShardInfo], bool], priority=1):
+    """Specify the priority and the condition when this infer hint should be used.
+
+    Parameters
+    ----------
+    cond : function(ShardInfo) -> bool
+        A function validating this infer hint is eligible to apply.
+    """
+
     if not hasattr(try_when, "counter"):
         try_when.counter = 0
     if not hasattr(try_when, "rules"):
@@ -41,8 +49,11 @@ def try_when(cond: Callable[[ShardInfo], bool], priority=1):
 
     return decorator
 
+
 @_register_func("raf.sharding._infer_shardspec")
 def infer_shardspec(call: relay.Call):
+    # pylint: disable=too-many-locals, too-many-branches
+    """Fill the placeholders of ShardSpec with infer hints."""
     rules = try_when.rules[call.op]
     s = ShardInfo(call)
 
@@ -63,7 +74,7 @@ def infer_shardspec(call: relay.Call):
         else:
             # already exist a specified ShardSpec
             filled_sin.append(s.sin[i])
-    
+
     filled_attrs = ShardOpCallAttrs(filled_sin, s.sout)
     filled_call = relay.Call(s.op, s.args, filled_attrs)
     filled_s = ShardInfo(filled_call)
@@ -80,16 +91,21 @@ def infer_shardspec(call: relay.Call):
     # Step 3: Check the solution is practicable
     ninputs = len(filled_s.sin)
     noutputs = len(filled_s.sout)
-    immut_in_idx = [i for i in range(ninputs) if is_sharded(filled_s.sin[i]) and filled_s.sin[i].mutable == False]
-    immut_out_idx = [i for i in range(noutputs) if is_sharded(filled_s.sout[i]) and filled_s.sout[i].mutable == False]
+    immut_in_idx = [
+        i for i in range(ninputs) if is_sharded(filled_s.sin[i]) and not filled_s.sin[i].mutable
+    ]
+    immut_out_idx = [
+        i for i in range(noutputs) if is_sharded(filled_s.sout[i]) and not filled_s.sout[i].mutable
+    ]
 
     possible_calls = []
     for guessed_call in guessed_calls:
         if not expand_opcall(guessed_call):
             continue
         guessed_s = ShardInfo(guessed_call)
-        immut_args = [(filled_s.sin[i], guessed_s.sin[i]) for i in immut_in_idx] + \
-            [(filled_s.sout[i], guessed_s.sout[i]) for i in immut_out_idx]
+        immut_args = [(filled_s.sin[i], guessed_s.sin[i]) for i in immut_in_idx] + [
+            (filled_s.sout[i], guessed_s.sout[i]) for i in immut_out_idx
+        ]
         for pair in immut_args:
             if not is_same_spec(pair[0], pair[1]):
                 break
@@ -97,7 +113,8 @@ def infer_shardspec(call: relay.Call):
             possible_calls.append(guessed_call)
 
     # Step 4: Pick an OpCall with full ShardSpec
-    # TODO: should use graph searching algorithm with cost map here. For now, always select the first solution.
+    # TODO: should use graph searching algorithm with cost map here.
+    # For now, always select the first solution.
     inferred_call = possible_calls[0]
     inferred_s = ShardInfo(inferred_call)
 
@@ -107,16 +124,22 @@ def infer_shardspec(call: relay.Call):
         if is_same_spec(filled_s.sin[i], inferred_s.sin[i]):
             resharded_args.append(inferred_s.args[i])
         else:
-            resharded_args.append(relay.Call(
-                GetOp("raf.op._reshard"),
-                [inferred_s.args[i]],
-                ShardOpCallAttrs([filled_s.sin[i]], [inferred_s.sin[i]])))
-    
+            resharded_args.append(
+                relay.Call(
+                    GetOp("raf.op._reshard"),
+                    [inferred_s.args[i]],
+                    ShardOpCallAttrs([filled_s.sin[i]], [inferred_s.sin[i]]),
+                )
+            )
+
     print("[Sharding Infer] %s %s ### %s" % (filled_s.op, inferred_s.attrs, filled_s.attrs))
     return relay.Call(inferred_s.op, resharded_args, inferred_s.attrs)
 
+
 def is_unset(s: BaseShardSpec):
+    """Check whether it is an UnsetShardSpec (placeholder of ShardSpec)."""
     return isinstance(s, UnsetShardSpec)
+
 
 @try_when(always_apply)
 @register_infer_hint(["raf.op.add", "raf.op.subtract"])
@@ -125,9 +148,8 @@ def element_wise_op_with_2in_1out(s: ShardInfo) -> List[ShardOpCallAttrs]:
     for e in (s.sin[0], s.sin[1], s.sout[0]):
         if not is_unset(e):
             specs.append(e)
-    return [
-        ShardOpCallAttrs([e, e], [e]) for e in specs
-    ]
+    return [ShardOpCallAttrs([e, e], [e]) for e in specs]
+
 
 @try_when(always_apply)
 @register_infer_hint(["raf.op.relu"])
@@ -136,6 +158,4 @@ def element_wise_op_with_1in_1out(s: ShardInfo) -> List[ShardOpCallAttrs]:
     for e in (s.sin[0], s.sout[0]):
         if not is_unset(e):
             specs.append(e)
-    return [
-        ShardOpCallAttrs([e], [e]) for e in specs
-    ]
+    return [ShardOpCallAttrs([e], [e]) for e in specs]
