@@ -9,7 +9,7 @@
  */
 #pragma once
 #include <vector>
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/op.h"
 #include "raf/value.h"
 

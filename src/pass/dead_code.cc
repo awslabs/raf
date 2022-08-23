@@ -15,7 +15,7 @@
 #include <unordered_set>
 #include <utility>
 #include "raf/op.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/pass.h"
 
 namespace raf {

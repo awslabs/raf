@@ -12,7 +12,7 @@
 #include <string>
 #include <algorithm>
 #include "raf/op.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/registry.h"
 #include "raf/value.h"
 #include "raf/binding.h"

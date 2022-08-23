@@ -15,7 +15,7 @@
  * as external functions.
  */
 #include "raf/op.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/pass.h"
 #include "./common.h"
 #include "../op/dialect/tvm/tvm_attrs.h"

@@ -10,7 +10,7 @@
 #include <vector>
 #include <unordered_map>
 #include "raf/op.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/pass.h"
 #include "raf/analysis.h"
 #include "./convert_utils.h"

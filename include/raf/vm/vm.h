@@ -16,7 +16,7 @@
 #include <vector>
 #include "bytecode.h"
 #include "executable.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/registry.h"
 #include "raf/value.h"
 #include "raf/op.h"

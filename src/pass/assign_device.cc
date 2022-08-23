@@ -8,7 +8,7 @@
  * \brief Assign the target device to init and constant ops.
  */
 #include "raf/op.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 
 #include "raf/pass.h"
 #include "tvm/relay/expr.h"

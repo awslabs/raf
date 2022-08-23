@@ -12,7 +12,7 @@
 #include <tvm/ir/type_functor.h>
 #include <tvm/tir/op.h>
 #include "raf/op.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/pass.h"
 #include "raf/pass_manager.h"
 #include "raf/binding.h"

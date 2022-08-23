@@ -8,7 +8,7 @@
  * \brief Helpers for running models.
  */
 #include "raf/binding.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/value.h"
 #include "raf/registry.h"
 #include "raf/executor.h"

@@ -9,7 +9,7 @@
  */
 #pragma once
 #include <tvm/ir/attrs.h>
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 
 namespace raf {
 namespace op {
