@@ -517,6 +517,8 @@ class NCCLAllToAll : public raf::op::OpEnv {
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     auto args = cv->args.as<raf::op::schema::AllToAllArgs>();
     RequestDistributed(&communicator, "nccl", args->rank_list);
+    DLTensor* x = args->x;
+    dtype = x->dtype;
 #if NCCL_VERSION_CODE < 20700
     LOG(FATAL) << "AllToAll is not supported in NCCL < 2.7.0";
 #endif
@@ -539,7 +541,7 @@ class NCCLAllToAll : public raf::op::OpEnv {
   void Execute(const std::vector<Value>& inputs, value::Value output) {
     auto comm_ref = GetRef<Communicator>(reinterpret_cast<CommunicatorObj*>(communicator));
     ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(comm_ref)->nccl_comm;
-    DLTensor* x = inputs[0];
+    const DLTensor* x = inputs[0];
     DLTensor* out = output;
 
     int nccl_num_ranks;
