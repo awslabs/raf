@@ -962,7 +962,7 @@ class NCCLScatter : public NCCLOpEnv {
     NCCL_CALL(ncclGroupStart());
     if (nccl_user_rank == root) {
       for (size_t i = 0; i < nccl_num_ranks; i++) {
-        NCCL_CALL(ncclSend(send_buffer + i * per_rank_bytes, size_per_rank, dtype, i, nccl_comm, 
+        NCCL_CALL(ncclSend(send_buffer + i * per_rank_bytes, size_per_rank, dtype, i, nccl_comm,
                            (cudaStream_t)stream));
       }
     }
