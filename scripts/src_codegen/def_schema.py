@@ -755,11 +755,11 @@ SCHEMAS = {
         Arg(name="token", cxx_type=OptionalTensor, cxx_default="nullptr", py_default="None"),
     ],
     "communication.h::comm_gather": [
-        Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="root", cxx_type="int"),
     ],
     "communication.h::comm_scatter": [
-        Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="root", cxx_type="int"),
     ],
     "transform.h::gather": [

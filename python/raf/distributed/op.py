@@ -236,10 +236,10 @@ def gather(x, root):
     ----------
     ret : Tensor
     """
-    if not isinstance(x, (tuple, list)):
-        x = [x]
+    is_list = isinstance(x, (tuple, list))
+    assert is_list is False, "Invalid Input Type"
+
     out = sym._gather(x, root)
-    out = sym.concatenate(out, axis=0)
     return out
 
 
@@ -257,9 +257,9 @@ def scatter(x, root):
     ----------
     ret : Tensor
     """
-    comm = get_communicator()
-    size = comm.size
-    x = sym.split(x, indices_or_sections=size, axis=0)
+    is_list = isinstance(x, (tuple, list))
+    assert is_list is False, "Invalid Input Type"
+
     return sym._scatter(x, root)
 
 

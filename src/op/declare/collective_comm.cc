@@ -254,17 +254,14 @@ RAF_OP_DECLARE("raf.op._recv", Recv)
 void Gather(const CallValues& call) {
   const auto* args = call->args.as<CommGatherArgs>();
   CHECK(args != nullptr);
-  ir::Array<Value> ret;
-  const DLTensor* x = args->x[0];
+  const DLTensor* x = args->x;
   call->device = x->device;
   size_t size = GetGlobalCommunicator()->size;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-  for (int i = 0; i < size; ++i) {
-    ret.push_back(TensorValue::Assemble(/*ctx=*/x->device,
-                                        /*dtype=*/x->dtype,
-                                        /*shape=*/shape));
-  }
-  call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
+  shape[0] = shape[0] * size;
+  call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
 }
 
 RAF_OP_DECLARE("raf.op._gather", Gather)
@@ -274,11 +271,12 @@ RAF_OP_DECLARE("raf.op._gather", Gather)
 void Scatter(const CallValues& call) {
   const auto* args = call->args.as<CommScatterArgs>();
   CHECK(args != nullptr);
-  auto& tv = args->x;
-  const DLTensor* x = tv[0];
+  const DLTensor* x = args->x;
   size_t size = GetGlobalCommunicator()->size;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  CHECK(shape[0] % size == 0);
   call->device = x->device;
+  shape[0] = shape[0] / size;
   call->out = TensorValue::Assemble(/*ctx=*/x->device,
                                     /*dtype=*/x->dtype,
                                     /*shape=*/shape);

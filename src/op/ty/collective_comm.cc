@@ -40,8 +40,16 @@ RAF_OP_TYPE("raf.op._allreduce", "NCCLAllReduce", IdentityType<AllreduceArgs>);
 RAF_OP_TYPE("raf.op._all_to_all", "NCCLAllToAll", IdentityType<AllToAllArgs>);
 RAF_OP_TYPE("raf.op._broadcast", "NCCLBroadcast", IdentityType<BroadcastArgs>);
 RAF_OP_TYPE("raf.op._reduce", "NCCLReduce", IdentityType<CommReduceArgs>);
-RAF_OP_TYPE("raf.op._gather", "NCCLGather", IdentityType<CommGatherArgs>);
-RAF_OP_TYPE("raf.op._scatter", "NCCLScatter", IdentityType<CommScatterArgs>);
+
+template <typename T>
+Type TensorIdentityType(const CallValues& value) {
+  const auto* args = value->args.as<T>();
+  CHECK(args != nullptr);
+  return GetType(args->x);
+}
+
+RAF_OP_TYPE("raf.op._gather", "NCCLGather", TensorIdentityType<CommGatherArgs>);
+RAF_OP_TYPE("raf.op._scatter", "NCCLScatter", TensorIdentityType<CommScatterArgs>);
 
 Type ReduceScatterInfer(const CallValues& value) {
   static auto* structural_equal = tvm::runtime::Registry::Get("node.StructuralEqual");
