@@ -53,7 +53,6 @@ RAF_OP_DECLARE("raf.op._allreduce", AllReduce)
 void Reduce(const CallValues& call) {
   const auto* args = call->args.as<CommReduceArgs>();
   CHECK(args != nullptr);
-  ir::Array<Value> ret;
   const DLTensor* x = args->x;
   call->device = x->device;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
@@ -161,7 +160,6 @@ RAF_OP_DECLARE("raf.op._group_reduce_scatter", GroupReduceScatter)
 void Broadcast(const CallValues& call) {
   const auto* args = call->args.as<BroadcastArgs>();
   CHECK(args != nullptr);
-  ir::Array<Value> ret;
   const DLTensor* x = args->x;
   call->device = x->device;
   std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
