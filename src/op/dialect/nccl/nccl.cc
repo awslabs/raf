@@ -891,11 +891,10 @@ class NCCLGather : public NCCLOpEnv {
       if (nccl_user_rank == root) {
         for (size_t i = 0; i < nccl_num_ranks; i++) {
           NCCL_CALL(ncclRecv(recv_buffer + i * per_rank_bytes, size, dtype, i, nccl_comm,
-                            (cudaStream_t)stream));
+                             (cudaStream_t)stream));
         }
       }
-      NCCL_CALL(
-          ncclSend(send_buffer, size, dtype, root, nccl_comm, (cudaStream_t)stream));
+      NCCL_CALL(ncclSend(send_buffer, size, dtype, root, nccl_comm, (cudaStream_t)stream));
     }
     NCCL_CALL(ncclGroupEnd());
   }
@@ -963,12 +962,11 @@ class NCCLScatter : public NCCLOpEnv {
     NCCL_CALL(ncclGroupStart());
     if (nccl_user_rank == root) {
       for (size_t i = 0; i < nccl_num_ranks; i++) {
-        NCCL_CALL(
-            ncclSend(send_buffer + i * per_rank_bytes, size_per_rank, dtype, i, nccl_comm, (cudaStream_t)stream));
+        NCCL_CALL(ncclSend(send_buffer + i * per_rank_bytes, size_per_rank, dtype, i, nccl_comm, 
+                           (cudaStream_t)stream));
       }
     }
-    NCCL_CALL(ncclRecv(recv_buffer, size_per_rank, dtype, root, nccl_comm,
-                       (cudaStream_t)stream));
+    NCCL_CALL(ncclRecv(recv_buffer, size_per_rank, dtype, root, nccl_comm, (cudaStream_t)stream));
     NCCL_CALL(ncclGroupEnd());
   }
 
