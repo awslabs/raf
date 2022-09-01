@@ -46,7 +46,7 @@ using FuseAndDefuseOpToAddMap =
 /*!
  * Use collective ops to decide tensor fusion and defusion ops to add.
  *
- * For allreduce, broadcast and reduce, we add fuse tensor op before
+ * For allreduce, we add fuse tensor op before
  * and defuse tensor op after it.
  *
  * For reduce scatter, we should add fuse reorder op before it and
@@ -58,8 +58,8 @@ static FuseAndDefuseOpToAddMap fuse_and_defuse_op_to_add_map = {
     {Op::Get("raf.op._allreduce"), {FuseOp::kFuse, DefuseOp::kDefuse}},
     {Op::Get("raf.op._allgather"), {FuseOp::kNone, DefuseOp::kNone}},
     {Op::Get("raf.op._reduce_scatter"), {FuseOp::kNone, DefuseOp::kNone}},
-    {Op::Get("raf.op._broadcast"), {FuseOp::kFuse, DefuseOp::kDefuse}},
-    {Op::Get("raf.op._reduce"), {FuseOp::kFuse, DefuseOp::kDefuse}},
+    {Op::Get("raf.op._broadcast"), {FuseOp::kNone, DefuseOp::kNone}},
+    {Op::Get("raf.op._reduce"), {FuseOp::kNone, DefuseOp::kNone}},
     {Op::Get("raf.op._send"), {FuseOp::kNone, DefuseOp::kNone}},
     {Op::Get("raf.op._recv"), {FuseOp::kNone, DefuseOp::kNone}},
 };
