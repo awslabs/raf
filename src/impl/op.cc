@@ -10,7 +10,7 @@
 #include <tvm/runtime/device_api.h>
 #include "dmlc/registry.h"
 #include "raf/executor.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/op.h"
 #include "raf/dialect.h"
 #include "raf/registry.h"

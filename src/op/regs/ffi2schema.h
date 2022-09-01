@@ -13,6 +13,7 @@
 #include "raf/value.h"
 #include "raf/registry.h"
 #include "raf/binding.h"
+#include "raf/sharding.h"
 #include "./regs_utils.h"
 
 namespace raf {
@@ -35,6 +36,9 @@ inline value::Value ArrayLike(const registry::TVMArgValue& a, binding::GradTape*
     auto* bound = binding::LookupBinding(a.AsObjectRef<Var>().operator->()).as<NDArrayBindingObj>();
     *tape = bound->tape;
     return bound->value;
+  }
+  if (type_code == kTVMObjectHandle && a.IsObjectRef<sharding::BaseShardSpec>()) {
+    return a;
   }
   if (type_code == kDLInt) {
     return ScalarValue::make(a.operator int64_t());

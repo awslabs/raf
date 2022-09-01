@@ -8,7 +8,7 @@
  * \brief cuDNN dropout operators.
  */
 #include <tvm/support/random_engine.h>
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/registry.h"
 #include "raf/op_utils.h"
 #include "raf/device.h"

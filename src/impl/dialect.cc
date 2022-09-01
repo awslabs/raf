@@ -12,7 +12,7 @@
 #include <dmlc/thread_local.h>
 
 #include "raf/executor.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/op.h"
 #include "raf/dialect.h"
 #include "raf/dialect.h"

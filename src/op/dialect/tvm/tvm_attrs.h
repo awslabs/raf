@@ -17,7 +17,7 @@
 #include <tvm/relay/attrs/random.h>
 #include <tvm/relay/attrs/reduce.h>
 #include <tvm/relay/attrs/transform.h>
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/value.h"
 #include "raf/op.h"
 #include "./attrs/nn.h"

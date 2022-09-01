@@ -11,7 +11,7 @@
 
 #include <vector>
 #include <tvm/ir/type_functor.h>
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/value.h"
 #include "../op/schema/init.h"
 #include "../op/schema/memory.h"

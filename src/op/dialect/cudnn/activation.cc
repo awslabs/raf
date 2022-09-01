@@ -9,7 +9,7 @@
  */
 #include "../../schema/ufunc.h"
 #include "./cudnn_utils.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/op_utils.h"
 
 namespace raf {

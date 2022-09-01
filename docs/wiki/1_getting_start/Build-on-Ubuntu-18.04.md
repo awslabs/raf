@@ -147,7 +147,6 @@ Again, the `export` commands can be put in `.bashrc` for auto loading (see bonus
 
 ```bash
 export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/python
-export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 # The following commands can verify if the environments are set up correctly.
 python3 -c "import raf"
 ```
@@ -170,7 +169,6 @@ vim $HOME/.zshrc
 # Adding the export commands to the end of those RC files
 export RAF_HOME=PATH-TO-RAF
 export PYTHONPATH=$RAF_HOME/python/:$RAF_HOME/3rdparty/tvm/python
-export TVM_LIBRARY_PATH=$RAF_HOME/build/lib
 ```
 
 </details>

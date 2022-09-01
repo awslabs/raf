@@ -9,7 +9,7 @@
  */
 #pragma once
 #include "raf/op.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/tensor.h"
 
 namespace raf {

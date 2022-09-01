@@ -227,32 +227,61 @@ def broadcast(x, root, rank_list=None):
     return sym._broadcast(x, root, rank_list)
 
 
-def all_to_all(x, group_use_memcpy=False):
+def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None):
     """Performs an all-to-all communication across all ranks.
 
     Parameters
     ----------
-    x : Tensor or List[Tensor]
+    x : Tensor
         The tensor(s) to perform all-to-all on. The input tensor is evenly split
-        into n chunks at axis 0, and chunk[i] is sent to rank i. If the input is a
+        into n chunks at split_axis, and chunk[i] is sent to rank i. If the input is a
         list of tensors, the result is equivalent to calling all-to-all on each tensor
         individually, but only one grouped all-to-all call will be launched.
-    group_use_memcpy: bool
-        Whether to use memory copy for a grouped all-to-all call. If set to true,
-        data of different input tensors will be copied to a single contiguous buffer
-        before communication and copied back afterwards. This parameter is only relevant
-        when x is a list of tensors. Default is false.
+    split_axis : int
+        The dimension to split input tensor. Input tensor is partitioned at split_axis,
+        which defaults to 0.
+    concat_axis : int
+        The dimension to concat output tensor. The received tensors from each rank are
+        concatenated at concat_axis, which defaults to 0.
+    rank_list : List[List[int]]
+        The list of ranks to communicate. This parameter will split the ranks
+        (MPI / NCCL processes) into multiple groups as specified by the user,
+        and each rank will only communicate within the group. If the rank list
+        leaves empty, the ranks won't get split. Note that this operator is
+        collective, which means ranks, whether they are in the rank_list or not,
+        must invoke this along with other ranks. The rank not in the rank_list
+        will run in standalone mode.
 
     Returns
     -------
-    ret: Tensor or List[Tensor]
+    ret: Tensor
         all-to-all results. The received tensors from each rank are concatenated at
-        axis 0 to form a single tensor (with the same size as input).
+        concat_axis to form a single tensor (with the same size as input).
     """
-    if not isinstance(x, (tuple, list)):
-        x = [x]
 
-    return sym._all_to_all(x, group_use_memcpy)
+    is_list = isinstance(x, (tuple, list))
+    assert is_list is False, "Invalid Input Type"
+
+    comm = get_communicator()
+    if rank_list:
+        for group in rank_list:
+            if comm.rank in group:
+                size = len(group)
+                break
+        else:
+            size = 1
+    else:
+        size = comm.size
+
+    x = sym.split(x, indices_or_sections=size, axis=split_axis)
+    x = sym.concatenate(x)
+
+    y = sym._all_to_all(x, rank_list=rank_list)
+
+    y = sym.split(y, indices_or_sections=size)
+    y = sym.concatenate(y, axis=concat_axis)
+
+    return y
 
 
 def send(x, peer, token=None):
