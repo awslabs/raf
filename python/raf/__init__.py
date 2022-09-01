@@ -1,7 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
-
-"""RAF is Not MXNet, it's MXNet 3.0."""
+"""RAF Accelerates deep learning Frameworks."""
 
 try:
     from .version import __version__
@@ -11,6 +10,11 @@ except:  # pylint: disable=bare-except
     __version__ = "dev"
     __full_version__ = "dev"
     __gitrev__ = "unknown"
+
+# We must import the lib first, because it imports TVM dependency,
+# and we need to set TVM_LIBRARY_PATH to make sure TVM loads the RAF
+# compatible libraries.
+from ._lib import *
 
 from ._core.ndarray import array, ndarray
 from ._op.imp import *  # pylint: disable=redefined-builtin

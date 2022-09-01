@@ -9,7 +9,7 @@
  */
 #include <sstream>
 #include "raf/op.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/pass.h"
 #include <string>
 #include <vector>

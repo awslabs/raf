@@ -11,7 +11,7 @@
 #include "../../schema/nn.h"
 #include "../3rdparty/tvm/src/runtime/file_utils.h"
 #include "./cudnn_utils.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/memory_pool.h"
 #include "raf/op_utils.h"
 #include "raf/profiler.h"

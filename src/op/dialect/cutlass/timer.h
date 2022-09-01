@@ -62,6 +62,9 @@ tvm::runtime::Module MakeCutlassModule(registry::PackedFunc pf);
  *                       minimum duration requirement of one `repeat`.
  *                       i.e., When the run time of one `repeat` falls below this time, the `number`
  *                       parameter will be automatically increased.
+ * \param limit_zero_time_iterations The maximum number of repeats when
+ *                                   measured time is equal to 0. It helps to avoid hanging
+ *                                   during measurements.
  * \param cooldown_interval_ms The cooldown interval in milliseconds between the number of
  *                             repeats defined by `repeats_to_cooldown`.
  * \param repeats_to_cooldown The number of repeats before the cooldown is activated.
@@ -70,6 +73,7 @@ tvm::runtime::Module MakeCutlassModule(registry::PackedFunc pf);
  */
 registry::PackedFunc TimeEvaluator(registry::PackedFunc pf, Device dev, int number = 10,
                                    int repeat = 1, int min_repeat_ms = 0,
+                                   int limit_zero_time_iterations = 100,
                                    int cooldown_interval_ms = 0, int repeats_to_cooldown = 1);
 
 }  // namespace cutlass

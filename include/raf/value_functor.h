@@ -14,6 +14,7 @@
 
 #include "./value.h"
 #include "./vm/value.h"
+#include "./sharding.h"
 
 namespace raf {
 namespace value {
@@ -85,6 +86,8 @@ class ValueFunctor<R(const Value& n, Args...)> {
   virtual R VisitValue_(const NoGradValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValue_(const VoidValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValue_(const ClosureValueObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
+  virtual R VisitValue_(const sharding::ShardSpecObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
+  virtual R VisitValue_(const sharding::UnsetShardSpecObj* op, Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValue_(const executor::vm::VMClosureValueObj* op,
                         Args... args) VALUE_FUNCTOR_DEFAULT;
   virtual R VisitValueDefault_(const ir::Object* op, Args...) {
@@ -109,6 +112,8 @@ class ValueFunctor<R(const Value& n, Args...)> {
     VALUE_FUNCTOR_DISPATCH(StringValueObj);
     VALUE_FUNCTOR_DISPATCH(NoGradValueObj);
     VALUE_FUNCTOR_DISPATCH(ClosureValueObj);
+    VALUE_FUNCTOR_DISPATCH(sharding::ShardSpecObj);
+    VALUE_FUNCTOR_DISPATCH(sharding::UnsetShardSpecObj);
     VALUE_FUNCTOR_DISPATCH(executor::vm::VMClosureValueObj);
     return vtable;
   }

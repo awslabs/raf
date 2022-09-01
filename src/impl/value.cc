@@ -12,7 +12,7 @@
 #include <tvm/node/functor.h>
 #include <tvm/ir/module.h>
 #include "raf/executor.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/registry.h"
 #include "raf/tensor.h"
 #include "raf/value.h"

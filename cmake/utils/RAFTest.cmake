@@ -28,7 +28,7 @@ macro(raf_test TESTNAME)
       ${RAF_BACKEND_LINK_LIBS}
   )
   target_compile_options(${TESTNAME} PRIVATE ${RAF_CXX_FLAGS})
-  target_compile_features(${TESTNAME} PRIVATE cxx_std_14)
+  target_compile_features(${TESTNAME} PRIVATE cxx_std_17)
   set_target_properties(${TESTNAME} PROPERTIES
     CXX_STANDARD 14
     CXX_STANDARD_REQUIRED ON

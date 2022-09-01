@@ -11,7 +11,7 @@
 #include <relay/analysis/dependency_graph.h>
 #include "support/arena.h"
 
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 
 namespace raf {
 namespace analysis {

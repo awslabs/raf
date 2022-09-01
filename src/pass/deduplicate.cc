@@ -8,7 +8,7 @@
  * \brief Deduplicate the same structure in a GNF IR.
  */
 
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/registry.h"
 #include "raf/pass.h"
 

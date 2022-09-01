@@ -40,6 +40,16 @@ class ValueTyper : public ValueFunctor<Type(const Value&)> {
     return TensorType::Scalar(DataType::Int(64));
   }
 
+  Type VisitValue_(const sharding::ShardSpecObj* value) override {
+    // fake type info
+    return TensorType::Scalar(DataType::Int(64));
+  }
+
+  Type VisitValue_(const sharding::UnsetShardSpecObj* value) override {
+    // fake type info
+    return TensorType::Scalar(DataType::Int(64));
+  }
+
   Type VisitValue_(const TensorValueObj* value) override {
     const DLTensor* x = GetRef<Value>(value);
     auto shape = std::vector<Integer>(x->shape, x->shape + x->ndim);

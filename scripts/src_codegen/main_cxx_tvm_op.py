@@ -12,7 +12,7 @@ def gen_file(filename):
  * \\file {FILENAME}
  * \\brief Register TVM ops.
  */
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/op.h"
 namespace raf {{
 namespace op {{

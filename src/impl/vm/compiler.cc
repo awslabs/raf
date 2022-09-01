@@ -15,7 +15,7 @@
 #include <tvm/relay/analysis.h>
 #include <tvm/relay/attrs/memory.h>
 #include "raf/op.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/binding.h"
 #include "raf/type.h"
 #include "raf/pass.h"
