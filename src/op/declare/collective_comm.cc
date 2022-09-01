@@ -261,8 +261,7 @@ void Gather(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-RAF_OP_DECLARE("raf.op._gather", Gather)
-    .set_attr<TRAFCollective>("TRAFCollective", true);
+RAF_OP_DECLARE("raf.op._gather", Gather).set_attr<TRAFCollective>("TRAFCollective", true);
 
 void Scatter(const CallValues& call) {
   const auto* args = call->args.as<GatherScatterArgs>();
@@ -278,8 +277,7 @@ void Scatter(const CallValues& call) {
                                     /*shape=*/shape);
 }
 
-RAF_OP_DECLARE("raf.op._scatter", Scatter)
-    .set_attr<TRAFCollective>("TRAFCollective", true);
+RAF_OP_DECLARE("raf.op._scatter", Scatter).set_attr<TRAFCollective>("TRAFCollective", true);
 
 }  // namespace declare
 }  // namespace op
