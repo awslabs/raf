@@ -249,7 +249,7 @@ RAF_OP_DECLARE("raf.op._recv", Recv)
     .set_attr<TRAFCollective>("TRAFCollective", true);
 
 void Gather(const CallValues& call) {
-  const auto* args = call->args.as<CommGatherArgs>();
+  const auto* args = call->args.as<GatherScatterArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   call->device = x->device;
@@ -262,11 +262,10 @@ void Gather(const CallValues& call) {
 }
 
 RAF_OP_DECLARE("raf.op._gather", Gather)
-    .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<TRAFCollective>("TRAFCollective", true);
 
 void Scatter(const CallValues& call) {
-  const auto* args = call->args.as<CommScatterArgs>();
+  const auto* args = call->args.as<GatherScatterArgs>();
   CHECK(args != nullptr);
   const DLTensor* x = args->x;
   size_t size = GetGlobalCommunicator()->size;
@@ -280,7 +279,6 @@ void Scatter(const CallValues& call) {
 }
 
 RAF_OP_DECLARE("raf.op._scatter", Scatter)
-    .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<TRAFCollective>("TRAFCollective", true);
 
 }  // namespace declare

@@ -262,8 +262,7 @@ def gather(x, root):
     ----------
     ret : Tensor
     """
-    is_list = isinstance(x, (tuple, list))
-    assert is_list is False, "Invalid Input Type"
+    assert not isinstance(x, (tuple, list)), "Invalid Input Type"
 
     out = sym._gather(x, root)
     return out
@@ -283,8 +282,7 @@ def scatter(x, root):
     ----------
     ret : Tensor
     """
-    is_list = isinstance(x, (tuple, list))
-    assert is_list is False, "Invalid Input Type"
+    assert not isinstance(x, (tuple, list)), "Invalid Input Type"
 
     return sym._scatter(x, root)
 

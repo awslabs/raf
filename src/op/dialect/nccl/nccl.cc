@@ -844,7 +844,7 @@ class NCCLGather : public NCCLOpEnv {
   explicit NCCLGather(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._gather");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
-    auto args = cv->args.as<raf::op::schema::CommGatherArgs>();
+    auto args = cv->args.as<raf::op::schema::GatherScatterArgs>();
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator, "nccl", NullValue<Value>());
@@ -865,7 +865,7 @@ class NCCLGather : public NCCLOpEnv {
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<raf::op::schema::CommGatherArgs>();
+    auto args = cv->args.as<raf::op::schema::GatherScatterArgs>();
     Execute({args->x}, cv->out);
   }
 
@@ -913,7 +913,7 @@ class NCCLScatter : public NCCLOpEnv {
   explicit NCCLScatter(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._scatter");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
-    auto args = cv->args.as<raf::op::schema::CommScatterArgs>();
+    auto args = cv->args.as<raf::op::schema::GatherScatterArgs>();
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
     RequestDistributed(&communicator, "nccl", NullValue<Value>());
@@ -934,7 +934,7 @@ class NCCLScatter : public NCCLOpEnv {
   }
 
   void Execute(const CallValues& cv) {
-    auto args = cv->args.as<raf::op::schema::CommScatterArgs>();
+    auto args = cv->args.as<raf::op::schema::GatherScatterArgs>();
     Execute({args->x}, cv->out);
   }
 
