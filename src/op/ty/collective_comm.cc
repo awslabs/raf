@@ -37,7 +37,6 @@ Type IdentityType(const CallValues& value) {
 }
 
 RAF_OP_TYPE("raf.op._allreduce", "NCCLAllReduce", IdentityType<AllreduceArgs>);
-RAF_OP_TYPE("raf.op._all_to_all", "NCCLAllToAll", IdentityType<AllToAllArgs>);
 RAF_OP_TYPE("raf.op._broadcast", "NCCLBroadcast", IdentityType<BroadcastArgs>);
 RAF_OP_TYPE("raf.op._reduce", "NCCLReduce", IdentityType<CommReduceArgs>);
 
@@ -72,6 +71,15 @@ Type CommScatterInfer(const CallValues& value) {
 
 RAF_OP_TYPE("raf.op._scatter", "NCCLScatter", CommScatterInfer);
 
+template <typename T>
+Type TensorIdentityType(const CallValues& value) {
+  const auto* args = value->args.as<T>();
+  CHECK(args != nullptr);
+  return GetType(args->x);
+}
+
+RAF_OP_TYPE("raf.op._all_to_all", "NCCLAllToAll", TensorIdentityType<AllToAllArgs>);
+
 Type ReduceScatterInfer(const CallValues& value) {
   static auto* structural_equal = tvm::runtime::Registry::Get("node.StructuralEqual");
   ICHECK(structural_equal) << "node.StructuralEqual is not registered.";
@@ -79,7 +87,12 @@ Type ReduceScatterInfer(const CallValues& value) {
   const auto* args = value->args.as<ReduceScatterArgs>();
   CHECK(args != nullptr);
   const auto& ty = GetType(args->x);
-  int size = GetGlobalCommunicator()->size;
+  int size;
+  if (args->rank_list.defined()) {
+    size = Communicator::Get("void", args->rank_list)->size;
+  } else {
+    size = GetGlobalCommunicator()->size;
+  }
   auto tpn = ty.as<TensorTypeNode>();
   auto shape = tpn->shape;
   auto old_size = shape[0].as<IntImmNode>()->value;

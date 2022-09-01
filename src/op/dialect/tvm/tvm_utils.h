@@ -19,7 +19,7 @@
 #include "relay/backend/te_compiler.h"
 #include "relay/backend/te_compiler_cache.h"
 #include "raf/cache.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/value.h"
 #include "raf/registry.h"
 #include "raf/op.h"
@@ -264,7 +264,7 @@ extern MetaPersistCache<RelayFuncCacheEntry> CacheLoweredFunc;
         [&](const ir::Function& f) {                                                               \
           te_compiler->Clear();                                                                    \
           auto key = tvm::relay::tec::CCacheKey(f, target);                                        \
-          auto cached_func = te_compiler->Lower(key, [](String name) { return name; });            \
+          auto cached_func = te_compiler->Lower(key);                                              \
           auto mod = tvm::build(cached_func->funcs, key->target, Target(nullptr));                 \
           return TVMModuleCacheEntry(mod, cached_func->prim_fn_var->name_hint);                    \
         });                                                                                        \

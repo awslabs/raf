@@ -10,7 +10,7 @@
 #pragma once
 
 #include <support/arena.h>
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/op.h"
 
 namespace raf {

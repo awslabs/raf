@@ -12,13 +12,10 @@ from setuptools.dist import Distribution
 
 from datetime import date
 
-# need to use distutils.core for correct placement of cython dll
 if "--inplace" in sys.argv:
     from distutils.core import setup
-    from distutils.extension import Extension
 else:
     from setuptools import setup
-    from setuptools.extension import Extension
 
 SCRIPT_DIR = os.path.dirname(__file__)
 CONDA_BUILD = os.getenv("CONDA_BUILD") is not None
@@ -31,21 +28,18 @@ def get_env_flag(name, default=""):
 
 def get_lib_path():
     """Get library path, name and version"""
-    # We can not import `libinfo.py` in setup.py directly since __init__.py
-    # Will be invoked which introduces dependences
-    libinfo_py = os.path.join(SCRIPT_DIR, "./raf/_lib.py")
+    # We can not import `_lib_utils.py` in setup.py directly since __init__.py
+    # Will be invoked which introduces dependences.
+    libinfo_py = os.path.join(SCRIPT_DIR, "./raf/_lib_utils.py")
     libinfo = {"__file__": libinfo_py}
     with open(libinfo_py, "rb") as f:
         ss = f.read()
     exec(compile(ss, libinfo_py, "exec"), libinfo, libinfo)
     if not os.getenv("CONDA_BUILD"):
-        lib_path = libinfo["find_lib_path"]()
-        libs = [lib_path[0]]
-        if libs[0].find("runtime") == -1:
-            for name in lib_path[1:]:
-                if name.find("runtime") != -1:
-                    libs.append(name)
-                    break
+        # Look for the libs.
+        # "libraf" is the core RAF lib.
+        # "raf" is the lib required by win32 systems.
+        libs = libinfo["find_lib_path"](["libraf", "raf"])
     else:
         libs = None
     return libs
@@ -68,6 +62,12 @@ git_version = get_build_version()
 
 
 def get_build_raf_version():
+    """Build the version based on PEP-440. Specifically, we have the following formats:
+    - Stable release: MAJOR.MINOR+PLATFORM
+    - Nightly release: MAJOR.MINOR.devDATE+PLATFORM
+    - Dev (local build): MAJOR.MINOR.dev+GIT_SHA
+    Note that we do not put the PLATFORM in dev version due to the limit of PEP 440 format.
+    """
     raf_build_version = os.getenv("RAF_BUILD_VERSION", default="dev")
     raf_build_platform = os.getenv("RAF_BUILD_PLATFORM", default="cu113")
     with open("./raf/version.txt", "r") as version_file:
@@ -81,7 +81,7 @@ def get_build_raf_version():
             raf_version = version + ".dev" + str(today) + "+" + raf_build_platform
         elif raf_build_version == "dev":
             version = inc_minor(version)
-            raf_version = version + git_version + "+" + raf_build_platform
+            raf_version = version + ".dev+" + git_version
         else:
             raise ValueError("Unsupported RAF build version: " % raf_build_version)
         return raf_version
@@ -123,6 +123,24 @@ class BinaryDistribution(Distribution):
         return False
 
 
+class ExtModules(list):
+    """bdist_wheel determines whether the package is pure or not based on ext_modules.
+    However, all RAF modules are prebuilt (libraf.so) and packaged as data, so the package
+    is not pure, although we have no Extensions to build.
+
+    Ideally we should override has_ext_modules, but https://bugs.python.org/issue32957
+    mentions that has_ext_modules is not always called in setuptools <= 57.0.0.
+
+    Thus, we provide a customized empty list. This causes the package to be treated
+    as non-pure on all relevant setuptools versions.
+
+    This solution is inspired by https://github.com/microsoft/debugpy/pull/700
+    """
+
+    def __bool__(self):
+        return True
+
+
 include_libs = False
 wheel_include_libs = False
 if not os.getenv("CONDA_BUILD"):
@@ -137,13 +155,10 @@ setup_kwargs = {}
 if wheel_include_libs:
     with open(os.path.join(SCRIPT_DIR, "MANIFEST.in"), "w") as fo:
         for path in LIB_LIST:
-            if os.path.normpath(path) != os.path.normpath(
-                os.path.join(SCRIPT_DIR, "raf/libraf.so")
-            ):
-                try:
-                    shutil.copy(path, os.path.join(SCRIPT_DIR, "raf"))
-                except shutil.SameFileError:
-                    pass
+            try:
+                shutil.copy(path, os.path.join(SCRIPT_DIR, "raf"))
+            except shutil.SameFileError:
+                pass
             _, libname = os.path.split(path)
             fo.write("include raf/%s\n" % libname)
     setup_kwargs = {"include_package_data": True}
@@ -164,21 +179,28 @@ setup_kwargs["package_dir"] = {"raf.version": "../build/private/raf/version"}
 setup(
     name="raf",
     version=__version__,
-    license="Apache",
+    license="Apache-2.0",
+    author="AWS AI team",
+    author_email="",
     description="RAF Accelerates Deep Learning Frameworks",
     zip_safe=False,
     install_requires=[
-        "tvm",
         "numpy",
     ],
     extras_require={
-        "test": ["torch==1.6.0", "pytest"],
+        "test": ["torch==1.12.0", "pytest"],
     },
     packages=find_packages() + ["raf.version"],
     package_data={"raf": [os.path.join(SCRIPT_DIR, "../build/lib/libraf.so")]},
     distclass=BinaryDistribution,
     url="https://github.com/awslabs/raf",
-    python_requires=">=3.6",
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    ],
+    ext_modules=ExtModules(),
+    has_ext_modules=lambda: True,
+    python_requires=">=3.7",
     **setup_kwargs
 )
 
@@ -187,4 +209,7 @@ if wheel_include_libs:
     os.remove(os.path.join(SCRIPT_DIR, "MANIFEST.in"))
     for path in LIB_LIST:
         _, libname = os.path.split(path)
-        os.remove("raf/%s" % libname)
+        try:
+            os.remove("raf/%s" % libname)
+        except FileNotFoundError:
+            pass

@@ -740,8 +740,8 @@ SCHEMAS = {
         Arg(name="root", cxx_type="int"),
     ],
     "communication.h::all_to_all": [
-        Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
-        Arg(name="group_use_memcpy", cxx_type="bool", cxx_default=False),
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
     "communication.h::send": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),

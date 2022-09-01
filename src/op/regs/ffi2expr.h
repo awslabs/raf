@@ -11,7 +11,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/value.h"
 #include "raf/registry.h"
 #include "./regs_utils.h"

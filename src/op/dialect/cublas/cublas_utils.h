@@ -11,7 +11,7 @@
 #include <cublas_v2.h>
 #include "raf/device.h"
 #include "raf/enum_base.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/pass.h"
 #include "../../../common/cuda_utils.h"
 
