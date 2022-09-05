@@ -81,8 +81,7 @@ def test_allreduce_with_tensor_list(computation):
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
-@pytest.mark.parametrize("group_use_memcpy", [True, False])
-def test_all_to_all_with_tensor(group_use_memcpy):
+def test_all_to_all_with_tensor():
     print("Testing all_to_all with a single tensor as input.")
 
     class TestModel(raf.Model):
@@ -91,7 +90,7 @@ def test_all_to_all_with_tensor(group_use_memcpy):
 
         @raf.model.trace
         def forward(self, x):
-            x = raf.all_to_all(x, group_use_memcpy)
+            x = raf.all_to_all(x)
             return x
 
     shape = (4, 4)
@@ -106,39 +105,6 @@ def test_all_to_all_with_tensor(group_use_memcpy):
     t_a = TensorType(shape, dtype=dtype)
     t_b = TensorType(shape, dtype=dtype)
     desire_type = FuncType([t_a], t_b)
-    check_type(m_func, desire_type)
-
-
-@pytest.mark.skipif(skip_dist_test(min_rank_num=2, require_exact_rank=True), reason=SKIP_REASON)
-@pytest.mark.parametrize("group_use_memcpy", [True, False])
-def test_all_to_all_with_tensor_list(group_use_memcpy):
-    print("Testing all_to_all with a list of tensors as input.")
-
-    class TestModel(raf.Model):
-        def build(self):
-            pass
-
-        @raf.model.trace
-        def forward(self, x1, x2):
-            x = raf.all_to_all([x1, x2], group_use_memcpy)
-            return x
-
-    shape1 = (4, 4)
-    shape2 = (4, 4, 5)
-    dtype = "float32"
-    model = TestModel()
-    _, rank, local_rank = get_dist_comm_info()
-    device = f"cuda({local_rank})"
-    x1 = np.ones(shape=shape1, dtype=dtype) * (rank + 1)
-    x2 = np.ones(shape=shape2, dtype=dtype) * (-rank - 1)
-    x1 = raf.array(x1, device=device)
-    x2 = raf.array(x2, device=device)
-    # infertype test for list of input
-    m_func = model._internal(x1, x2).mod["main"]
-    m_func = run_infer_type(m_func)
-    t_x1 = TensorType(shape1, dtype=dtype)
-    t_x2 = TensorType(shape2, dtype=dtype)
-    desire_type = FuncType([t_x1, t_x2], TupleType([t_x1, t_x2]))
     check_type(m_func, desire_type)
 
 
