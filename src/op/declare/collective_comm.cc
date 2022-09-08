@@ -246,6 +246,37 @@ RAF_OP_DECLARE("raf.op._recv", Recv)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<TRAFCollective>("TRAFCollective", true);
 
+void Gather(const CallValues& call) {
+  const auto* args = call->args.as<GatherScatterArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  call->device = x->device;
+  size_t size = GetGlobalCommunicator()->size;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  shape[0] = shape[0] * size;
+  call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+}
+
+RAF_OP_DECLARE("raf.op._gather", Gather).set_attr<TRAFCollective>("TRAFCollective", true);
+
+void Scatter(const CallValues& call) {
+  const auto* args = call->args.as<GatherScatterArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  size_t size = GetGlobalCommunicator()->size;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  CHECK(shape[0] % size == 0);
+  call->device = x->device;
+  shape[0] = shape[0] / size;
+  call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+}
+
+RAF_OP_DECLARE("raf.op._scatter", Scatter).set_attr<TRAFCollective>("TRAFCollective", true);
+
 }  // namespace declare
 }  // namespace op
 }  // namespace raf

@@ -762,6 +762,145 @@ class NCCLReduce : public NCCLOpEnv {
 RAF_REGISTER_DIALECT_OP(nccl, _reduce, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._reduce", NCCLReduce::make);
 
+class NCCLGather : public NCCLOpEnv {
+  int root;
+  DType dtype;
+  explicit NCCLGather(const CallValues& cv) : NCCLOpEnv(cv) {
+    auto op = ir::Op::Get("raf.op._gather");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    auto args = cv->args.as<raf::op::schema::GatherScatterArgs>();
+    this->arg_indices = {fschema_index[op]("x")};
+    RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
+    RequestDistributed(&communicator, "nccl", NullValue<Value>());
+    root = args->root;
+    DLTensor* x = args->x;
+    dtype = x->dtype;
+#if NCCL_VERSION_CODE < 20700
+    LOG(FATAL) << "Gather is not supported in NCCL < 2.7.0";
+#endif
+  }
+
+ public:
+  ~NCCLGather() {
+  }
+
+  std::string name() const override {
+    return TruncateName(GetUniqueName("raf.op.nccl._gather"));
+  }
+
+  void Execute(const CallValues& cv) {
+    auto args = cv->args.as<raf::op::schema::GatherScatterArgs>();
+    Execute({args->x}, cv->out);
+  }
+
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) {
+    auto comm_ref = GetRef<Communicator>(reinterpret_cast<CommunicatorObj*>(communicator));
+    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(comm_ref)->nccl_comm;
+    const DLTensor* x = inputs[0];
+    DLTensor* out = output;
+    int nccl_num_ranks;
+    int nccl_user_rank;
+    NCCL_CALL(ncclCommCount(nccl_comm, &nccl_num_ranks));
+    NCCL_CALL(ncclCommUserRank(nccl_comm, &nccl_user_rank));
+    NCCL_CALL(ncclGroupStart());
+    int64_t size = 1;
+    for (int i = 0; i < x->ndim; ++i) {
+      size *= x->shape[i];
+    }
+    int64_t dtype_size_in_bytes = GetSizeInBytes(dtype);
+    size_t per_rank_bytes = size * dtype_size_in_bytes;
+    char* send_buffer = (char*)x->data;
+    char* recv_buffer = (char*)out->data;
+    if (size != 0) {
+      if (nccl_user_rank == root) {
+        for (size_t i = 0; i < nccl_num_ranks; i++) {
+          NCCL_CALL(ncclRecv(recv_buffer + i * per_rank_bytes, size, dtype, i, nccl_comm,
+                             (cudaStream_t)stream));
+        }
+      }
+      NCCL_CALL(ncclSend(send_buffer, size, dtype, root, nccl_comm, (cudaStream_t)stream));
+    }
+    NCCL_CALL(ncclGroupEnd());
+  }
+
+  static OpEnv* make(const CallValues& cv) {
+    return new NCCLGather(cv);
+  }
+};
+
+RAF_REGISTER_DIALECT_OP(nccl, _gather, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._gather", NCCLGather::make);
+
+class NCCLScatter : public NCCLOpEnv {
+  int root;
+  DType dtype;
+  explicit NCCLScatter(const CallValues& cv) : NCCLOpEnv(cv) {
+    auto op = ir::Op::Get("raf.op._scatter");
+    auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
+    auto args = cv->args.as<raf::op::schema::GatherScatterArgs>();
+    this->arg_indices = {fschema_index[op]("x")};
+    RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
+    RequestDistributed(&communicator, "nccl", NullValue<Value>());
+    root = args->root;
+    DLTensor* x = args->x;
+    dtype = x->dtype;
+#if NCCL_VERSION_CODE < 20700
+    LOG(FATAL) << "Scatter is not supported in NCCL < 2.7.0";
+#endif
+  }
+
+ public:
+  ~NCCLScatter() {
+  }
+
+  std::string name() const override {
+    return TruncateName(GetUniqueName("raf.op.nccl._scatter"));
+  }
+
+  void Execute(const CallValues& cv) {
+    auto args = cv->args.as<raf::op::schema::GatherScatterArgs>();
+    Execute({args->x}, cv->out);
+  }
+
+  void Execute(const std::vector<value::Value>& inputs, value::Value output) {
+    auto comm_ref = GetRef<Communicator>(reinterpret_cast<CommunicatorObj*>(communicator));
+    ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(comm_ref)->nccl_comm;
+    const DLTensor* x = inputs[0];
+    DLTensor* out = output;
+
+    int nccl_num_ranks;
+    int nccl_user_rank;
+    NCCL_CALL(ncclCommCount(nccl_comm, &nccl_num_ranks));
+    NCCL_CALL(ncclCommUserRank(nccl_comm, &nccl_user_rank));
+
+    int64_t size = 1;
+    for (int i = 0; i < x->ndim; ++i) {
+      size *= x->shape[i];
+    }
+    int64_t dtype_size_in_bytes = GetSizeInBytes(dtype);
+
+    size_t per_rank_bytes = size * dtype_size_in_bytes / nccl_num_ranks;
+    size_t size_per_rank = per_rank_bytes / dtype_size_in_bytes;
+    char* send_buffer = (char*)x->data;
+    char* recv_buffer = (char*)out->data;
+    NCCL_CALL(ncclGroupStart());
+    if (nccl_user_rank == root) {
+      for (size_t i = 0; i < nccl_num_ranks; i++) {
+        NCCL_CALL(ncclSend(send_buffer + i * per_rank_bytes, size_per_rank, dtype, i, nccl_comm,
+                           (cudaStream_t)stream));
+      }
+    }
+    NCCL_CALL(ncclRecv(recv_buffer, size_per_rank, dtype, root, nccl_comm, (cudaStream_t)stream));
+    NCCL_CALL(ncclGroupEnd());
+  }
+
+  static OpEnv* make(const CallValues& cv) {
+    return new NCCLScatter(cv);
+  }
+};
+
+RAF_REGISTER_DIALECT_OP(nccl, _scatter, 10);
+RAF_OP_ENV_MAKER("raf.op.nccl._scatter", NCCLScatter::make);
 }  // namespace nccl
 }  // namespace communication
 }  // namespace op

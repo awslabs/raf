@@ -40,6 +40,37 @@ RAF_OP_TYPE("raf.op._allreduce", "NCCLAllReduce", IdentityType<AllreduceArgs>);
 RAF_OP_TYPE("raf.op._broadcast", "NCCLBroadcast", IdentityType<BroadcastArgs>);
 RAF_OP_TYPE("raf.op._reduce", "NCCLReduce", IdentityType<CommReduceArgs>);
 
+Type CommGatherInfer(const CallValues& value) {
+  const auto* args = value->args.as<GatherScatterArgs>();
+  CHECK(args != nullptr);
+  int size = GetGlobalCommunicator()->size;
+  const auto& ty = GetType(args->x);
+  auto tpn = ty.as<TensorTypeNode>();
+  auto shape = tpn->shape;
+  auto old_size = shape[0].as<IntImmNode>()->value;
+  auto new_size = old_size * size;
+  shape.Set(0, Integer(new_size));
+  return TensorType(shape, DataType(tpn->dtype));
+}
+
+RAF_OP_TYPE("raf.op._gather", "NCCLGather", CommGatherInfer);
+
+Type CommScatterInfer(const CallValues& value) {
+  const auto* args = value->args.as<GatherScatterArgs>();
+  CHECK(args != nullptr);
+  int size = GetGlobalCommunicator()->size;
+  const auto& ty = GetType(args->x);
+  auto tpn = ty.as<TensorTypeNode>();
+  auto shape = tpn->shape;
+  auto old_size = shape[0].as<IntImmNode>()->value;
+  CHECK(old_size % size == 0);
+  auto new_size = old_size / size;
+  shape.Set(0, Integer(new_size));
+  return TensorType(shape, DataType(tpn->dtype));
+}
+
+RAF_OP_TYPE("raf.op._scatter", "NCCLScatter", CommScatterInfer);
+
 template <typename T>
 Type TensorIdentityType(const CallValues& value) {
   const auto* args = value->args.as<T>();

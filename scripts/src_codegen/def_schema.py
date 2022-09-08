@@ -754,6 +754,10 @@ SCHEMAS = {
         Arg(name="dtype", cxx_type="std::string", cxx_default='"float32"', py_default='"float32"'),
         Arg(name="token", cxx_type=OptionalTensor, cxx_default="nullptr", py_default="None"),
     ],
+    "communication.h::gather_scatter": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="root", cxx_type="int"),
+    ],
     "transform.h::gather": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),
         Arg(name="axis", cxx_type="int"),
