@@ -7,7 +7,7 @@
  * \file ./src/op/from_relay/binary.cc
  * \brief Operators bridged from Relay.
  */
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "./from_relay_utils.h"
 
 namespace raf {

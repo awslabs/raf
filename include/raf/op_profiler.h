@@ -11,6 +11,7 @@
 
 #pragma once
 #include "raf/cache.h"
+#include "raf/ir_ext.h"
 #include "op.h"
 #include "op_utils.h"
 #include <unordered_map>

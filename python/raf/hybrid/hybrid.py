@@ -45,7 +45,7 @@ ARG_MAKERS = {
     float: Value.as_const_expr,
     bool: Value.as_const_expr,
     np.ndarray: Value.as_const_expr,
-    NDArray: None,  # TODO
+    NDArray: lambda x: x._ndarray__handle,  # pylint: disable=protected-access
 }
 
 

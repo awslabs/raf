@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include "raf/value.h"
+#include "raf/sharding.h"
 #include "./regs_utils.h"
 
 namespace raf {
@@ -41,7 +42,8 @@ inline value::Value ArrayLike(const value::Value& a) {
   if (a->IsInstance<IntValueObj>() || a->IsInstance<FloatValueObj>() ||
       a->IsInstance<BoolValueObj>() || a->IsInstance<BaseTensorValueObj>() ||
       a->IsInstance<TupleValueObj>() || a->IsInstance<VoidValueObj>() ||
-      a->IsInstance<OpValueObj>() || a->IsInstance<ClosureValueObj>()) {
+      a->IsInstance<OpValueObj>() || a->IsInstance<ClosureValueObj>() ||
+      a->IsInstance<sharding::BaseShardSpecObj>()) {
     return a;
   }
   LOG(FATAL) << "TypeError: In operator \"{op}\", argument \"{arg}\" of type \"" << a->GetTypeKey()

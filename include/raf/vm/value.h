@@ -8,7 +8,7 @@
  * \brief The values that are specific to VM.
  */
 #pragma once
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/memory_pool.h"
 #include "raf/value.h"
 

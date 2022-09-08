@@ -20,7 +20,7 @@
 #include "raf/device.h"
 #include "raf/op.h"
 #include "raf/enum_base.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/value.h"
 #include "raf/tensor.h"
 #include "raf/communicator.h"

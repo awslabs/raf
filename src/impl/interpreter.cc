@@ -8,7 +8,7 @@
  * \brief RAF interpreter, a naive implementation of executor
  */
 #include "raf/executor.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/memory_pool.h"
 #include "raf/op.h"
 #include "raf/pass.h"

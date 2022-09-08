@@ -19,7 +19,7 @@
 #include "relay/backend/te_compiler.h"
 #include "relay/backend/te_compiler_cache.h"
 #include "raf/cache.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/value.h"
 #include "raf/registry.h"
 #include "raf/op.h"

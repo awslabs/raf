@@ -18,7 +18,7 @@
 #include <utility>
 #include <vector>
 #include "raf/device.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/registry.h"
 #include "raf/vm/bytecode.h"
 #include "raf/vm/executable.h"

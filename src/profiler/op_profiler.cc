@@ -9,7 +9,7 @@
  */
 
 #include "raf/op_profiler.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "../op/dialect/tvm/tvm_utils.h"
 #include "../requests.h"
 #include <chrono>

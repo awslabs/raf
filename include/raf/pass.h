@@ -13,7 +13,7 @@
 #include "tvm/relay/analysis.h"
 #include "tvm/relay/dataflow_matcher.h"
 #include "tvm/relay/transform.h"
-#include "raf/ir.h"
+#include "raf/ir_ext.h"
 #include "raf/value.h"
 #include "raf/ir_ext.h"
 #include "raf/pass_manager.h"
