@@ -20,8 +20,6 @@ from raf.ir import ANFBuilder
     "comm_op,comm_args",
     [
         ["_allreduce", [raf.ir.const("sum")]],
-        ["_reduce", [raf.ir.const(0), raf.ir.const("sum")]],
-        ["_broadcast", [raf.ir.const(0)]],
     ],
 )
 @pytest.mark.parametrize("shape", [[128, 128], [64, 64], [32, 64, 128]])

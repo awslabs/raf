@@ -399,10 +399,6 @@ RAF_REGISTER_DIALECT_OP(nccl, _group_reduce_scatter, 10);
 RAF_OP_ENV_MAKER("raf.op.nccl._group_reduce_scatter", NCCLGroupReduceScatter::make);
 
 class NCCLBroadcast : public NCCLOpEnv {
-  void* fused_data;
-  size_t total_size = 0;
-  std::vector<size_t> tuple_sizes;
-  DType dtype;
   int root;
 
   explicit NCCLBroadcast(const CallValues& cv) : NCCLOpEnv(cv) {
@@ -411,18 +407,8 @@ class NCCLBroadcast : public NCCLOpEnv {
     this->arg_indices = {fschema_index[op]("x")};
     auto args = cv->args.as<raf::op::schema::BroadcastArgs>();
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-    RequestDistributed(&communicator, "nccl", NullValue<Value>());
-    auto& tv = args->x;
+    RequestDistributed(&communicator, "nccl", args->rank_list);
     root = args->root;
-    for (int i = 0; i < tv.size(); ++i) {
-      DLTensor* x = tv[i];
-      size_t size = BytesCompactTensor(*x);
-      tuple_sizes.push_back(size);
-      total_size += size;
-      dtype = x->dtype;
-    }
-    if (tv.size() == 1) return;
-    RequestWorkspace(&fused_data, cv->device, total_size);
   }
 
  public:
@@ -436,48 +422,18 @@ class NCCLBroadcast : public NCCLOpEnv {
 
   void Execute(const CallValues& cv) override {
     auto args = cv->args.as<raf::op::schema::BroadcastArgs>();
-    Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
+    Execute({args->x}, cv->out);
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) {
     auto comm_ref = GetRef<Communicator>(reinterpret_cast<CommunicatorObj*>(communicator));
     ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(comm_ref)->nccl_comm;
-    auto tv = Downcast<value::TupleValue>(inputs[0]);
-    size_t dtype_size = 0;
-    if (tv->fields.size() == 1) {
-      DLTensor* x = tv->fields[0];
-      DLTensor* out = output;
-      dtype_size = GetSizeInBytes(x->dtype);
-      NCCL_CALL(ncclBroadcast(x->data, out->data, total_size / dtype_size, dtype, root, nccl_comm,
-                              (cudaStream_t)stream));
-      return;
-    }
-
-    size_t offset = 0;
-    for (int i = 0; i < tv->fields.size(); ++i) {
-      DLTensor* x = tv->fields[i];
-      void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
-      cudaMemcpyAsync(buffer_data_at_offset, x->data, tuple_sizes[i], cudaMemcpyDeviceToDevice,
-                      (cudaStream_t)stream);
-      offset += tuple_sizes[i];
-      CHECK(dtype_size == 0 || dtype_size == GetSizeInBytes(x->dtype))
-          << "Broadcast requires tensors to be the same type.";
-      dtype_size = GetSizeInBytes(x->dtype);
-    }
-
-    NCCL_CALL(ncclBroadcast(fused_data, fused_data, total_size / dtype_size, dtype, root, nccl_comm,
-                            (cudaStream_t)stream));
-
-    // UnFuse Tensor
-    value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(output);
-    auto& of = out->fields;
-    for (int i = of.size() - 1; i >= 0; --i) {
-      DLTensor* x = of[i];
-      offset -= tuple_sizes[i];
-      void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
-      cudaMemcpyAsync(x->data, buffer_data_at_offset, tuple_sizes[i], cudaMemcpyDeviceToDevice,
-                      (cudaStream_t)stream);
-    }
+    const DLTensor* x = inputs[0];
+    DLTensor* out = output;
+    size_t total_size = BytesCompactTensor(*x);
+    size_t dtype_size = GetSizeInBytes(x->dtype);
+    NCCL_CALL(ncclBroadcast(x->data, out->data, total_size / dtype_size, DType(x->dtype), root,
+                            nccl_comm, (cudaStream_t)stream));
   }
 
   static OpEnv* make(const CallValues& cv) {
@@ -658,18 +614,14 @@ class NCCLReduce : public NCCLOpEnv {
   void* communicator;
   ncclRedOp_t compute;
   int root;
-  DType dtype;
-  size_t total_size = 0;
-  std::vector<size_t> tuple_sizes;
-  void* fused_data;
 
   explicit NCCLReduce(const CallValues& cv) : NCCLOpEnv(cv) {
     auto op = ir::Op::Get("raf.op._reduce");
     auto fschema_index = ir::Op::GetAttrMap<op::FRAFSchemaFieldIndex>("FRAFSchemaFieldIndex");
     this->arg_indices = {fschema_index[op]("x")};
     RequestStream(&stream, cv->device, StreamTagEnum::CudaCommunicate());
-    RequestDistributed(&communicator, "nccl", NullValue<Value>());
     auto args = cv->args.as<raf::op::schema::CommReduceArgs>();
+    RequestDistributed(&communicator, "nccl", args->rank_list);
     root = args->root;
     if (args->computation.compare("sum") == 0) {
       compute = ncclSum;
@@ -688,18 +640,6 @@ class NCCLReduce : public NCCLOpEnv {
     } else {
       LOG(FATAL) << "Invalid computation " << args->computation;
     }
-
-    auto& tv = args->x;
-    for (int i = 0; i < tv.size(); ++i) {
-      DLTensor* x = tv[i];
-      size_t size = BytesCompactTensor(*x);
-      tuple_sizes.push_back(size);
-      total_size += size;
-      dtype = x->dtype;
-    }
-    if (tv.size() >= 1) {
-      RequestWorkspace(&fused_data, cv->device, total_size);
-    }
   }
 
  public:
@@ -712,46 +652,18 @@ class NCCLReduce : public NCCLOpEnv {
 
   void Execute(const CallValues& cv) override {
     auto args = cv->args.as<raf::op::schema::CommReduceArgs>();
-    Execute({TupleValue::make(ir::Array<Value>(args->x.begin(), args->x.end()))}, cv->out);
+    Execute({args->x}, cv->out);
   }
 
   void Execute(const std::vector<value::Value>& inputs, value::Value output) override {
     auto comm_ref = GetRef<Communicator>(reinterpret_cast<CommunicatorObj*>(communicator));
     ncclComm_t nccl_comm = Downcast<NCCLCommunicator>(comm_ref)->nccl_comm;
-    auto input_x = Downcast<value::TupleValue>(inputs[0]);
-    size_t dtype_size = 0;
-    if (input_x->fields.size() == 1) {
-      DLTensor* x = input_x->fields[0];
-      DLTensor* out = output;
-      dtype_size = GetSizeInBytes(x->dtype);
-
-      size_t dtype_size = GetSizeInBytes(x->dtype);
-      NCCL_CALL(ncclReduce(x->data, out->data, total_size / dtype_size, dtype, compute, root,
-                           nccl_comm, (cudaStream_t)stream));
-    } else {
-      size_t offset = 0;
-      for (int i = 0; i < input_x->fields.size(); ++i) {
-        DLTensor* x = input_x->fields[i];
-        void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
-        cudaMemcpyAsync(buffer_data_at_offset, x->data, tuple_sizes[i], cudaMemcpyDeviceToDevice,
-                        (cudaStream_t)stream);
-        offset += tuple_sizes[i];
-        dtype_size = GetSizeInBytes(x->dtype);
-      }
-
-      NCCL_CALL(ncclReduce(fused_data, fused_data, total_size / dtype_size, dtype, compute, root,
-                           nccl_comm, (cudaStream_t)stream));
-      // UnFuse Tensor
-      value::TupleValue out = tvm::runtime::Downcast<value::TupleValue>(output);
-      auto& of = out->fields;
-      for (int i = of.size() - 1; i >= 0; --i) {
-        DLTensor* x = of[i];
-        offset -= tuple_sizes[i];
-        void* buffer_data_at_offset = reinterpret_cast<uint8_t*>(fused_data) + offset;
-        cudaMemcpyAsync(x->data, buffer_data_at_offset, tuple_sizes[i], cudaMemcpyDeviceToDevice,
-                        (cudaStream_t)stream);
-      }
-    }
+    const DLTensor* x = inputs[0];
+    DLTensor* out = output;
+    size_t total_size = BytesCompactTensor(*x);
+    size_t dtype_size = GetSizeInBytes(x->dtype);
+    NCCL_CALL(ncclReduce(x->data, out->data, total_size / dtype_size, DType(x->dtype), compute,
+                         root, nccl_comm, (cudaStream_t)stream));
   }
 
   static OpEnv* make(const CallValues& cv) {

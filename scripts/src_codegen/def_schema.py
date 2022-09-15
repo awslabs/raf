@@ -702,9 +702,10 @@ SCHEMAS = {
         Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
     "communication.h::comm_reduce": [
-        Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="root", cxx_type="int"),
         Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
+        Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
     "communication.h::allgather": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
@@ -736,8 +737,9 @@ SCHEMAS = {
         Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
     ],
     "communication.h::broadcast": [
-        Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="root", cxx_type="int"),
+        Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
     "communication.h::all_to_all": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),

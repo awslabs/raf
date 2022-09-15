@@ -526,69 +526,54 @@ def test_reduce(computation):
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.parametrize("rank_list", [[0], [0, 1]])
 @pytest.mark.parametrize("computation", ["sum", "prod", "min", "max", "avg"])
-def test_reduce_list(computation):
-    """Testing reduce with list of tensor"""
+def test_reduce_with_rank_list(computation, rank_list):
+    """Testing reduce with rank list"""
 
     class TestModel(raf.Model):
         def build(self):
             pass
 
         @raf.model.trace
-        def forward(self, x1, x2):
-            x = raf.reduce([x1, x2], 0, computation=computation)
-            a = x[0]
-            b = x[1]
-            return raf.concatenate((a, b))
+        def forward(self, x):
+            x = raf.reduce(x, 0, computation=computation, rank_list=rank_list)
+            return x
 
     if computation == "avg" and raf.build.with_nccl() < 21000:
         pytest.skip("avg is not supported in NCCL < 2.10")
     model = TestModel()
-    total_rank, rank, local_rank = get_dist_comm_info(verbose=True)
+    _, rank, local_rank = get_dist_comm_info(verbose=True)
+    total_rank = len(rank_list)
     device = f"cuda({local_rank})"
-    x1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
-    x2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
-    x1 = raf.array(x1, device=device)
-    x2 = raf.array(x2, device=device)
-    vx1 = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
-    vx2 = np.ones(shape=(4, 4), dtype="float32") * (-rank - 1)
-    vx1 = raf.array(vx1, device=device)
-    vx2 = raf.array(vx2, device=device)
-    run_vm_model(model, device, [vx1, vx2])
+    x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    x = raf.array(x, device=device)
     if rank == 0:
-        print(f"{rank} - X: ", [x1, x2])
+        print(f"{rank} - X: ", x)
     model.to(device=device)
-    y = run_model(model, [x1, x2], device)
+    y = model(x)
+    vx = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    vx = raf.array(vx, device=device)
+    vy = run_vm_model(model, device, [vx])
     if rank == 0:
         ones = np.ones(shape=(4, 4), dtype="float32")
         if computation == "sum":
-            target_y = np.concatenate(
-                [ones * sum(range(1, total_rank + 1)), ones * -sum(range(1, total_rank + 1))]
-            )
+            target_y = ones * sum(range(1, total_rank + 1))
         elif computation == "prod":
-            sign = 1 if total_rank % 2 == 0 else -1
-            target_y = np.concatenate(
-                [
-                    ones * np.prod(range(1, total_rank + 1)),
-                    ones * sign * np.prod(range(1, total_rank + 1)),
-                ]
-            )
+            target_y = ones * np.prod(range(1, total_rank + 1))
         elif computation == "min":
-            target_y = np.concatenate([ones, ones * -total_rank])
+            target_y = ones
         elif computation == "max":
-            target_y = np.concatenate([ones * total_rank, ones * -1])
+            target_y = ones * total_rank
         elif computation == "avg":
-            target_y = np.concatenate(
-                [ones * sum(range(1, total_rank + 1)), ones * -sum(range(1, total_rank + 1))]
-            )
+            target_y = ones * sum(range(1, total_rank + 1))
             target_y = target_y / total_rank
         else:
             assert False, "Invalid computation"
         print(f"{rank} - Y: ", y)
         print(f"{rank} - T: ", target_y)
         check(y, target_y)
-        vy = np.concatenate([vx1.numpy(), vx2.numpy()])
-        check(vy, target_y)
+        check(y, vy)
 
 
 @pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
@@ -597,15 +582,15 @@ def test_broadcast():
 
     # pylint: disable=attribute-defined-outside-init
     class TestModel(raf.Model):
-        def build(self, root):
-            self.root = root
+        def build(self):
+            pass
 
         @raf.model.trace
         def forward(self, x):
-            res = raf.broadcast(x, self.root)
+            res = raf.broadcast(x, 0)
             return res
 
-    model = TestModel(root=0)
+    model = TestModel()
     _, rank, local_rank = get_dist_comm_info(verbose=True)
     device = f"cuda({local_rank})"
     x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
@@ -617,6 +602,35 @@ def test_broadcast():
     target_y = np.ones(shape=(4, 4), dtype="float32")  # rank 0's data
     print(f"{rank} - Y: ", y)
     print(f"{rank} - T: ", target_y)
+    check(y, target_y)
+
+
+@pytest.mark.skipif(skip_dist_test(min_rank_num=2), reason=SKIP_REASON)
+@pytest.mark.parametrize("rank_list", [[0, 1], [0]])
+def test_broadcast_with_rank_list(rank_list):
+    """Testing broadcast with a 1d group as tensor list."""
+
+    class TestModel(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x):
+            res = raf.broadcast(x, 0, rank_list=rank_list)
+            return res
+
+    model = TestModel()
+    _, rank, local_rank = get_dist_comm_info(verbose=True)
+    device = f"cuda({local_rank})"
+    x = np.ones(shape=(4, 4), dtype="float32") * (rank + 1)
+    x = raf.array(x, device=device)
+    model.to(device=device)
+    y = run_model(model, [x], device)
+
+    if rank in rank_list:
+        target_y = np.ones(shape=(4, 4), dtype="float32")
+    else:
+        target_y = x
     check(y, target_y)
 
 
