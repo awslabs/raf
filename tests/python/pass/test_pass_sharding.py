@@ -2,9 +2,25 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # pylint: disable=missing-function-docstring, missing-class-docstring, invalid-name, protected-access
+import raf
 import pytest
+import numpy as np
+from raf.distributed.sharding import (
+    ShardSpec,
+    BaseShardSpec,
+    ShardOpCallAttrs,
+)
+from raf._ffi.pass_ import (
+    AnnotateShardOpCall,
+    ToGraphNormalForm,
+    ExpandShardOpCall,
+    InferType,
+    InferShardSpec,
+)
+from raf._lib import relay
 from raf.distributed.sharding import make_replicated_spec, make_shard_spec, make_unset_spec
 from tvm.ir import structural_equal
+from tvm.relay.analysis.analysis import post_order_visit
 
 
 def test_shardspec():
@@ -32,5 +48,57 @@ def test_shardspec():
     assert not structural_equal(a, i)
 
 
+def test_infer_hint_with_reshard():
+    class Model(raf.Model):
+        def build(self):
+            pass
+
+        @raf.model.trace
+        def forward(self, x, y):
+            z = raf.add(x, y)
+            a = raf.relu(z)
+            return a
+
+    model = Model()
+    m_x = raf.array(np.arange(16, dtype="float").reshape((4, 4)))
+    m_y = raf.array(np.zeros(16, dtype="float").reshape((4, 4)))
+    record = model._internal(m_x, m_y)
+    mod_before = record.mod
+    mod_before = InferType()(mod_before)
+
+    print(m_x)
+    call_list = []
+    post_order_visit(
+        mod_before["main"].body,
+        lambda op: call_list.append(op) if isinstance(op, relay.Call) else None,
+    )
+
+    spec = make_shard_spec([2, 2], [1, 2], 4, mutable=False)
+
+    attrs_map = {
+        call_list[0]: ShardOpCallAttrs([make_unset_spec(), make_unset_spec()], [make_unset_spec()]),
+        call_list[1]: ShardOpCallAttrs([make_unset_spec()], [spec]),
+    }
+
+    mod0 = AnnotateShardOpCall(attrs_map)(mod_before)
+    mod1 = ToGraphNormalForm()(mod0)
+    mod2 = InferType()(mod1)
+    print("after 1st infer type")
+    print(raf._ffi.ir.AsText(mod2))
+
+    mod3 = InferShardSpec()(mod2)
+    print("after infer shard spec")
+    print(raf._ffi.ir.AsText(mod3))
+
+    mod4 = InferType()(mod3)
+    print("after 2nd infer type")
+    print(raf._ffi.ir.AsText(mod4))
+
+    mod5 = ExpandShardOpCall()(mod4)
+    print("after expand shard opcall")
+    print(raf._ffi.ir.AsText(mod5))
+
+
 if __name__ == "__main__":
-    pytest.main([__file__])
+    test_infer_hint_with_reshard()
+    # pytest.main([__file__])

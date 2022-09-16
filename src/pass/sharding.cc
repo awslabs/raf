@@ -32,15 +32,14 @@ class ShardOpCallAttrsSetter : public ExprMutator {
   }
 
   Expr VisitExpr_(const CallNode* node) override {
-    const Expr& callee = node->op;
-    if (callee->IsInstance<OpNode>()) {
-      auto ref = GetRef<Expr>(node);
-      if (_attrs_map.count(ref)) {
-        auto new_expr = Call(node->op, node->args, Attrs(_attrs_map[ref]));
-        return ExprMutator::VisitExpr_(new_expr.as<CallNode>());
+    Call call = Downcast<Call>(ExprMutator::VisitExpr_(node));
+    const Expr& op = call->op;
+    if (op->IsInstance<OpNode>()) {
+      if (_attrs_map.count(call)) {
+        return Call(node->op, node->args, Attrs(_attrs_map[call]));
       }
     }
-    return ExprMutator::VisitExpr_(node);
+    return call;
   }
 
  private:
@@ -50,15 +49,17 @@ class ShardOpCallAttrsSetter : public ExprMutator {
 class ShardOpCallExpander : public ExprMutator {
  public:
   Expr VisitExpr_(const CallNode* node) override {
-    const Expr& op = node->op;
-    const Attrs& attrs = node->attrs;
+    Call call = Downcast<Call>(ExprMutator::VisitExpr_(node));
+    const Expr& op = call->op;
+    const Attrs& attrs = call->attrs;
     const auto* f = tvm::runtime::Registry::Get("raf.sharding._match_expansion_rule");
     if (attrs.defined() && op->IsInstance<OpNode>() && attrs->IsInstance<ShardOpCallAttrs>()) {
-      auto call = GetRef<Call>(node);
+      LOG(INFO) << op << " " << call->op;
+
       Expr new_expr = (*f)(call);
       return new_expr;
     }
-    return ExprMutator::VisitExpr_(node);
+    return call;
   }
 };
 
