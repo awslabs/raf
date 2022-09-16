@@ -53,24 +53,12 @@ RAF_OP_DECLARE("raf.op._allreduce", AllReduce)
 void Reduce(const CallValues& call) {
   const auto* args = call->args.as<CommReduceArgs>();
   CHECK(args != nullptr);
-  ir::Array<Value> ret;
-  auto& tv = args->x;
-  const DLTensor* x = tv[0];
+  const DLTensor* x = args->x;
   call->device = x->device;
-  for (int i = 0; i < tv.size(); ++i) {
-    const DLTensor* x = tv[i];
-    std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-    ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
-                                        /*dtype=*/x->dtype,
-                                        /*shape=*/shape));
-  }
-  if (ret.size() == 0) {
-    call->callee = ir::NullValue<OpValue>();
-  } else if (ret.size() == 1) {
-    call->out = ret[0];
-  } else {
-    call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
-  }
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
 }
 
 RAF_OP_DECLARE("raf.op._reduce", Reduce)
@@ -172,23 +160,12 @@ RAF_OP_DECLARE("raf.op._group_reduce_scatter", GroupReduceScatter)
 void Broadcast(const CallValues& call) {
   const auto* args = call->args.as<BroadcastArgs>();
   CHECK(args != nullptr);
-  ir::Array<Value> ret;
-  auto& tv = args->x;
-  for (int i = 0; i < tv.size(); ++i) {
-    const DLTensor* x = tv[i];
-    std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
-    ret.push_back(TensorValue::Assemble(/*dev=*/x->device,
-                                        /*dtype=*/x->dtype,
-                                        /*shape=*/shape));
-  }
-  if (ret.size() == 0) call->callee = ir::NullValue<OpValue>();
-  const DLTensor* x = tv[0];
+  const DLTensor* x = args->x;
   call->device = x->device;
-  if (ret.size() == 1) {
-    call->out = ret[0];
-  } else {
-    call->out = TupleValue::make(ir::Array<Value>(ret.begin(), ret.end()));
-  }
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  call->out = TensorValue::Assemble(/*dev=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
 }
 
 RAF_OP_DECLARE("raf.op._broadcast", Broadcast)
@@ -245,6 +222,37 @@ void Recv(const CallValues& call) {
 RAF_OP_DECLARE("raf.op._recv", Recv)
     .set_attr<TOpPattern>("TOpPattern", kOpaque)
     .set_attr<TRAFCollective>("TRAFCollective", true);
+
+void Gather(const CallValues& call) {
+  const auto* args = call->args.as<GatherScatterArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  call->device = x->device;
+  size_t size = GetGlobalCommunicator()->size;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  shape[0] = shape[0] * size;
+  call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+}
+
+RAF_OP_DECLARE("raf.op._gather", Gather).set_attr<TRAFCollective>("TRAFCollective", true);
+
+void Scatter(const CallValues& call) {
+  const auto* args = call->args.as<GatherScatterArgs>();
+  CHECK(args != nullptr);
+  const DLTensor* x = args->x;
+  size_t size = GetGlobalCommunicator()->size;
+  std::vector<int64_t> shape(x->shape, x->shape + x->ndim);
+  CHECK(shape[0] % size == 0);
+  call->device = x->device;
+  shape[0] = shape[0] / size;
+  call->out = TensorValue::Assemble(/*ctx=*/x->device,
+                                    /*dtype=*/x->dtype,
+                                    /*shape=*/shape);
+}
+
+RAF_OP_DECLARE("raf.op._scatter", Scatter).set_attr<TRAFCollective>("TRAFCollective", true);
 
 }  // namespace declare
 }  // namespace op

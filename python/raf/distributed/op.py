@@ -107,26 +107,30 @@ def group_allgather(tensor_list, axis, out):
     return sym._group_allgather(tensor_list, axis, out)
 
 
-def reduce(x, root, computation="sum"):
+def reduce(x, root, computation="sum", rank_list=None):
     """Performs reduce operation. Collect data to root rank
 
     Parameters
     ----------
-    x : Tensor or list of Tensor
-        Tensor(s) to be reduced
+    x : Tensor
+        Tensor to be reduced
     root: int
         The root rank
     computation: string
         The reduction operation, default is sum
+    rank_list: List[int]
+        The list of ranks to reduce
 
     Returns
     -------
     ret: Tensor
         reduction result
     """
-    if not isinstance(x, (tuple, list)):
-        x = [x]
-    return sym._reduce(x, root, computation)
+    if rank_list is not None:
+        assert root in rank_list, "Invalid root and rank_list"
+        rank_list = [rank_list]
+
+    return sym._reduce(x, root, computation, rank_list)
 
 
 def reduce_scatter(x, computation="sum", rank_list=None):
@@ -199,24 +203,28 @@ def group_reduce_scatter(tensor_list, computation="sum"):
     return sym._group_reduce_scatter(tensor_list, computation)
 
 
-def broadcast(x, root):
+def broadcast(x, root, rank_list=None):
     """Performs broadcast
 
     Parameters
     ----------
-    x : List[Tensor]
-        A list of tensors on rank root to broadcast
+    x : Tensor
+        A tensor on rank root to broadcast
     root : int
         root rank
+    rank_list : List[int]
+        The list of ranks to broadcast
 
     Returns
     -------
-    ret: List[Tensor]
+    ret: Tensor
         broadcast-ed results
     """
-    if not isinstance(x, (tuple, list)):
-        x = [x]
-    return sym._broadcast(x, root)
+    if rank_list is not None:
+        assert root in rank_list, "Invalid root and rank_list"
+        rank_list = [rank_list]
+
+    return sym._broadcast(x, root, rank_list)
 
 
 def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None):
@@ -274,6 +282,46 @@ def all_to_all(x, split_axis=0, concat_axis=0, rank_list=None):
     y = sym.concatenate(y, axis=concat_axis)
 
     return y
+
+
+def gather(x, root):
+    """Performs a gather communication across all ranks.
+
+    Parameters
+    ----------
+    x : Tensor
+        The tensor to be gathered. Tensors from each rank should be
+        of the same shape.
+    root : int
+        The root rank.
+
+    Returns
+    ----------
+    ret : Tensor
+    """
+    assert not isinstance(x, (tuple, list)), "Invalid Input Type"
+
+    out = sym._gather(x, root)
+    return out
+
+
+def scatter(x, root):
+    """Performs a scatter communication across all ranks.
+
+    Parameters
+    ----------
+    x : Tensor
+        The tensor to be scattered.
+    root : int
+        The root rank.
+
+    Returns
+    ----------
+    ret : Tensor
+    """
+    assert not isinstance(x, (tuple, list)), "Invalid Input Type"
+
+    return sym._scatter(x, root)
 
 
 def send(x, peer, token=None):

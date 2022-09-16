@@ -702,9 +702,10 @@ SCHEMAS = {
         Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
     "communication.h::comm_reduce": [
-        Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="root", cxx_type="int"),
         Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
+        Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
     "communication.h::allgather": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
@@ -736,8 +737,9 @@ SCHEMAS = {
         Arg(name="computation", cxx_type="std::string", cxx_default='"sum"', py_default='"sum"'),
     ],
     "communication.h::broadcast": [
-        Arg(name="x", cxx_type="std::vector<value::BaseTensorValue>", cxx_normalizer="TensorTuple"),
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
         Arg(name="root", cxx_type="int"),
+        Arg(name="rank_list", cxx_type="value::Value", cxx_default="nullptr"),
     ],
     "communication.h::all_to_all": [
         Arg(name="x", cxx_type="value::BaseTensorValue"),
@@ -753,6 +755,10 @@ SCHEMAS = {
         Arg(name="shape", cxx_type="std::vector<int64_t>", cxx_normalizer="IntTuple"),
         Arg(name="dtype", cxx_type="std::string", cxx_default='"float32"', py_default='"float32"'),
         Arg(name="token", cxx_type=OptionalTensor, cxx_default="nullptr", py_default="None"),
+    ],
+    "communication.h::gather_scatter": [
+        Arg(name="x", cxx_type="value::BaseTensorValue"),
+        Arg(name="root", cxx_type="int"),
     ],
     "transform.h::gather": [
         Arg(name="data", cxx_type="value::BaseTensorValue"),
