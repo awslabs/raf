@@ -47,6 +47,7 @@ def test_shardspec():
     i = make_shard_spec([4], ranks=4, mutable=False)
     assert not structural_equal(a, i)
 
+
 def test_infer_hint_without_prev_spec():
     class Model(raf.Model):
         def build(self):
@@ -74,8 +75,12 @@ def test_infer_hint_without_prev_spec():
     )
 
     attrs_map = {
-        call_list[1]: ShardOpCallAttrs([make_unset_spec()], [make_shard_spec([4, 1], ranks=4, mutable=False)]),
-        call_list[2]: ShardOpCallAttrs([make_unset_spec()], [make_replicated_spec(2, mutable=False)])
+        call_list[1]: ShardOpCallAttrs(
+            [make_unset_spec()], [make_shard_spec([4, 1], ranks=4, mutable=False)]
+        ),
+        call_list[2]: ShardOpCallAttrs(
+            [make_unset_spec()], [make_replicated_spec(2, mutable=False)]
+        ),
     }
 
     mod0 = AnnotateShardOpCall(attrs_map)(mod_before)
@@ -95,6 +100,7 @@ def test_infer_hint_without_prev_spec():
     mod5 = ExpandShardOpCall()(mod4)
     print("after expand shard opcall")
     print(raf._ffi.ir.AsText(mod5))
+
 
 def test_infer_hint_inserting_reshard():
     class Model(raf.Model):

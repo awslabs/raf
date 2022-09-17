@@ -76,7 +76,7 @@ class ShardSpecPropagator : public ExprMutator {
       Call new_opcall = (*f)(call);
       return new_opcall;
     }
-    
+
     return call;
   }
 };

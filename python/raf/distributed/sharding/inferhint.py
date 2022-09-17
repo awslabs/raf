@@ -91,12 +91,8 @@ def infer_shardspec(call: relay.Call):
     # Step 3: Check the solution is practicable
     ninputs = len(s.sin)
     noutputs = len(s.sout)
-    immut_in_idx = [
-        i for i in range(ninputs) if is_sharded(s.sin[i]) and not s.sin[i].mutable
-    ]
-    immut_out_idx = [
-        i for i in range(noutputs) if is_sharded(s.sout[i]) and not s.sout[i].mutable
-    ]
+    immut_in_idx = [i for i in range(ninputs) if is_sharded(s.sin[i]) and not s.sin[i].mutable]
+    immut_out_idx = [i for i in range(noutputs) if is_sharded(s.sout[i]) and not s.sout[i].mutable]
 
     possible_calls = []
     for filled_call in filled_calls:
