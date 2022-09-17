@@ -49,17 +49,17 @@ class ShardOpCallAttrsSetter : public ExprMutator {
 class ShardOpCallExpander : public ExprMutator {
  public:
   Expr VisitExpr_(const CallNode* node) override {
-    Call call = Downcast<Call>(ExprMutator::VisitExpr_(node));
+    Call call = GetRef<Call>(node);
     const Expr& op = call->op;
     const Attrs& attrs = call->attrs;
     const auto* f = tvm::runtime::Registry::Get("raf.sharding._match_expansion_rule");
-    if (attrs.defined() && op->IsInstance<OpNode>() && attrs->IsInstance<ShardOpCallAttrs>()) {
-      LOG(INFO) << op << " " << call->op;
 
-      Expr new_expr = (*f)(call);
-      return new_expr;
+    if (attrs.defined() && op->IsInstance<OpNode>() && attrs->IsInstance<ShardOpCallAttrs>()) {
+      Call new_opcall = (*f)(call);
+      return ExprMutator::VisitExpr_(new_opcall.as<CallNode>());
     }
-    return call;
+
+    return ExprMutator::VisitExpr_(node);
   }
 };
 
@@ -71,12 +71,12 @@ class ShardSpecPropagator : public ExprMutator {
     const Attrs& attrs = call->attrs;
     const Array<Expr>& args = call->args;
     const auto* f = tvm::runtime::Registry::Get("raf.sharding._infer_shardspec");
-    if (attrs.defined() && op->IsInstance<OpNode>() && attrs->IsInstance<ShardOpCallAttrs>()) {
-      LOG(INFO) << op << " " << call->op;
 
-      Expr new_expr = (*f)(call);
-      return new_expr;
+    if (attrs.defined() && op->IsInstance<OpNode>() && attrs->IsInstance<ShardOpCallAttrs>()) {
+      Call new_opcall = (*f)(call);
+      return new_opcall;
     }
+    
     return call;
   }
 };

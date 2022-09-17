@@ -58,59 +58,61 @@ def infer_shardspec(call: relay.Call):
     s = ShardInfo(call)
 
     # Step 1: Inherit ShardSpec from previous output
-    filled_sin = []
+    inherit_sin = []
     for i in range(len(s.sin)):
         if isinstance(s.sin[i], UnsetShardSpec):
             if isinstance(s.args[i], relay.Call) and hasattr(s.args[i].attrs, "sin"):
                 # cannot use isinstance to check the type of OpCall Attrs
                 # direct inherit ShardSpec
                 prev_sinfo = ShardInfo(s.args[i])
-                filled_sin.append(prev_sinfo.sout[0])
+                inherit_sin.append(prev_sinfo.sout[0])
             else:
                 # the previous output doesn't have ShardSpec
                 ndim = len(s.args[0].checked_type.concrete_shape)
-                filled_sin.append(make_replicated_spec(ndim))
+                inherit_sin.append(make_replicated_spec(ndim))
 
         else:
             # already exist a specified ShardSpec
-            filled_sin.append(s.sin[i])
+            inherit_sin.append(s.sin[i])
 
-    filled_attrs = ShardOpCallAttrs(filled_sin, s.sout)
-    filled_call = relay.Call(s.op, s.args, filled_attrs)
-    filled_s = ShardInfo(filled_call)
+    inherit_attrs = ShardOpCallAttrs(inherit_sin, s.sout)
+    inherit_call = relay.Call(s.op, s.args, inherit_attrs)
+    inherit_s = ShardInfo(inherit_call)
 
-    # Step 2: Match an InferHint
-    guessed_calls = []
+    # Step 2: Match InferHints
+    filled_calls = []
     for rule in rules.queue:
         _, _, cond, irgen = rule
-        if cond(filled_s):
-            guessed_calls.extend([relay.Call(s.op, s.args, a) for a in irgen(filled_s)])
-    if not guessed_calls:
+        if cond(inherit_s):
+            filled_calls.extend([relay.Call(s.op, s.args, a) for a in irgen(inherit_s)])
+    if not filled_calls:
         raise ValueError("Failed to match an InferHint")
 
     # Step 3: Check the solution is practicable
-    ninputs = len(filled_s.sin)
-    noutputs = len(filled_s.sout)
+    ninputs = len(s.sin)
+    noutputs = len(s.sout)
     immut_in_idx = [
-        i for i in range(ninputs) if is_sharded(filled_s.sin[i]) and not filled_s.sin[i].mutable
+        i for i in range(ninputs) if is_sharded(s.sin[i]) and not s.sin[i].mutable
     ]
     immut_out_idx = [
-        i for i in range(noutputs) if is_sharded(filled_s.sout[i]) and not filled_s.sout[i].mutable
+        i for i in range(noutputs) if is_sharded(s.sout[i]) and not s.sout[i].mutable
     ]
 
     possible_calls = []
-    for guessed_call in guessed_calls:
-        if not expand_opcall(guessed_call):
+    for filled_call in filled_calls:
+        if not expand_opcall(filled_call):
+            # there doesn't exist a expansion rule that accepts this sharding solution
             continue
-        guessed_s = ShardInfo(guessed_call)
-        immut_args = [(filled_s.sin[i], guessed_s.sin[i]) for i in immut_in_idx] + [
-            (filled_s.sout[i], guessed_s.sout[i]) for i in immut_out_idx
+        filled_s = ShardInfo(filled_call)
+        immut_args = [(inherit_s.sin[i], filled_s.sin[i]) for i in immut_in_idx] + [
+            (inherit_s.sout[i], filled_s.sout[i]) for i in immut_out_idx
         ]
         for pair in immut_args:
             if not is_same_spec(pair[0], pair[1]):
+                # violate immutable flag
                 break
         else:
-            possible_calls.append(guessed_call)
+            possible_calls.append(filled_call)
 
     # Step 4: Pick an OpCall with full ShardSpec
     # TODO: should use graph searching algorithm with cost map here.
@@ -118,21 +120,21 @@ def infer_shardspec(call: relay.Call):
     inferred_call = possible_calls[0]
     inferred_s = ShardInfo(inferred_call)
 
-    # Step 5: Insert Reshard OpCall
+    # Step 5: Insert Reshard OpCalls
     resharded_args = []
     for i in range(ninputs):
-        if is_same_spec(filled_s.sin[i], inferred_s.sin[i]):
+        if is_same_spec(inherit_s.sin[i], inferred_s.sin[i]):
             resharded_args.append(inferred_s.args[i])
         else:
             resharded_args.append(
                 relay.Call(
                     GetOp("raf.op._reshard"),
                     [inferred_s.args[i]],
-                    ShardOpCallAttrs([filled_s.sin[i]], [inferred_s.sin[i]]),
+                    ShardOpCallAttrs([inherit_s.sin[i]], [inferred_s.sin[i]]),
                 )
             )
 
-    print("[Sharding Infer] %s %s ### %s" % (filled_s.op, inferred_s.attrs, filled_s.attrs))
+    print("[Sharding Infer] %s %s ### %s" % (inherit_s.op, inferred_s.attrs, inherit_s.attrs))
     return relay.Call(inferred_s.op, resharded_args, inferred_s.attrs)
 
 

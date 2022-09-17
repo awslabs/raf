@@ -200,7 +200,7 @@ def reshard_sharded_to_replicated(s: ShardInfo):
     axis = []
     full_shape = []
     for i in range(spec.ndim):
-        if spec.logic_shape[i] > 0:
+        if spec.logic_shape[i] > 1:
             axis.append(i)
         full_shape.append(int(spec.logic_shape[i]))
         full_shape.append(int(spec.subgroup_shape[i]))
