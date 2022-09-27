@@ -48,6 +48,12 @@ class ShardOpCallAttrsSetter : public ExprMutator {
 
 class ShardOpCallExpander : public ExprMutator {
  public:
+  Expr VisitExpr_(const FunctionNode* node) override {
+    // remove inferred function return type as IR has changed
+    Expr new_body = VisitExpr(node->body);
+    return Function(node->params, new_body, {}, {});
+  }
+
   Expr VisitExpr_(const CallNode* node) override {
     Call call = GetRef<Call>(node);
     const Expr& op = call->op;

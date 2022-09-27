@@ -13,8 +13,12 @@ import tvm
 
 from raf._ffi.op import GetOp
 from raf._lib import _register_func, relay
-from raf.distributed.sharding.shardspec import BaseShardSpec, ShardSpec
-from tvm.relay import Expr
+from raf.distributed.sharding import (
+    ShardSpec,
+    BaseShardSpec,
+    ShardOpCallAttrs,
+)
+from tvm.relay import Call, Expr
 from tvm.ir import Op
 from tvm.runtime.object import Object
 
@@ -50,6 +54,20 @@ class ShardInfo:
         self.sin = call.attrs.sin
         self.sout = call.attrs.sout
 
+    def make_updated(self, op=None, args=None, sin=None, sout=None, attrs=None):
+        # pylint: disable=too-many-arguments
+        """Make a new ShardInfo based on this ShardInfo with a few fields modified"""
+        op = op if op else self.op
+        args = args if args else self.args
+        if sin or sout:
+            sin = sin if sin else self.sin
+            sout = sout if sout else self.sout
+            attrs = ShardOpCallAttrs(sin, sout)
+        elif not attrs:
+            attrs = self.attrs
+        call = Call(op, args, attrs)
+        return ShardInfo(call)
+
 
 def all_satisfied(conds: List[Callable[[ShardInfo], bool]]):
     """Return true when all conditions are satisfied."""
@@ -63,11 +81,28 @@ def all_satisfied(conds: List[Callable[[ShardInfo], bool]]):
     return func
 
 
-def is_same_spec(*args):
-    """Check whether two ShardSpecs are same."""
+def is_exact_same_spec(*args):
+    """Check whether two ShardSpecs are exact same."""
     for e in args[1:]:
         if not tvm.ir.structural_equal(args[0], e):
             return False
+    return True
+
+
+def is_same_spec(*args):
+    """Check whether two ShardSpecs are same except Mutable Attr."""
+    if is_sharded(args[0]):
+        for e in args[1:]:
+            if not is_sharded(e):
+                return False
+            if not tvm.ir.structural_equal(args[0].ranks, e.ranks):
+                return False
+            if not tvm.ir.structural_equal(args[0].phy_shape, e.phy_shape):
+                return False
+            if not tvm.ir.structural_equal(args[0].subgroup_shape, e.subgroup_shape):
+                return False
+    else:
+        return is_exact_same_spec(*args)
     return True
 
 
