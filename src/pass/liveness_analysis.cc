@@ -103,6 +103,18 @@ MapVSet LivenessAnalyzer::Run() {
   return live_;
 }
 
+void LivenessAnalyzer::FormChecker::VisitExpr_(const LetNode* node) {
+  auto pre_visit = [this](const LetNode* node) {
+    this->VisitExpr(node->var);
+    this->VisitExpr(node->value);
+  };
+  auto post_visit = [this](const LetNode* node) {
+    this->VisitExpr(node->body);
+    this->visit_counter_[node] += 1;  // avoid call nestedly
+  };
+  ExpandANormalForm(node, pre_visit, post_visit);
+}
+
 void LivenessAnalyzer::FormChecker::VisitExpr_(const CallNode* node) {
   const Array<Expr>& args = node->args;
   Array<Var> vargs;
