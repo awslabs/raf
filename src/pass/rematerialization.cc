@@ -937,7 +937,7 @@ class Rematerializer::TensorAnalyzer : public ExprVisitor {
         }
       }
 
-      if (op.defined() && IsNonDeterministicOp(op) && IsCollectiveOp(op)) {
+      if (op.defined() && (IsNonDeterministicOp(op) || IsCollectiveOp(op))) {
         // Non-deterministic and collective ops cannot be recomputed
         compute_cost = std::numeric_limits<float>::max();
       } else if (profiler_) {
