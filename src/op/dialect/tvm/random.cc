@@ -32,12 +32,12 @@ std::vector<std::string> ThreefryGenerateSchemaArgNames(const op::CallValues& ca
 
 Attrs ThreefryGenerateSchema2Attrs(const ThreefryGenerateArgs* args) {
   auto attrs = make_object<ThreefryGenerateAttrs>();
-  std::vector<IndexExpr> shape;
+  Array<Integer> shape;
   shape.reserve(args->shape.size());
   for (size_t i = 0; i < args->shape.size(); ++i) {
-    shape.emplace_back(IntImm(ir::DataType::Int(32), args->shape[i]));
+    shape.push_back(IntImm(ir::DataType::Int(32), args->shape[i]));
   }
-  attrs->out_shape = Array<Integer>(shape.begin(), shape.end());
+  attrs->out_shape = shape;
   return Attrs(attrs);
 }
 
