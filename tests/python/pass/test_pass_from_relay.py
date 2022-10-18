@@ -599,7 +599,7 @@ def test_cast_n_cast_like(shape, itype, otype):
     r_var = raf.ir.var("x", shape=shape, dtype=itype)
     r_var2 = raf.ir.var("y", shape=shape, dtype=otype)
     r_func = _relay.Function(params=[r_var, r_var2], body=_relay.cast_like(r_var, r_var2))
-    check_from_relay(cast_like_model, r_func, [m_x, m_x_like])
+    check_from_relay(cast_like_model, r_func, [m_x, m_x_like], disabled_pass=["SimplifyExpr"])
 
 
 @pytest.mark.parametrize("dshape", [[10, 11, 12, 13]])
