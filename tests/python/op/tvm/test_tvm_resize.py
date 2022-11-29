@@ -53,9 +53,16 @@ def test_resize2d(device, params, method):
         params["to_shape"],
         params["infer_shape"],
     )
+    if layout == "NCHW" and method == "cubic":
+        pytest.skip(
+            "It takes too long to run this test since tvm 101e3a4. "
+            "See https://github.com/apache/tvm/issues/13508."
+        )
+
     # Skip float64 tests since it may not be supported by te.Gradient
     in_dtype = "float32"
     out_dtype = "float32"
+
     # PyTorch only support NCHW, so for NHWC, only compared the shape
     if layout == "NHWC":
         m_x, _ = randn_torch(
