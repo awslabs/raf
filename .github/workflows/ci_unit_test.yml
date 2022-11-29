@@ -244,7 +244,7 @@ jobs:
                 "${{ needs.test_on_gpu.result }}" == "success" &&
                 "${{ needs.test_on_multi_gpu.result }}" == "success" ]]; then
             echo "message=passing (${head_commit})" >> $GITHUB_OUTPUT
-            echo "color=success"
+            echo "color=success" >> $GITHUB_OUTPUT
           else
             echo "message=failing (${head_commit})" >> $GITHUB_OUTPUT
             echo "color=critical" >> $GITHUB_OUTPUT
