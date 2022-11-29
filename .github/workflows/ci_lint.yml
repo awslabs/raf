@@ -39,7 +39,7 @@ jobs:
         run: |
           bash ./scripts/lint/git-skip-testing.sh
           SKIP_CI=$(bash ./scripts/lint/git-skip-testing.sh)
-          echo "skip_ci=${SKIP_CI} >> $GITHUB_OUTPUT"
+          echo "skip_ci=${SKIP_CI}" >> $GITHUB_OUTPUT
       - name: Save common job info
         # Initialize the artifact and whether to skip CI.
         run: |

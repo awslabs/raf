@@ -43,11 +43,11 @@ jobs:
         id: job_info
         run: |
           skip_ci=$(head -n 1 artifact/skip.txt)
-          echo "skip_ci=${skip_ci} >> $GITHUB_OUTPUT"
+          echo "skip_ci=${skip_ci}" >> $GITHUB_OUTPUT
           ref=$(head -n 1 artifact/ref.txt)
-          echo "ref=${ref} >> $GITHUB_OUTPUT"
+          echo "ref=${ref}" >> $GITHUB_OUTPUT
           repo=$(head -n 1 artifact/repo.txt)
-          echo "repo=${repo} >> $GITHUB_OUTPUT"
+          echo "repo=${repo}" >> $GITHUB_OUTPUT
           lint=${{ github.event.workflow_run.conclusion }}
           echo "Linting result: ${lint}"
       - name: Parse PR job info
@@ -56,16 +56,16 @@ jobs:
         # Note that pr and sha only available for pull request, and will be empty for push events.
         run: |
           pr=$(head -n 1 artifact/pr.txt)
-          echo "pr=${pr} >> $GITHUB_OUTPUT"
+          echo "pr=${pr}" >> $GITHUB_OUTPUT
           sha=$(head -n 1 artifact/sha.txt)
-          echo "sha=${sha} >> $GITHUB_OUTPUT"
+          echo "sha=${sha}" >> $GITHUB_OUTPUT
       - name: Generate tag
         id: gen_tag
         # This tag is PR-unique so it can be used to connect jobs for the same PR.
         # For example, we use it to share ccache caches and cancel previous runs.
         run: |
           tag=${{ steps.job_info.outputs.repo }}/${{ steps.pr_job_info.outputs.pr }}
-          echo "tag=${tag} >> $GITHUB_OUTPUT"
+          echo "tag=${tag}" >> $GITHUB_OUTPUT
       - name: Whether linting was failed
         if: ${{ github.event.workflow_run.conclusion != 'success' }}
         run: exit 1
@@ -229,7 +229,7 @@ jobs:
         # Note that pr and sha only available for pull request, and will be empty for push events.
         run: |
           pr=$(head -n 1 artifact/pr.txt)
-          echo "pr=${pr} >> $GITHUB_OUTPUT"
+          echo "pr=${pr}" >> $GITHUB_OUTPUT
       - name: Generate CI badge
         id: badge
         run: |
@@ -238,16 +238,16 @@ jobs:
             echo "No need to update badge for PR CI. Skip."
             exit 0
           fi
-          echo "gist_id=a3f4a76704e40ddba1b73fb0ad072eb9 >> $GITHUB_OUTPUT"
+          echo "gist_id=a3f4a76704e40ddba1b73fb0ad072eb9" >> $GITHUB_OUTPUT
           head_commit=$(git rev-parse --short HEAD)
           if [[ "${{ needs.test_on_cpu.result }}" == "success" &&
                 "${{ needs.test_on_gpu.result }}" == "success" &&
                 "${{ needs.test_on_multi_gpu.result }}" == "success" ]]; then
-            echo "message=passing (${head_commit}) >> $GITHUB_OUTPUT"
+            echo "message=passing (${head_commit})" >> $GITHUB_OUTPUT
             echo "color=success"
           else
-            echo "message=failing (${head_commit}) >> $GITHUB_OUTPUT"
-            echo "color=critical >> $GITHUB_OUTPUT"
+            echo "message=failing (${head_commit})" >> $GITHUB_OUTPUT
+            echo "color=critical" >> $GITHUB_OUTPUT
           fi
       - name: Update CI badge
         # Intentionally fail this step with empty gist_id.
