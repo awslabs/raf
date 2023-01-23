@@ -61,6 +61,7 @@ using namespace raf::requests;
 using namespace raf::device_api;
 using namespace raf::stream_pool;
 using namespace raf::distributed::communicator;
+using tvm::relay::PrettyPrint;
 
 namespace utils {
 inline std::shared_ptr<Event> GetEventById(const VMContext& ctx, Index device_id, Index event_id) {

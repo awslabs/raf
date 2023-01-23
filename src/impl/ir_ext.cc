@@ -7,7 +7,7 @@
  * \file src/impl/ir_ext.cc
  * \brief RAF extension to TVM/Relay IR.
  */
-#include <printer/text_printer.h>
+#include <relay/printer/text_printer.h>
 #include "raf/ir_ext.h"
 #include "raf/registry.h"
 #include "raf/pass.h"
@@ -112,7 +112,7 @@ std::string AsText(const ObjectRef& node, bool show_meta_data) {
           }
         }
         if (expr.as<CallNode>() && Downcast<Expr>(expr)->checked_type_.defined()) {
-          auto meta = tvm::TextMetaDataContext();
+          auto meta = tvm::relay::TextMetaDataContext();
           tvm::relay::RelayTextPrinter printer(false, &meta, nullptr);
           os << " /* ty=" << printer.Print(Downcast<Expr>(expr)->checked_type()).str() << " */";
         }
@@ -123,7 +123,7 @@ std::string AsText(const ObjectRef& node, bool show_meta_data) {
         return String(os.str());
       });
 
-  std::string ret = tvm::AsText(node, show_meta_data, annotate);
+  std::string ret = tvm::relay::AsText(node, show_meta_data, annotate);
   size_t index = 0;
   while (true) {
     index = ret.find("-114514i64", index);

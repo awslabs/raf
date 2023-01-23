@@ -8,7 +8,7 @@
  * \brief The RAF virtual machine compiler.
  */
 #pragma once
-#include <tvm/ir/error.h>
+#include <tvm/relay/error.h>
 #include <tvm/relay/expr_functor.h>
 #include <tvm/relay/transform.h>
 #include <memory>
@@ -45,7 +45,7 @@ struct VMCompilerContext {
   // The module context for the compilation
   IRModule module;
   // Error reporter
-  tvm::ErrorReporter err_reporter;
+  tvm::relay::ErrorReporter err_reporter;
   // Map from a unique integer to ADT constructor tag
   TagNameMap tag_index_map;
   // Map from ADT constructor tag to a unique integer
