@@ -643,14 +643,15 @@ class FuseMutator : private ExprMutator {
 
   // Debug function, dump the group assignment in text.
   void DebugDumpGroup(const Expr& body) {
-    std::string text = AsText(body, false, [this](const ObjectRef& expr) -> std::string {
-      auto it = gmap_.find(expr.get());
-      if (it == gmap_.end()) return "";
-      std::ostringstream os;
-      auto* group = it->second->FindRoot();
-      os << " /* group=" << group << " */";
-      return os.str();
-    });
+    std::string text =
+        tvm::relay::AsText(body, false, [this](const ObjectRef& expr) -> std::string {
+          auto it = gmap_.find(expr.get());
+          if (it == gmap_.end()) return "";
+          std::ostringstream os;
+          auto* group = it->second->FindRoot();
+          os << " /* group=" << group << " */";
+          return os.str();
+        });
     LOG(INFO) << "Dump of group info:\n" << text;
   }
 };

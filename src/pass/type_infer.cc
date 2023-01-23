@@ -27,6 +27,7 @@ namespace type_infer {
 
 using namespace raf::op;
 using namespace raf::value;
+using tvm::relay::PrettyPrint;
 
 Type Unify(const Type& src, const Type& dst);
 

@@ -11,6 +11,7 @@
 #include <tvm/ir/type_functor.h>
 #include <tvm/target/target.h>
 #include <tvm/tir/op.h>
+#include <tvm/relay/base.h>
 #include <tvm/relay/transform.h>
 #include <tvm/relay/analysis.h>
 #include <tvm/relay/attrs/memory.h>
@@ -40,6 +41,7 @@ using namespace raf::value;
 using binding::LookupBinding;
 using binding::NDArrayBinding;
 using raf::distributed::DistConfig;
+using tvm::relay::PrettyPrint;
 using tvm::relay::Shape;
 
 /*!
