@@ -7,7 +7,7 @@
  * \file src/impl/ir_ext.cc
  * \brief RAF extension to TVM/Relay IR.
  */
-#include <printer/text_printer.h>
+#include <relay/printer/text_printer.h>
 #include "raf/ir_ext.h"
 #include "raf/registry.h"
 #include "raf/pass.h"
