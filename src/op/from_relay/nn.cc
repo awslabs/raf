@@ -34,9 +34,8 @@ RELAY_REGISTER_OP("nn.batch_matmul")
         return Call(Op::Get("raf.op.batch_matmul_tn"), args);
       } else if (!transpose_a && transpose_b) {
         return Call(Op::Get("raf.op.batch_matmul_nt"), args);
-      } else {
-        return Call(Op::Get("raf.op.batch_matmul"), args);
       }
+      return Call(Op::Get("raf.op.batch_matmul"), args);
     });
 
 RAF_OP_FROM_RELAY("nn.conv2d", "raf.op.conv2d",

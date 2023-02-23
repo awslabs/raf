@@ -1068,6 +1068,33 @@ def test_dense_pattern(trans):
     check_from_relay(model, r_func, [m_x, m_y])
 
 
+@pytest.mark.parametrize("trans", [[False, False], [False, True], [True, False], [True, True]])
+def test_batch_matmul(trans):
+    class TransposeBatchMatmul(raf.Model):
+        def build(self, trans):
+            self.op_name = "batch_matmul"
+            if trans[0] or trans[1]:
+                self.op_name += f"_{'t' if trans[0] else 'n'}{'t' if trans[1] else 'n'}"
+
+        @raf.model.trace
+        def forward(self, m_x, m_y):
+            x = raf.relu(m_x)
+            return getattr(raf, self.op_name)(x, m_y)
+
+    model = TransposeBatchMatmul(trans)
+    m_x, _ = randn((4, 10, 10), dtype="float32")
+    m_y, _ = randn((4, 10, 10), dtype="float32")
+
+    r_x = raf.ir.var("x", shape=(4, 10, 10), dtype="float32")
+    r_y = raf.ir.var("x", shape=(4, 10, 10), dtype="float32")
+    r_out = _relay.nn.batch_matmul(
+        _relay.nn.relu(r_x), r_y, transpose_a=trans[0], transpose_b=trans[1]
+    )
+    r_func = _relay.Function(params=[r_x, r_y], body=r_out)
+
+    check_from_relay(model, r_func, [m_x, m_y])
+
+
 @pytest.mark.parametrize("device", get_testable_devices())
 @pytest.mark.parametrize("shape", [(), (1,), (1, 2, 3, 4)])
 @pytest.mark.parametrize("dtype", ["float64", "float32", "float16"])
@@ -1093,7 +1120,7 @@ def test_gelu_pattern(shape, dtype, device):
     bias = raf.ir.var("bias", shape=shape, dtype=dtype)
 
     a0 = _relay.add(r_x, bias)
-    a1 = _relay.multiply(a0, _relay.const(1 / 2 ** 0.5, dtype))
+    a1 = _relay.multiply(a0, _relay.const(1 / 2**0.5, dtype))
     a2 = _relay.erf(a1)
     a3 = _relay.multiply(a2, _relay.const(0.5, dtype))
     a4 = _relay.add(_relay.const(0.5, dtype), a3)
