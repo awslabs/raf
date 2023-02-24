@@ -15,28 +15,8 @@ namespace raf {
 namespace op {
 namespace from_relay {
 
+RAF_GENERIC_ATTR_OP_FROM_RELAY("nn.batch_matmul", "raf.op.batch_matmul_nt");
 RAF_GENERIC_ATTR_OP_FROM_RELAY("nn.dense", "raf.op.dense");
-
-// TVM's nn.batch_matmul has a transpose_a and transpose_b attribute, but RAF's
-// batch_matmul_nt does not. Instead, RAF has 4 variants of batch_matmul for
-// different combinations of transpose_a and transpose_b. This function
-// converts the batch_matmul with transpose_a and transpose_b attributes to
-// the appropriate batch_matmul variant.
-RELAY_REGISTER_OP("nn.batch_matmul")
-    .set_attr<op::FRAFFromRelay>("FRAFFromRelay", [](const Attrs& attrs, const Array<Expr>& args,
-                                                     const VarValueMap& val_map) {
-      const auto* relay_attrs = attrs.as<BatchMatmulAttrs>();
-      auto transpose_a = relay_attrs->transpose_a;
-      auto transpose_b = relay_attrs->transpose_b;
-      if (transpose_a && transpose_b) {
-        return Call(Op::Get("raf.op.batch_matmul_tt"), args);
-      } else if (transpose_a && !transpose_b) {
-        return Call(Op::Get("raf.op.batch_matmul_tn"), args);
-      } else if (!transpose_a && transpose_b) {
-        return Call(Op::Get("raf.op.batch_matmul_nt"), args);
-      }
-      return Call(Op::Get("raf.op.batch_matmul"), args);
-    });
 
 RAF_OP_FROM_RELAY("nn.conv2d", "raf.op.conv2d",
                   [&](const Attrs& attrs, const Array<Expr>& args, const VarValueMap& val_map) {
