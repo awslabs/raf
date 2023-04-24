@@ -100,8 +100,8 @@ class ShardSpecObj final : public BaseShardSpecObj {
     v->Visit("ranks", &ranks);
     v->Visit("logic_shape", &logic_shape);
     v->Visit("logic_index", &logic_index_);
-    v->Visit("phy_shape", &logic_shape);
-    v->Visit("phy_index", &logic_index_);
+    v->Visit("phy_shape", &phy_shape);
+    v->Visit("phy_index", &phy_index_);
     v->Visit("subgroup_shape", &subgroup_shape);
     v->Visit("subgroup_index", &subgroup_index_);
   }

@@ -35,6 +35,14 @@ class ShardSpec(BaseShardSpec):
             _make.ShardSpec, ranks, phy_shape, subgroup_shape, mutable
         )
 
+    def make_updated(self, ranks=None, phy_shape=None, subgroup_shape=None, mutable=None):
+        """Make a new spec based on this spec with a few fields modified"""
+        ranks = ranks if ranks else self.ranks
+        phy_shape = phy_shape if phy_shape else self.phy_shape
+        subgroup_shape = subgroup_shape if subgroup_shape else self.subgroup_shape
+        mutable = mutable if mutable else self.mutable
+        return ShardSpec(ranks, phy_shape, subgroup_shape, mutable)
+
 
 @register_node("raf.sharding.UnsetShardSpec")
 class UnsetShardSpec(BaseShardSpec):

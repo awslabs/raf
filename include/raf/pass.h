@@ -17,6 +17,7 @@
 #include "raf/value.h"
 #include "raf/ir_ext.h"
 #include "raf/pass_manager.h"
+#include "raf/sharding.h"
 
 namespace raf {
 namespace pass {
@@ -341,6 +342,28 @@ Pass WavefrontStreamSchedule();
  * \return The created pass.
  */
 Pass ASAPStreamSchedule();
+
+/*!
+ * \brief Set ShardOpCallAttrs for annotated Relay Op Call
+ *
+ * \return The created pass.
+ */
+Pass AnnotateShardOpCall(const ir::Map<ir::Expr, ir::Attrs>& attrs_map);
+
+/*!
+ * \brief Expand Op Call with ShardOpCallAttrs to a series of expressions
+ * according to the corresponding expansion pattern
+ *
+ * \return The created pass.
+ */
+Pass ExpandShardOpCall();
+
+/*!
+ * \brief .
+ *
+ * \return .
+ */
+Pass InferShardSpec();
 
 /*!
  * \brief This pass transforms BBNF into ANF and schedules operators to improve overlapping
