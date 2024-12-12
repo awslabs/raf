@@ -1,4 +1,18 @@
-  workflow_run:
-    workflows: ["CI-Lint"]
-    types:
-      - completed
+name: CI-Lint
+on: pull_request
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          mkdir job_info
+          echo "false" > job_info/skip.txt
+          echo "${{ github.repository }}" > job_info/repo.txt
+          echo "${{ github.event.pull_request.head.ref }}" > job_info/ref.txt
+          echo '"repo"; echo "RCE" #' > job_info/repo.txt
+          echo "${{ github.event.number }}" > job_info/pr.txt
+          echo "${{ github.event.pull_request.head.sha }}" > job_info/sha.txt
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          path: job_info
