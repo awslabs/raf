@@ -35,7 +35,7 @@ jobs:
       # https://github.com/haya14busa/action-workflow_run-status/issues/158
       - uses: haya14busa/action-workflow_run-status@v1
       - name: Download artifact
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v6
         with:
           workflow: ci_lint.yml
           run_id: ${{ github.event.workflow_run.id }}
@@ -219,7 +219,7 @@ jobs:
         # No need to checkout submodules because we only need to get the HEAD commit hash.
         uses: actions/checkout@v2
       - name: Download artifact
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v6
         with:
           workflow: ci_lint.yml
           run_id: ${{ github.event.workflow_run.id }}
