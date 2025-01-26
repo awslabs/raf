@@ -13,7 +13,7 @@ jobs:
         # matrix of build configs
         config:
           - platform: 'cpu'
-          - cuda: 'cu113'          
+          - cuda: 'cu113'
 
     runs-on: ubuntu-latest
     container:
@@ -21,7 +21,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0 # Checkout all branches and history.
         submodules: 'recursive'
@@ -46,10 +46,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Update PyPI index
       if: github.ref == 'refs/heads/main'
       env:
         GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
       run: |
-        python3 scripts/wheel/gen_pypi_index.py --tag nightly        
+        python3 scripts/wheel/gen_pypi_index.py --tag nightly
