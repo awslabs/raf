@@ -5,3 +5,5 @@
 from raf._ffi.sharding._make import ShardOpCallAttrs
 from .shardspec import BaseShardSpec, ShardSpec, UnsetShardSpec
 from .utils import make_replicated_spec, make_shard_spec, make_unset_spec
+from .expandrule import expand_opcall
+from .inferhint import infer_shardspec

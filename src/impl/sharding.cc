@@ -170,7 +170,7 @@ TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
       auto r = Downcast<ShardSpec>(ref);
       auto ndim = r->ndim_;
       if (r->nshard_ == 1) {
-        p->stream << "ShardSpec(Replicated)";
+        p->stream << "ShardSpec(Replicated, " << (r->mutable_ ? "Mut)" : "Immut)");
       } else {
         p->stream << "ShardSpec("
                   << "[";
@@ -179,9 +179,9 @@ TVM_STATIC_IR_FUNCTOR(ReprPrinter, vtable)
           auto ngroup_on_dim = r->subgroup_shape[i]->value;
           p->stream << (nshard_on_dim == 1 ? ":" : std::to_string(nshard_on_dim))
                     << (ngroup_on_dim == 1 ? "" : "(x" + std::to_string(ngroup_on_dim) + ")")
-                    << (i != ndim - 1 ? ", " : "");
+                    << (i != ndim - 1 ? ", " : "], ");
         }
-        p->stream << "])";
+        p->stream << (r->mutable_ ? "Mut)" : "Immut)");
       }
     });
 
