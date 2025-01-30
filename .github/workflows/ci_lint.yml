@@ -49,23 +49,31 @@ jobs:
       - name: Save push event job info
         # Dump the job information for running CI with a new commit on main branch.
         if: ${{ github.event_name == 'push' }}
+        env:
+          GITHUB_REF_ENV: ${{ github.ref }}
+          GITHUB_REPO_ENV: ${{ github.repository }}
         run: |
-          echo "Ref: ${{ github.ref }}"
-          echo "Repo: ${{ github.repository }}"
-          echo "${{ github.ref }}" > job_info/ref.txt
-          echo "${{ github.repository }}" > job_info/repo.txt
+          echo "Ref: \"$GITHUB_REF_ENV\""
+          echo "Repo: \"$GITHUB_REPO_ENV\""
+          echo "$GITHUB_REF_ENV" > job_info/ref.txt
+          echo "$GITHUB_REPO_ENV" > job_info/repo.txt
       - name: Save pull request event job info
         # Dump the job information for running CI with a pull request.
         if: ${{ github.event_name == 'pull_request' || github.event_name == 'pull_request_target' }}
+        env:
+          REF_ENV: ${{ github.event.pull_request.head.ref }}
+          REPO_ENV: ${{ github.event.pull_request.head.repo.full_name }}
+          NUMBER_ENV: ${{ github.event.number }}
+          SHA_ENV: ${{ github.event.pull_request.head.sha }}
         run: |
-          echo "Ref: ${{ github.event.pull_request.head.ref }}"
-          echo "FullName: ${{ github.event.pull_request.head.repo.full_name }}"
-          echo "Number: ${{ github.event.number }}"
-          echo "HeadSHA: ${{ github.event.pull_request.head.sha }}"
-          echo "${{ github.event.pull_request.head.ref }}" > job_info/ref.txt
-          echo "${{ github.event.pull_request.head.repo.full_name }}" > job_info/repo.txt
-          echo "${{ github.event.number }}" > job_info/pr.txt
-          echo "${{ github.event.pull_request.head.sha }}" > job_info/sha.txt
+          echo "Ref: \"$REF_ENV\""
+          echo "FullName: \"$REPO_ENV\""
+          echo "Number: \"$NUMBER_ENV\""
+          echo "HeadSHA: \"$SHA_ENV\""
+          echo "$REF_ENV" > job_info/ref.txt
+          echo "$REPO_ENV" > job_info/repo.txt
+          echo "$NUMBER_ENV" > job_info/pr.txt
+          echo "$SHA_ENV" > job_info/sha.txt
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
